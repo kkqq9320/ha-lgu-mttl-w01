@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>MTTL-W01 Log</title>
+<link rel="stylesheet" href="dashboard.css">
+<script type="module" src="logview.mjs"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>MTTL-W01</h1>
+    <span class="badge badge-demo" id="demo-badge" data-i18n="demo" hidden></span>
+    <span class="badge" id="server-badge" data-state="idle"><span class="badge-dot"></span><span data-f="text"></span></span>
+    <span class="brand-sub num"><span id="backend-version"></span></span>
+  </div>
+  <nav class="tools">
+    <a class="tool" href="./" data-demo-href="dashboard.html?demo">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"></path></svg>
+      <span data-i18n="log_back"></span>
+    </a>
+    <a class="tool" href="tuo.html" data-i18n="settings"></a>
+    <label class="tool tool-select">
+      <span class="sr-only" data-i18n="theme"></span>
+      <select id="theme-select">
+        <option value="auto" data-i18n="theme_auto"></option>
+        <option value="dark" data-i18n="theme_dark"></option>
+        <option value="light" data-i18n="theme_light"></option>
+      </select>
+    </label>
+    <div class="seg" role="group" id="lang-group">
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="ko">KR</button>
+    </div>
+  </nav>
+</header>
+
+<main class="log-page">
+  <section class="panel">
+    <div class="log-head">
+      <div>
+        <h2 data-i18n="log_title"></h2>
+        <p class="log-note" data-i18n="log_note"></p>
+      </div>
+      <button class="log-clear" id="log-clear" type="button" data-state="idle" data-i18n="log_clear"></button>
+    </div>
+    <div class="log-filters">
+      <label class="field">
+        <span data-i18n="log_level"></span>
+        <select id="log-level">
+          <option value="INFO" data-i18n="log_level_INFO" selected></option>
+          <option value="DEBUG" data-i18n="log_level_DEBUG"></option>
+          <option value="WARNING" data-i18n="log_level_WARNING"></option>
+          <option value="ERROR" data-i18n="log_level_ERROR"></option>
+        </select>
+      </label>
+      <label class="field">
+        <span data-i18n="log_category"></span>
+        <select id="log-category">
+          <option value="all" data-i18n="log_cat_all" selected></option>
+          <option value="ota" data-i18n="log_cat_ota"></option>
+          <option value="wire" data-i18n="log_cat_wire"></option>
+          <option value="control" data-i18n="log_cat_control"></option>
+          <option value="childlock" data-i18n="log_cat_childlock"></option>
+          <option value="ha" data-i18n="log_cat_ha"></option>
+          <option value="connection" data-i18n="log_cat_connection"></option>
+          <option value="storage" data-i18n="log_cat_storage"></option>
+          <option value="other" data-i18n="log_cat_other"></option>
+        </select>
+      </label>
+      <label class="field">
+        <span data-i18n="log_view"></span>
+        <select id="log-view">
+          <option value="compact" data-i18n="log_view_compact" selected></option>
+          <option value="text" data-i18n="log_view_text"></option>
+          <option value="json" data-i18n="log_view_json"></option>
+        </select>
+      </label>
+      <label class="field">
+        <span data-i18n="log_limit"></span>
+        <select id="log-limit" class="num">
+          <option>100</option>
+          <option selected>300</option>
+          <option>500</option>
+          <option>1000</option>
+        </select>
+      </label>
+      <label class="check"><input id="log-auto" type="checkbox" checked><span data-i18n="log_auto"></span></label>
+      <button id="log-refresh" type="button" data-i18n="log_refresh"></button>
+      <button id="log-copy" type="button" data-i18n="log_copy"></button>
+      <span class="log-status num" id="log-status" role="status"></span>
+    </div>
+    <div class="log-rows" id="log-rows"></div>
+    <p class="log-empty" id="log-empty" data-i18n="log_empty" hidden></p>
+    <pre class="log-pre" id="log-text" hidden></pre>
+    <pre class="log-pre" id="log-json" hidden></pre>
+  </section>
+</main>
+
+<template id="log-row-tpl">
+  <div class="log-row">
+    <span class="log-time" data-f="time"></span>
+    <span class="log-level" data-f="level"></span>
+    <span class="log-cat" data-f="cat"></span>
+    <span class="log-msg" data-f="msg"></span>
+  </div>
+</template>
+</body>
+</html>

@@ -12,7 +12,7 @@ const {
 const fixture = JSON.parse(
   readFileSync(new URL("../fixtures/api_devices_guest.json", import.meta.url), "utf-8"),
 );
-const DASH = "–";
+const NA = "N/A"; // shown for missing or unmeasured values
 
 test("string tables have the same keys", () => {
   assert.deepEqual(Object.keys(STRINGS.ko).sort(), Object.keys(STRINGS.en).sort());
@@ -25,6 +25,24 @@ test("string tables have the same keys", () => {
   assert.equal(t("en", "outlet", { n: 2 }), "Outlet 2");
   assert.equal(t("ko", "outlet", { n: 2 }), "콘센트 2");
   assert.equal(t("ko", "no_such_key"), "no_such_key");
+});
+
+test("KR keeps awkward technical terms in English", () => {
+  for (const [key, vars, want] of [
+    ["online", {}, "Online"],
+    ["offline", {}, "Offline"],
+    ["server_online", {}, "Server online"],
+    ["mqtt_broker", {}, "Broker"],
+    ["mqtt_topic", {}, "Topic prefix"],
+    ["mqtt_discovery", {}, "Discovery prefix"],
+    ["fw_ota_host", {}, "OTA server"],
+    ["fw_badge_pending", { n: 1 }, "Update 1"],
+  ]) {
+    assert.equal(t("ko", key, vars), want, key);
+  }
+  // Plain Korean words stay Korean.
+  assert.equal(t("ko", "total_power"), "전체 전력");
+  assert.equal(t("ko", "all_on"), "전체 켜기");
 });
 
 test("pickLang prefers saved, then browser", () => {
@@ -55,10 +73,10 @@ test("normalizeMac", () => {
   assert.equal(normalizeMac(null), null);
 });
 
-test("formatters show dash for missing values", () => {
+test("formatters show N/A for missing values", () => {
   for (const fmt of [fmtWatts, fmtKwh, fmtTemp, fmtVolt, fmtRssi]) {
     for (const missing of [null, undefined, NaN, "", "abc"]) {
-      assert.equal(fmt(missing), DASH, `${fmt.name}(${String(missing)})`);
+      assert.equal(fmt(missing), NA, `${fmt.name}(${String(missing)})`);
     }
   }
   assert.equal(fmtWatts(12345), "12.3 W");
@@ -78,12 +96,12 @@ test("cardModel fills four outlets", () => {
     assert.equal(o.n, i + 1);
     assert.equal(o.on, null);
     assert.equal(o.name, `Outlet ${i + 1}`);
-    assert.equal(o.w, DASH);
-    assert.equal(o.kwh, DASH);
-    assert.equal(o.temp, DASH);
+    assert.equal(o.w, NA);
+    assert.equal(o.kwh, NA);
+    assert.equal(o.temp, NA);
   }
-  assert.equal(empty.totalW, DASH);
-  assert.equal(empty.totalKwh, DASH);
+  assert.equal(empty.totalW, NA);
+  assert.equal(empty.totalKwh, NA);
 
   const partial = cardModel(
     {

@@ -48,7 +48,7 @@ class WebPathsTest(unittest.TestCase):
 
     def test_dashboard_has_no_innerhtml(self):
         # Device and outlet names come from users; the dashboard must set them as text only.
-        for name in ("dashboard.mjs", "dashboard-core.mjs", "qr.mjs"):
+        for name in ("dashboard.mjs", "dashboard-core.mjs", "qr.mjs", "logview.mjs"):
             with self.subTest(file=name):
                 src = (STATIC / name).read_text(encoding="utf-8")
                 for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):

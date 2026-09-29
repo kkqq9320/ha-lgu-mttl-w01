@@ -1,7 +1,7 @@
 // Page wiring for dashboard.html. Values reach the page only through textContent,
 // attributes and data-* states; see dashboard-core.mjs for the logic.
 import {
-  DASH, t, pickLang, resolveTheme, normalizeMac, fmtMac,
+  NA, t, pickLang, resolveTheme, normalizeMac, fmtMac,
   cardModel, summaryModel, apkUrl, apkUrlForHost, demoResponse, demoHa,
 } from "./dashboard-core.mjs";
 import { encodeQr } from "./qr.mjs";
@@ -149,7 +149,7 @@ function setAttr(el, name, value) {
 }
 
 /** Value cell that shows a muted placeholder when there is no value. */
-function setValue(el, value, placeholder = DASH) {
+function setValue(el, value, placeholder = NA) {
   setText(el, value ?? placeholder);
   setData(el, "empty", value === null || value === undefined ? "yes" : "no");
 }
@@ -234,18 +234,18 @@ function updateCard(card, m, raw) {
   setData(f.status, "state", m.online ? "ok" : "idle");
   setText(f.statusText, t(lang, m.online ? "online" : "offline"));
   setText(f.mac, fmtMac(m.mac));
-  setText(f.fw, m.firmware ?? DASH);
+  setText(f.fw, m.firmware ?? NA);
   setText(f.ip, m.ip ?? "");
 
   // One reserved slot: offline notice first (an update cannot run offline), then the firmware link.
   setData(f.notice, "kind", !m.online ? "offline" : m.fwAction ? "fw" : "none");
-  setText(f.fwUpdate, m.fwAction ? t(lang, `fw_${m.fwAction}`, { v: m.fwTarget ?? DASH }) : "");
+  setText(f.fwUpdate, m.fwAction ? t(lang, `fw_${m.fwAction}`, { v: m.fwTarget ?? NA }) : "");
   setAttr(f.fwUpdate, "href", `tuo.html#device=${m.mac}`);
 
   setValue(f.totalW, m.totalW);
   setValue(f.totalKwh, m.totalKwh);
-  setValue(f.voltage, m.voltage, t(lang, "not_measured"));
-  setValue(f.rssi, m.rssi, t(lang, "not_measured"));
+  setValue(f.voltage, m.voltage);
+  setValue(f.rssi, m.rssi);
 
   setDisabled(f.allOn, !m.controls || cardBusy);
   setDisabled(f.allOff, !m.controls || cardBusy);
@@ -278,7 +278,7 @@ function updateCard(card, m, raw) {
     setText(of.kwh, o.kwh);
     setText(of.temp, o.temp);
     setHidden(of.lockMark, !(synced && lock.bits[o.n]));
-    if (!busy) setText(of.toggle, o.on === null ? DASH : t(lang, o.on ? "on" : "off"));
+    if (!busy) setText(of.toggle, o.on === null ? NA : t(lang, o.on ? "on" : "off"));
     setDisabled(of.toggle, !m.controls || o.on === null || busy);
   });
   card.raw = raw;
@@ -485,6 +485,12 @@ function toggleScreenLock() {
   render();
 }
 
+// Pressing the lock button moves focus away from an open name field, and that blur would save it.
+// Cancel the edit first, on pointerdown, which comes before the blur.
+function cancelEditBeforeLock() {
+  if (state.unlocked) state.cancelEdit?.();
+}
+
 // ---- #device=<mac> ----
 
 let focusedHash = "";
@@ -512,6 +518,10 @@ function init() {
   const params = new URLSearchParams(location.search);
   state.source = params.has("demo") ? createDemoSource() : null;
   $("#demo-badge").hidden = !state.source?.demo;
+  if (state.source?.demo) {
+    // A static preview has no backend routes; stay inside the demo pages.
+    for (const a of document.querySelectorAll("[data-demo-href]")) a.setAttribute("href", a.dataset.demoHref);
+  }
 
   applyTheme();
   applyLang();
@@ -529,6 +539,7 @@ function init() {
     applyLang();
     render();
   });
+  $("#lock-btn").addEventListener("pointerdown", cancelEditBeforeLock);
   $("#lock-btn").addEventListener("click", toggleScreenLock);
   $("#devices").addEventListener("click", onDeviceClick);
   window.addEventListener("hashchange", () => {

@@ -1,7 +1,8 @@
 // Dashboard logic without DOM access. dashboard.mjs wires it to the page;
 // tests/js/dashboard-core.test.mjs runs it under Node.
 
-export const DASH = "–";
+/** Shown for any missing or unmeasured value, in both languages. */
+export const NA = "N/A";
 
 export const STRINGS = {
   en: {
@@ -23,7 +24,7 @@ export const STRINGS = {
     theme_light: "Light",
     language: "Language",
     sum_mqtt: "Home Assistant MQTT",
-    mqtt_connected: "On · connected",
+    mqtt_connected: "Connected",
     mqtt_disconnected: "Disconnected",
     mqtt_off: "Off",
     unknown: "Unknown",
@@ -35,12 +36,11 @@ export const STRINGS = {
     fw_pending_label: "Devices to update",
     fw_pending_count: "{n}",
     fw_ota_host: "OTA server",
-    fw_badge_pending: "{n} to update",
+    fw_badge_pending: "Update {n}",
     fw_badge_ok: "Up to date",
     open_settings: "Open settings",
     open_logs: "View logs",
     sum_app: "Android setup app",
-    app_badge: "Scan to install",
     apk_download: "Download APK",
     pc_download: "Download PC tool",
     qr_label: "QR code for {url}",
@@ -52,7 +52,6 @@ export const STRINGS = {
     total_energy: "Energy",
     voltage: "Voltage",
     rssi: "Wi-Fi RSSI",
-    not_measured: "Not measured",
     all_on: "All ON",
     all_off: "All OFF",
     outlet: "Outlet {n}",
@@ -70,14 +69,47 @@ export const STRINGS = {
     fw_downgrade: "Firmware downgrade → {v}",
     fw_reflash: "Reinstall firmware {v}",
     action_failed: "Request failed: {msg}",
+    log_title: "Backend log",
+    log_note: "Memory keeps the latest 5,000 rows. DEBUG and above also go to backend.log (5 MB, 3 files).",
+    log_back: "Dashboard",
+    log_level: "Level",
+    log_level_DEBUG: "DEBUG+ detailed",
+    log_level_INFO: "INFO+ brief",
+    log_level_WARNING: "WARNING+",
+    log_level_ERROR: "ERROR",
+    log_category: "Category",
+    log_cat_all: "All",
+    log_cat_ota: "OTA",
+    log_cat_wire: "Wire TX/RX",
+    log_cat_control: "Control",
+    log_cat_childlock: "Child Lock",
+    log_cat_ha: "Home Assistant",
+    log_cat_connection: "Connection",
+    log_cat_storage: "DB/backup",
+    log_cat_other: "Other",
+    log_view: "View",
+    log_view_compact: "Compact",
+    log_view_text: "Text",
+    log_view_json: "JSON",
+    log_limit: "Rows",
+    log_auto: "Auto 2 s",
+    log_refresh: "Refresh",
+    log_copy: "Copy logs",
+    log_copied: "Copied ({n} rows)",
+    log_copy_failed: "Could not copy to the clipboard.",
+    log_clear: "Clear buffer",
+    log_clear_confirm: "Press again to clear",
+    log_status: "{n} rows · {time}",
+    log_error: "Error: {msg}",
+    log_empty: "No log rows for this filter.",
   },
   ko: {
     demo: "예시",
-    backend: "백엔드 {v}",
-    online_count: "기기 {n}/{total} 온라인",
-    server_online: "서버 온라인",
-    server_offline: "서버 오프라인",
-    server_checking: "서버 확인 중",
+    backend: "Backend {v}",
+    online_count: "기기 {n}/{total} Online",
+    server_online: "Server online",
+    server_offline: "Server offline",
+    server_checking: "Checking server",
     unlock: "해제",
     relock: "잠금",
     unlock_hint: "조작 버튼이 잠겨 있습니다. 해제하면 켜고 끄기와 이름 바꾸기를 할 수 있습니다.",
@@ -90,36 +122,34 @@ export const STRINGS = {
     theme_light: "라이트",
     language: "언어",
     sum_mqtt: "Home Assistant MQTT",
-    mqtt_connected: "켜짐·연결됨",
-    mqtt_disconnected: "끊김",
-    mqtt_off: "꺼짐",
-    unknown: "알 수 없음",
-    mqtt_broker: "브로커",
-    mqtt_topic: "토픽 접두어",
-    mqtt_discovery: "발견 접두어",
+    mqtt_connected: "Connected",
+    mqtt_disconnected: "Disconnected",
+    mqtt_off: "Off",
+    unknown: "Unknown",
+    mqtt_broker: "Broker",
+    mqtt_topic: "Topic prefix",
+    mqtt_discovery: "Discovery prefix",
     sum_fw: "펌웨어",
-    fw_target_label: "목표판",
+    fw_target_label: "목표 버전",
     fw_pending_label: "업데이트 대상",
     fw_pending_count: "{n}대",
-    fw_ota_host: "OTA 서버",
-    fw_badge_pending: "업데이트 {n}대",
-    fw_badge_ok: "최신",
+    fw_ota_host: "OTA server",
+    fw_badge_pending: "Update {n}",
+    fw_badge_ok: "Up to date",
     open_settings: "설정 열기",
     open_logs: "로그 보기",
     sum_app: "안드로이드 설정 앱",
-    app_badge: "찍어서 설치",
     apk_download: "APK 내려받기",
     pc_download: "PC 도구 내려받기",
     qr_label: "{url} QR 코드",
     empty: "MTTL-W01 기기를 기다리는 중입니다.",
-    online: "온라인",
-    offline: "오프라인",
-    offline_note: "오프라인 · 마지막으로 받은 값",
+    online: "Online",
+    offline: "Offline",
+    offline_note: "Offline · 마지막으로 받은 값",
     total_power: "전체 전력",
     total_energy: "누적 사용량",
     voltage: "전압",
-    rssi: "Wi-Fi 신호",
-    not_measured: "측정 안 함",
+    rssi: "Wi-Fi RSSI",
     all_on: "전체 켜기",
     all_off: "전체 끄기",
     outlet: "콘센트 {n}",
@@ -137,6 +167,39 @@ export const STRINGS = {
     fw_downgrade: "펌웨어 다운그레이드 → {v}",
     fw_reflash: "펌웨어 다시 설치 {v}",
     action_failed: "요청 실패: {msg}",
+    log_title: "Backend log",
+    log_note: "메모리에 최근 5,000줄을 둡니다. DEBUG 이상은 backend.log 파일(5MB, 3개)에도 남습니다.",
+    log_back: "대시보드",
+    log_level: "Level",
+    log_level_DEBUG: "DEBUG+ 상세",
+    log_level_INFO: "INFO+ 간략",
+    log_level_WARNING: "WARNING+",
+    log_level_ERROR: "ERROR",
+    log_category: "분류",
+    log_cat_all: "전체",
+    log_cat_ota: "OTA",
+    log_cat_wire: "통신 TX/RX",
+    log_cat_control: "제어",
+    log_cat_childlock: "Child Lock",
+    log_cat_ha: "Home Assistant",
+    log_cat_connection: "연결",
+    log_cat_storage: "DB/백업",
+    log_cat_other: "기타",
+    log_view: "보기",
+    log_view_compact: "간략",
+    log_view_text: "텍스트",
+    log_view_json: "JSON",
+    log_limit: "줄 수",
+    log_auto: "자동 2초",
+    log_refresh: "새로고침",
+    log_copy: "현재 로그 복사",
+    log_copied: "복사됨 ({n}줄)",
+    log_copy_failed: "클립보드에 복사하지 못했습니다.",
+    log_clear: "버퍼 지우기",
+    log_clear_confirm: "한 번 더 누르면 지웁니다",
+    log_status: "{n}줄 · {time}",
+    log_error: "오류: {msg}",
+    log_empty: "이 조건에 맞는 로그가 없습니다.",
   },
 };
 
@@ -175,7 +238,7 @@ function num(v) {
 
 function fmtScaled(v, scale, digits, unit) {
   const n = num(v) / scale;
-  return Number.isFinite(n) ? `${n.toFixed(digits)} ${unit}` : DASH;
+  return Number.isFinite(n) ? `${n.toFixed(digits)} ${unit}` : NA;
 }
 
 export function fmtWatts(mw) {
@@ -192,7 +255,7 @@ export function fmtVolt(mv) {
 
 export function fmtTemp(c) {
   const n = num(c);
-  if (!Number.isFinite(n)) return DASH;
+  if (!Number.isFinite(n)) return NA;
   return `${Number.isInteger(n) ? n : n.toFixed(1)} °C`;
 }
 
@@ -249,7 +312,7 @@ export function cardModel(device, { authenticated, unlocked, lang }) {
       name: text(ch.name) ?? t(lang, "outlet", { n }),
       on: onState(ch.on_state),
       // An offline strip's last power reading is stale; energy and temperature stay as last received.
-      w: online ? fmtWatts(ch.power_mw) : DASH,
+      w: online ? fmtWatts(ch.power_mw) : NA,
       kwh: fmtKwh(ch.energy_lifetime_wh),
       temp: fmtTemp(ch.temperature_c),
     };
@@ -264,7 +327,7 @@ export function cardModel(device, { authenticated, unlocked, lang }) {
     firmware: d.firmware_version ?? null,
     online,
     ip: admin ? text(d.peer_ip) : null,
-    totalW: online ? fmtWatts(sum(rows.map((ch) => ch.power_mw))) : DASH,
+    totalW: online ? fmtWatts(sum(rows.map((ch) => ch.power_mw))) : NA,
     totalKwh: fmtKwh(sum(rows.map((ch) => ch.energy_lifetime_wh))),
     voltage: diag.voltage_enabled === true ? fmtVolt(diag.voltage_mv) : null,
     rssi: diag.rssi_enabled === true ? fmtRssi(diag.rssi_dbm) : null,
@@ -324,6 +387,62 @@ export function apkUrlForHost(firmware, hostname) {
 export function apkUrl(firmware, loc) {
   if (!INGRESS_PATH.test(loc.pathname)) return new URL(APK_FILE, loc.href).href;
   return apkUrlForHost(firmware, loc.hostname);
+}
+
+// ---- Log page (logview.html) ----
+
+export const LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR"];
+export const LOG_CATEGORIES = ["all", "ota", "wire", "control", "childlock", "ha", "connection", "storage", "other"];
+export const LOG_LIMITS = [100, 300, 500, 1000];
+const LEVEL_NUMBER = { DEBUG: 10, INFO: 20, WARNING: 30, ERROR: 40, CRITICAL: 50 };
+
+/** Filters for `api/logs`, clamped the way backend.py does it. */
+export function logFilters({ level, category, limit }) {
+  const lv = String(level ?? "").toUpperCase();
+  const n = Number.parseInt(limit, 10);
+  return {
+    level: LOG_LEVELS.includes(lv) ? lv : "INFO",
+    category: LOG_CATEGORIES.includes(category) ? category : "all",
+    limit: Number.isFinite(n) ? Math.max(1, Math.min(1000, n)) : 300,
+  };
+}
+
+/** Query string for `api/logs`. */
+export function logQuery(filters) {
+  const f = logFilters(filters);
+  return new URLSearchParams({ level: f.level, category: f.category, limit: String(f.limit) }).toString();
+}
+
+/** Same selection as backend.py UILogHandler.snapshot: minimum level, category, newest `limit` rows. */
+export function filterLogs(rows, filters) {
+  const f = logFilters(filters);
+  const min = LEVEL_NUMBER[f.level];
+  const picked = rows.filter((r) => (LEVEL_NUMBER[r.level] ?? 0) >= min && (f.category === "all" || r.category === f.category));
+  return picked.slice(-f.limit);
+}
+
+/** "YYYY-MM-DD HH:MM:SS.mmm" in the viewer's time zone (or `timeZone`). */
+export function fmtLogTime(ts, timeZone) {
+  const date = new Date(Number(ts) * 1000);
+  if (Number.isNaN(date.getTime())) return NA;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  }).formatToParts(date);
+  const get = (type) => parts.find((p) => p.type === type)?.value ?? "00";
+  const ms = String(date.getUTCMilliseconds()).padStart(3, "0");
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}.${ms}`;
+}
+
+/** One row as text, the same layout as Tuo's text view and copy. */
+export function logLine(row, timeZone) {
+  return `${fmtLogTime(row.ts, timeZone)} ${String(row.level ?? "").padEnd(7)} [${row.category || "other"}] ${row.message ?? ""}`;
+}
+
+/** The text a view shows and "copy" puts on the clipboard. */
+export function logText(rows, view, timeZone) {
+  if (view === "json") return JSON.stringify(rows, null, 2);
+  return rows.map((r) => logLine(r, timeZone)).join("\n");
 }
 
 // ---- Demo data (`?demo`). Same keys as an administrator's `api/devices` response. ----
@@ -469,4 +588,48 @@ export function demoHa() {
     last_error: null,
     connected_since: DEMO_NOW - 7200,
   };
+}
+
+const DEMO_LOG_ROWS = [
+  ["INFO", "other", "backend version=0.2.11 console_level=INFO ui/file capture=DEBUG"],
+  ["INFO", "other", "MTTL UP backend TCP 0.0.0.0:10086 / Web HTTP 0.0.0.0:8080 / OTA HTTP 0.0.0.0:10080 / poll=5s"],
+  ["INFO", "ha", "mqtt connected host=192.0.2.10 port=1883"],
+  ["INFO", "connection", "connect peer=192.0.2.21"],
+  ["DEBUG", "wire", "RX 0a1b2c3d4e5f up:bootinfo:1.0.111"],
+  ["INFO", "connection", "identified 0a1b2c3d4e5f peer=192.0.2.21 session=demo-4e5f removed=False"],
+  ["INFO", "childlock", "TX childlock mac=0a1b2c3d4e5f wire=up:childlock"],
+  ["INFO", "childlock", "RX childlock mac=0a1b2c3d4e5f wire=up:childlock:4"],
+  ["INFO", "childlock", "childlock connect sync mac=0a1b2c3d4e5f result={'ok': True, 'mask': 4}"],
+  ["INFO", "connection", "connect peer=192.0.2.22"],
+  ["INFO", "connection", "identified 0a1b2c3d4e60 peer=192.0.2.22 session=demo-4e60 removed=False"],
+  ["INFO", "connection", "connect peer=192.0.2.23"],
+  ["INFO", "connection", "identified 0a1b2c3d4e61 peer=192.0.2.23 session=demo-4e61 removed=False"],
+  ["DEBUG", "wire", "TX 0a1b2c3d4e5f up:getinfo"],
+  ["DEBUG", "wire", "RX 0a1b2c3d4e5f up:getinfo:1:1:84300:31"],
+  ["DEBUG", "other", "skip periodic poll; recent GETINFO mac=0a1b2c3d4e60"],
+  ["INFO", "control", "control start tx=7 source=web mac=0a1b2c3d4e60 selector=2"],
+  ["INFO", "control", "control confirmed tx=7 mac=0a1b2c3d4e60 selector=2 observed=1"],
+  ["WARNING", "connection", "getinfo timeout mac=0a1b2c3d4e62; reconnecting to resync"],
+  ["WARNING", "connection", "invalidate session mac=0a1b2c3d4e62 id=demo-4e62 reason=getinfo timeout abort=True"],
+  ["INFO", "connection", "disconnect mac=0a1b2c3d4e62 peer=192.0.2.24"],
+  ["INFO", "ota", "firmware prepared locally pid=official-111 source=stock file=official_1.0.111.fwr sha=3f9c1e"],
+  ["INFO", "storage", "verified DB backup reason=firmware_target db_sha=9b2e41 buckets=3"],
+  ["WARNING", "control", "control busy tx=8 source=ha mac=0a1b2c3d4e5f selector=3"],
+  ["ERROR", "ha", "mqtt connection failed: [Errno 111] Connection refused"],
+  ["INFO", "ha", "mqtt connected host=192.0.2.10 port=1883"],
+  ["DEBUG", "other", "HTTP GET api/devices 200"],
+  ["INFO", "control", "physical relay event mac=0a1b2c3d4e61 selector=1 state=0"],
+];
+
+/** Sample rows for `logview.html?demo`, shaped like `api/logs` rows. */
+export function demoLogs() {
+  return DEMO_LOG_ROWS.map(([level, category, message], i) => ({
+    seq: i + 1,
+    ts: DEMO_NOW - 600 + i * 17.25,
+    level,
+    logger: "mttl",
+    category,
+    message,
+    thread: "MainThread",
+  }));
 }

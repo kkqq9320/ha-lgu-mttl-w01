@@ -13,17 +13,17 @@
   <div class="brand">
     <h1>MTTL-W01</h1>
     <span class="badge badge-demo" id="demo-badge" data-i18n="demo" hidden></span>
-    <span class="badge" id="server-badge" data-state="ok"><span class="badge-dot"></span><span data-f="text"></span></span>
+    <span class="badge" id="server-badge" data-state="idle"><span class="badge-dot"></span><span data-f="text"></span></span>
     <span class="brand-sub num"><span id="backend-version"></span><span id="online-count"></span></span>
   </div>
   <nav class="tools">
     <button class="tool tool-lock" id="lock-btn" type="button" data-state="locked">
-      <svg class="icon icon-locked" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg>
-      <svg class="icon icon-unlocked" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 7.7-1.5" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg>
+      <svg class="icon icon-locked" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="1.5" fill="currentColor"></rect></svg>
+      <svg class="icon icon-unlocked" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 7.7-1.5" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="1.5" fill="currentColor"></rect></svg>
       <span data-f="label"></span>
     </button>
     <a class="tool" href="tuo.html" data-i18n="settings"></a>
-    <a class="tool" href="logs.html" data-i18n="logs"></a>
+    <a class="tool" href="logs.html" data-demo-href="logview.html?demo" data-i18n="logs"></a>
     <label class="tool tool-select">
       <span class="sr-only" data-i18n="theme"></span>
       <select id="theme-select">
@@ -49,7 +49,7 @@
     </dl>
     <div class="sum-actions">
       <a class="action" href="tuo.html" data-i18n="open_settings"></a>
-      <a class="action" href="logs.html" data-i18n="open_logs"></a>
+      <a class="action" href="logs.html" data-demo-href="logview.html?demo" data-i18n="open_logs"></a>
     </div>
   </article>
   <article class="panel sum-card" id="sum-fw">
@@ -61,11 +61,11 @@
     </dl>
     <div class="sum-actions">
       <a class="action" href="tuo.html" data-i18n="open_settings"></a>
-      <a class="action" href="logs.html" data-i18n="open_logs"></a>
+      <a class="action" href="logs.html" data-demo-href="logview.html?demo" data-i18n="open_logs"></a>
     </div>
   </article>
   <article class="panel sum-card" id="sum-app">
-    <div class="sum-head"><h2 data-i18n="sum_app"></h2><span class="badge" data-state="info"><span class="badge-dot"></span><span data-i18n="app_badge"></span></span></div>
+    <div class="sum-head"><h2 data-i18n="sum_app"></h2></div>
     <div class="sum-body qr-body">
       <div class="qr" data-f="qr" role="img"></div>
       <p class="qr-url num" data-f="url"></p>
@@ -88,7 +88,9 @@
       <div class="name-row">
         <h2 class="name" data-f="title"></h2>
         <input class="name-input" data-f="titleInput" maxlength="64" hidden>
-        <button class="icon-btn" type="button" data-act="rename" data-f="renameBtn" data-i18n-title="rename">✎</button>
+        <button class="icon-btn" type="button" data-act="rename" data-f="renameBtn" data-i18n-title="rename" hidden>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"></path></svg>
+        </button>
       </div>
       <span class="badge" data-f="status"><span class="badge-dot"></span><span data-f="statusText"></span></span>
     </div>
@@ -112,7 +114,7 @@
     <div class="lock" data-f="lock" data-supported="yes" data-synced="yes">
       <div class="lock-line">
         <span class="lock-label">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="1.5" fill="currentColor"></rect></svg>
           <span data-i18n="lock"></span>
         </span>
         <span class="lock-state" data-f="lockState"></span>
@@ -131,10 +133,12 @@
 <template id="outlet-tpl">
   <div class="outlet" data-state="unknown">
     <div class="outlet-title">
-      <button class="icon-btn" type="button" data-act="rename-outlet" data-f="renameBtn" data-i18n-title="rename">✎</button>
       <b class="outlet-name" data-f="name"></b>
       <input class="name-input" data-f="nameInput" maxlength="64" hidden>
-      <span class="lock-mark" data-f="lockMark" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg></span>
+      <button class="icon-btn" type="button" data-act="rename-outlet" data-f="renameBtn" data-i18n-title="rename" hidden>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"></path></svg>
+      </button>
+      <span class="lock-mark" data-f="lockMark" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="1.5" fill="currentColor"></rect></svg></span>
     </div>
     <div class="readings">
       <div class="reading"><span data-i18n="power"></span><strong class="num" data-f="w"></strong></div>

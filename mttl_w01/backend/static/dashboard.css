@@ -1,73 +1,85 @@
 /*
- * Layout, palette and card styling adapted from af950833's MTTL-W01 dashboard
+ * Layout adapted from af950833's MTTL-W01 dashboard
  * (https://github.com/af950833/mttl_w01, web/index.html and web/style.css):
- * navy #14213d top bar, same-size setup cards in a row, device cards up to four
- * columns, 2x2 outlet cells with a full-width ON/OFF button.
- * Dark (default) is navy and black; [data-theme="light"] is af950833's own palette.
+ * top bar, same-size setup cards in a row, device cards up to four columns,
+ * 2x2 outlet cells with a full-width ON/OFF button.
+ * Colors are neutral with no blue cast; dark is the default, [data-theme="light"] the light theme.
+ * Shared by dashboard.html and logview.html.
  */
 
 :root {
   color-scheme: dark;
-  --bg: #04070d;
-  --surface: #0b1322;
-  --surface-2: #101b30;
-  --card-border: #1a2847;
-  --line: #1f2e4f;
-  --text: #e9eef7;
-  --muted: #97a5c2;
-  --topbar: #14213d;
-  --topbar-text: #ffffff;
-  --topbar-muted: #c3cde0;
-  --topbar-line: #ffffff4d;
-  --btn: #17264a;
-  --btn-hover: #203463;
-  --action: #22386b;
-  --action-hover: #2c4684;
-  --on-bg: #15803d;
-  --on-line: #22c55e66;
-  --ok: #4ade80;
-  --ok-soft: #22c55e24;
-  --warn: #fbbf24;
-  --warn-soft: #f59e0b24;
-  --bad: #f87171;
-  --bad-soft: #ef444424;
-  --info: #93c5fd;
-  --info-soft: #3b82f626;
-  --idle: #97a5c2;
-  --idle-soft: #94a3b81f;
-  --accent: #60a5fa;
-  --shadow: 0 8px 30px #000000a6;
+  --font: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  --bg: #111111;
+  --surface: #1b1b1b;
+  --surface-2: #232323;
+  --card-border: #2a2a2a;
+  --line: #313131;
+  --text: #eeeae0;
+  --muted: #9c988d;
+  --topbar: #0a0a0a;
+  --topbar-text: #eeeae0;
+  --topbar-muted: #9c988d;
+  --topbar-line: #363634;
+  --btn: #2a2a2a;
+  --btn-hover: #353535;
+  --action: #b9b6aa;
+  --action-hover: #cac7bc;
+  --action-text: #161616;
+  --accent: #5a6b8c;
+  --accent-text: #f4f2ec;
+  --on-bg: #4e7449;
+  --on-line: #6f956966;
+  --ok: #9dbf97;
+  --ok-soft: #9dbf971f;
+  --warn: #d8b06a;
+  --warn-soft: #d8b06a1f;
+  --bad: #de8f83;
+  --bad-soft: #de8f8324;
+  --idle: #9c988d;
+  --idle-soft: #ffffff0f;
+  --focus: #eeeae0;
   --pad: 16px;
+  --track: 0.06em;
+  --label: 11px;
+  --label-sm: 10px;
+}
+
+/* Wide tracking and tiny caps suit Latin labels; Hangul reads better untracked and a size up. */
+:root:lang(ko) {
+  --track: 0;
+  --label: 12px;
+  --label-sm: 11px;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #f3f6fa;
+  --bg: #ededeb;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --card-border: transparent;
-  --line: #e2e8f0;
-  --text: #172033;
-  --muted: #64748b;
-  --topbar-muted: #cbd5e1;
-  --topbar-line: #ffffff66;
-  --btn: #e2e8f0;
-  --btn-hover: #d5dde8;
-  --action: #14213d;
-  --action-hover: #22335c;
-  --on-line: #16a34a66;
-  --ok: #15803d;
-  --ok-soft: #dcfce7;
-  --warn: #b45309;
-  --warn-soft: #fef3c7;
-  --bad: #b91c1c;
-  --bad-soft: #fee2e2;
-  --info: #1d4ed8;
-  --info-soft: #dbeafe;
-  --idle: #64748b;
-  --idle-soft: #e2e8f0;
-  --accent: #2563eb;
-  --shadow: 0 8px 30px #14213d18;
+  --surface-2: #f6f6f4;
+  --card-border: #dedcd7;
+  --line: #e3e2de;
+  --text: #1b1b1a;
+  --muted: #6b675e;
+  --topbar: #161616;
+  --btn: #e8e7e3;
+  --btn-hover: #dcdbd6;
+  --action: #1f1f1e;
+  --action-hover: #34342f;
+  --action-text: #eeeae0;
+  --accent: #56688c;
+  --on-bg: #4e7449;
+  --on-line: #4e744966;
+  --ok: #3f6639;
+  --ok-soft: #e3ecdf;
+  --warn: #7d5516;
+  --warn-soft: #f3e9d4;
+  --bad: #9e4337;
+  --bad-soft: #f5e1dd;
+  --idle: #6b675e;
+  --idle-soft: #ecebe7;
+  --focus: #1b1b1a;
 }
 
 @media (min-width: 680px) {
@@ -93,7 +105,7 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: var(--font);
   line-height: 1.4;
   -webkit-text-size-adjust: 100%;
 }
@@ -102,11 +114,13 @@ h1,
 h2,
 p,
 dl,
-dd {
+dd,
+pre {
   margin: 0;
 }
 
 .num {
+  font-family: var(--mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -120,15 +134,30 @@ dd {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
+/* Labels: small uppercase monospace with wide tracking. */
+.kv dt,
+.reading span,
+.sum-head h2,
+.lock-label,
+.field > span,
+.check,
+.badge,
+button,
+.tool,
+.action {
+  font-family: var(--mono);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
 button {
-  font: inherit;
-  font-size: 14px;
+  font-size: 12px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 3px;
   padding: 9px;
   background: var(--btn);
   color: var(--text);
@@ -144,6 +173,20 @@ button:disabled {
   cursor: not-allowed;
 }
 
+input[type="checkbox"] {
+  accent-color: var(--action);
+}
+
+select {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--btn);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
 .icon {
   flex: none;
   width: 14px;
@@ -156,20 +199,20 @@ button:disabled {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 5px;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 999px;
+  gap: 6px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 2px;
   background: var(--idle-soft);
   color: var(--idle);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .badge-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: currentColor;
 }
@@ -189,12 +232,7 @@ button:disabled {
   color: var(--bad);
 }
 
-.badge[data-state="info"] {
-  background: var(--info-soft);
-  color: var(--info);
-}
-
-/* ---- Top bar (navy in both themes, as in af950833) ---- */
+/* ---- Top bar (near-black in both themes) ---- */
 
 .topbar {
   display: flex;
@@ -202,7 +240,8 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 12px 20px;
-  padding: 16px var(--pad);
+  padding: 14px var(--pad);
+  border-bottom: 1px solid var(--topbar-line);
   background: var(--topbar);
   color: var(--topbar-text);
 }
@@ -216,35 +255,37 @@ button:disabled {
 }
 
 .brand h1 {
-  font-size: 24px;
-  letter-spacing: 0.01em;
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
 .brand-sub {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   color: var(--topbar-muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .topbar .badge {
-  background: #ffffff1f;
+  background: #ffffff14;
   color: var(--topbar-muted);
 }
 
 .topbar .badge[data-state="ok"] {
-  background: #22c55e2e;
-  color: #86efac;
+  background: #9dbf9724;
+  color: #a9c9a3;
 }
 
 .topbar .badge[data-state="bad"] {
-  background: #ef444433;
-  color: #fca5a5;
+  background: #de8f832e;
+  color: #e6a197;
 }
 
 .topbar .badge-demo {
-  background: #fbbf24;
-  color: #1f1300;
+  background: #b9b6aa;
+  color: #161616;
 }
 
 .tools {
@@ -258,19 +299,19 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 34px;
   padding: 0 11px;
   border: 1px solid var(--topbar-line);
-  border-radius: 8px;
+  border-radius: 3px;
   background: transparent;
   color: var(--topbar-text);
-  font-size: 14px;
+  font-size: 12px;
   text-decoration: none;
 }
 
 .tool:hover,
 button.tool:hover:not(:disabled) {
-  background: #ffffff1a;
+  background: #ffffff14;
 }
 
 .tool-lock[data-state="locked"] .icon-unlocked,
@@ -278,11 +319,12 @@ button.tool:hover:not(:disabled) {
   display: none;
 }
 
+/* The one muted slate-blue highlight: controls are live. */
 .tool-lock[data-state="unlocked"],
 button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
-  border-color: #fbbf24;
-  background: #fbbf24;
-  color: #1f1300;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
 }
 
 .tool-select {
@@ -290,13 +332,13 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 }
 
 .tool-select select {
-  min-height: 34px;
-  padding: 0 6px;
+  min-height: 32px;
+  padding: 0 4px;
   border: 0;
   background: transparent;
   color: inherit;
-  font: inherit;
-  font-size: 14px;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
   cursor: pointer;
 }
 
@@ -309,25 +351,25 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   display: inline-flex;
   padding: 2px;
   border: 1px solid var(--topbar-line);
-  border-radius: 8px;
+  border-radius: 3px;
 }
 
 .seg button {
-  min-width: 38px;
-  min-height: 30px;
+  min-width: 36px;
+  min-height: 28px;
   padding: 0 8px;
+  border-radius: 2px;
   background: transparent;
   color: var(--topbar-muted);
-  font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .seg button:hover:not(:disabled) {
-  background: #ffffff1a;
+  background: #ffffff14;
 }
 
 .seg button[aria-pressed="true"] {
-  background: #ffffff2e;
+  background: #ffffff24;
   color: var(--topbar-text);
 }
 
@@ -336,7 +378,8 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 .summary,
 .devices,
 .banner,
-.empty {
+.empty,
+.log-page {
   width: min(calc(100% - 2 * var(--pad)), 1920px);
   margin-inline: auto;
 }
@@ -345,15 +388,15 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 .devices {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 18px;
+  gap: 14px;
 }
 
 .summary {
-  margin-top: 22px;
+  margin-top: 20px;
 }
 
 .devices {
-  margin-top: 18px;
+  margin-top: 14px;
   margin-bottom: 32px;
 }
 
@@ -376,15 +419,14 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--card-border);
-  border-radius: 18px;
+  border-radius: 4px;
   background: var(--surface);
-  box-shadow: var(--shadow);
 }
 
 .banner {
-  margin-top: 18px;
+  margin-top: 14px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 3px;
   font-size: 14px;
 }
 
@@ -403,11 +445,11 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   display: grid;
   align-content: start;
   gap: 4px;
-  font-size: 14px;
 }
 
 .kv > div {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
   min-height: 22px;
@@ -417,11 +459,14 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 .kv dt {
   flex: none;
   color: var(--muted);
+  font-size: var(--label);
 }
 
 .kv dd {
   overflow: hidden;
-  font-weight: 600;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -444,12 +489,13 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 26px;
+  min-height: 22px;
 }
 
 .sum-head h2 {
   overflow: hidden;
-  font-size: 17px;
+  font-size: 13px;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -469,13 +515,13 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 38px;
+  height: 36px;
   padding: 0 10px;
   overflow: hidden;
-  border-radius: 9px;
+  border-radius: 3px;
   background: var(--action);
-  color: #ffffff;
-  font-size: 14px;
+  color: var(--action-text);
+  font-size: 12px;
   font-weight: 600;
   text-decoration: none;
   text-overflow: ellipsis;
@@ -496,7 +542,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 /* A QR code needs dark modules on a light field in both themes. */
 .qr {
   display: flex;
-  border-radius: 6px;
+  border-radius: 2px;
   background: #ffffff;
   line-height: 0;
 }
@@ -508,7 +554,6 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 .qr-url {
   max-width: 100%;
   color: var(--muted);
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   font-size: 12px;
   text-align: center;
   word-break: break-all;
@@ -519,13 +564,13 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 .card {
   display: flex;
   flex-direction: column;
-  outline: 3px solid transparent;
+  outline: 2px solid transparent;
   outline-offset: 3px;
   transition: outline-color 0.3s;
 }
 
 .card.is-target {
-  outline-color: var(--accent);
+  outline-color: var(--focus);
 }
 
 .card-head {
@@ -540,36 +585,43 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 .outlet-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
 .name {
   overflow: hidden;
-  font-size: 19px;
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .icon-btn {
+  display: inline-flex;
   flex: none;
-  padding: 2px 6px;
+  align-items: center;
+  padding: 4px;
   background: transparent;
   color: var(--muted);
-  font-size: 15px;
-  line-height: 1.2;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: transparent;
+  color: var(--text);
 }
 
 .name-input {
   width: 100%;
   min-width: 0;
   padding: 3px 8px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
+  border: 1px solid var(--focus);
+  border-radius: 3px;
   background: var(--surface);
   color: var(--text);
-  font: inherit;
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: 14px;
 }
 
 .meta {
@@ -593,8 +645,9 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   height: 32px;
   margin-top: 10px;
   padding: 0 10px;
-  border-radius: 9px;
-  font-size: 13px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -605,12 +658,12 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 }
 
 .notice[data-kind="fw"] {
-  background: var(--info-soft);
+  background: var(--warn-soft);
 }
 
 .notice[data-kind="fw"] .notice-fw {
   display: block;
-  color: var(--info);
+  color: var(--warn);
   font-weight: 600;
   text-decoration: none;
 }
@@ -668,7 +721,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   min-width: 0;
   padding: 9px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 3px;
   background: var(--surface-2);
 }
 
@@ -680,13 +733,11 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   height: 24px;
 }
 
-.outlet-title .icon-btn {
-  margin-left: -4px;
-}
-
 .outlet-name {
   overflow: hidden;
-  font-size: 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -696,11 +747,11 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   flex-direction: column;
   gap: 3px;
   color: var(--muted);
-  font-size: 12px;
 }
 
 .reading {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 6px;
   white-space: nowrap;
@@ -709,6 +760,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 .reading span {
   overflow: hidden;
   min-width: 0;
+  font-size: var(--label-sm);
   text-overflow: ellipsis;
 }
 
@@ -716,20 +768,19 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   flex: none;
   color: var(--text);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .toggle {
   width: 100%;
   margin-top: auto;
   font-weight: 700;
-  letter-spacing: 0.04em;
 }
 
 .outlet[data-state="on"] .toggle,
 .outlet[data-state="on"] .toggle:hover:not(:disabled) {
   background: var(--on-bg);
-  color: #ffffff;
+  color: #f4f2ec;
 }
 
 .outlet[data-busy="yes"] .toggle {
@@ -743,7 +794,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   color: var(--warn);
 }
 
-/* ---- Button lock (firmware 1.0.111): two lines, same height on every card ---- */
+/* ---- Button lock (firmware 1.0.111): two lines of the same width, same height on every card ---- */
 
 .lock {
   margin-top: 12px;
@@ -761,7 +812,6 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   justify-content: space-between;
   gap: 8px;
   height: 20px;
-  font-size: 13px;
 }
 
 .lock-label {
@@ -769,27 +819,29 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   align-items: center;
   gap: 6px;
   color: var(--muted);
+  font-size: var(--label);
 }
 
 .lock-state {
   overflow: hidden;
   color: var(--warn);
+  font-family: var(--mono);
+  font-size: 12px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Spans line 1 exactly: from the lock icon to the end of the status slot. */
 .lock-bits {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
   margin-top: 8px;
 }
 
 .lock-bits button {
-  min-width: 42px;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 6px 0;
   font-weight: 600;
 }
 
@@ -799,15 +851,153 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   box-shadow: inset 0 0 0 1px currentColor;
 }
 
+/* ---- Log page (logview.html) ---- */
+
+.log-page {
+  margin-top: 20px;
+  margin-bottom: 32px;
+}
+
+.log-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.log-head h2 {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
+.log-note {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.log-clear {
+  flex: none;
+  white-space: nowrap;
+}
+
+.log-clear[data-state="armed"],
+.log-clear[data-state="armed"]:hover:not(:disabled) {
+  background: var(--bad-soft);
+  color: var(--bad);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  margin: 14px 0;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+
+.field > span {
+  color: var(--muted);
+  font-size: var(--label-sm);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  color: var(--muted);
+  font-size: var(--label);
+}
+
+.log-filters button {
+  min-height: 30px;
+  padding: 6px 10px;
+}
+
+.log-status {
+  margin-left: auto;
+  align-self: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.log-rows {
+  display: grid;
+  gap: 2px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: 180px 64px 92px minmax(0, 1fr);
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 2px;
+  background: var(--surface-2);
+}
+
+.log-time,
+.log-cat {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-level {
+  font-weight: 600;
+}
+
+.log-row[data-level="DEBUG"] {
+  color: var(--muted);
+}
+
+.log-row[data-level="WARNING"] .log-level,
+.log-row[data-level="WARNING"] .log-msg {
+  color: var(--warn);
+}
+
+.log-row[data-level="ERROR"] .log-level,
+.log-row[data-level="ERROR"] .log-msg {
+  color: var(--bad);
+}
+
+.log-msg {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.log-pre {
+  overflow: auto;
+  padding: 10px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.log-empty {
+  padding: 18px 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 /* ---- Phones ---- */
 
 @media (max-width: 679px) {
   .topbar {
     padding-block: 12px;
-  }
-
-  .brand h1 {
-    font-size: 21px;
   }
 
   .tools {
@@ -818,5 +1008,18 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   .notice[data-kind="none"],
   .lock[data-supported="no"] {
     display: none;
+  }
+
+  .log-row {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .log-msg {
+    grid-column: 1 / -1;
+  }
+
+  .log-status {
+    width: 100%;
+    margin-left: 0;
   }
 }
