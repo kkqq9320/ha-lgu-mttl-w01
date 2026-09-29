@@ -1,42 +1,22 @@
 // Page wiring for dashboard.html. Values reach the page only through textContent,
 // attributes and data-* states; see dashboard-core.mjs for the logic.
 import {
-  NA, t, pickLang, resolveTheme, normalizeMac, fmtMac,
+  NA, t, normalizeMac, fmtMac,
   cardModel, summaryModel, apkUrl, apkUrlForHost, demoResponse, demoHa,
 } from "./dashboard-core.mjs";
+import { page, applyTheme, applyStrings, initPage, useDemoLinks } from "./page.mjs";
 import { encodeQr } from "./qr.mjs";
 
-const THEME_KEY = "mttl.theme";
-const LANG_KEY = "mttl.lang";
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
-function storageGet(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function storageSet(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // Storage can be blocked inside the HA frame; the choice then lasts for this page only.
-  }
-}
-
-const savedTheme = storageGet(THEME_KEY);
 const state = {
   source: null,
   resp: null,
   ha: null,
   stale: false, // the last load failed; the real API source sets this
   unlocked: false, // every page load starts locked; never stored
-  lang: pickLang(storageGet(LANG_KEY), navigator.language),
-  theme: ["auto", "dark", "light"].includes(savedTheme) ? savedTheme : "auto",
   busy: new Set(), // "<mac>" for the whole card, "<mac>:<n>" for one outlet, "<mac>:lock"
   editing: null, // "<mac>" or "<mac>:<n>" while a name field is open
   cancelEdit: null,
@@ -88,42 +68,6 @@ function createDemoSource() {
       device(mac).childlock_mask = mask;
     },
   };
-}
-
-// ---- Theme and language ----
-
-function haDarkMode() {
-  try {
-    if (window.parent === window) return undefined;
-    const dark = window.parent.document.querySelector("home-assistant")?.hass?.themes?.darkMode;
-    return typeof dark === "boolean" ? dark : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-const lightQuery = window.matchMedia("(prefers-color-scheme: light)");
-
-function applyTheme() {
-  document.documentElement.dataset.theme = resolveTheme(state.theme, haDarkMode(), lightQuery.matches);
-  $("#theme-select").value = state.theme;
-}
-
-function applyStrings(root = document) {
-  for (const el of root.querySelectorAll("[data-i18n]")) el.textContent = t(state.lang, el.dataset.i18n);
-  for (const el of root.querySelectorAll("[data-i18n-title]")) {
-    const label = t(state.lang, el.dataset.i18nTitle);
-    el.title = label;
-    el.setAttribute("aria-label", label);
-  }
-}
-
-function applyLang() {
-  document.documentElement.lang = state.lang;
-  for (const b of document.querySelectorAll("[data-lang]")) b.setAttribute("aria-pressed", String(b.dataset.lang === state.lang));
-  $("#lang-group").setAttribute("aria-label", t(state.lang, "language"));
-  $("#theme-select").closest("label").title = t(state.lang, "theme");
-  applyStrings();
 }
 
 // ---- Small DOM helpers that only write when the value changed ----
@@ -222,7 +166,7 @@ function createCard(mac) {
 
 function updateCard(card, m, raw) {
   const { f, root } = card;
-  const lang = state.lang;
+  const lang = page.lang;
   const cardBusy = state.busy.has(m.mac);
 
   setData(root, "online", m.online ? "on" : "off");
@@ -288,7 +232,7 @@ function renderCards() {
   const list = $("#devices");
   const resp = state.resp;
   const devices = Array.isArray(resp?.devices) ? resp.devices : [];
-  const opts = { authenticated: resp?.authenticated === true, unlocked: state.unlocked, lang: state.lang };
+  const opts = { authenticated: resp?.authenticated === true, unlocked: state.unlocked, lang: page.lang };
   const seen = new Set();
   let prev = null;
   for (const raw of devices) {
@@ -318,7 +262,7 @@ const MQTT_BADGE = { connected: "ok", disconnected: "bad", off: "idle", unknown:
 
 function renderHeader() {
   const s = summaryModel(state.resp, state.ha);
-  const lang = state.lang;
+  const lang = page.lang;
 
   const server = $("#server-badge");
   const serverState = state.stale ? "bad" : state.resp === null ? "idle" : "ok";
@@ -384,7 +328,7 @@ async function refresh() {
 
 function showError(err) {
   const el = $("#action-error");
-  el.textContent = t(state.lang, "action_failed", { msg: err?.message ?? String(err) });
+  el.textContent = t(page.lang, "action_failed", { msg: err?.message ?? String(err) });
   el.hidden = false;
   clearTimeout(showError.timer);
   showError.timer = setTimeout(() => {
@@ -428,7 +372,7 @@ function onDeviceClick(event) {
     const on = outletEl.dataset.state !== "on";
     // Show the requested state at once; the next load confirms or corrects it.
     setData(outletEl, "state", on ? "on" : "off");
-    setText(btn, t(state.lang, on ? "on" : "off"));
+    setText(btn, t(page.lang, on ? "on" : "off"));
     run(`${mac}:${n}`, () => state.source.power(mac, n, on));
   } else if (act === "lock") {
     const mask = currentMask(card.raw);
@@ -518,27 +462,9 @@ function init() {
   const params = new URLSearchParams(location.search);
   state.source = params.has("demo") ? createDemoSource() : null;
   $("#demo-badge").hidden = !state.source?.demo;
-  if (state.source?.demo) {
-    // A static preview has no backend routes; stay inside the demo pages.
-    for (const a of document.querySelectorAll("[data-demo-href]")) a.setAttribute("href", a.dataset.demoHref);
-  }
+  if (state.source?.demo) useDemoLinks();
 
-  applyTheme();
-  applyLang();
-  lightQuery.addEventListener("change", applyTheme);
-  $("#theme-select").addEventListener("change", (e) => {
-    state.theme = e.target.value;
-    storageSet(THEME_KEY, state.theme);
-    applyTheme();
-  });
-  $("#lang-group").addEventListener("click", (e) => {
-    const lang = e.target.closest("[data-lang]")?.dataset.lang;
-    if (!lang || lang === state.lang) return;
-    state.lang = lang;
-    storageSet(LANG_KEY, lang);
-    applyLang();
-    render();
-  });
+  initPage({ onLangChange: render });
   $("#lock-btn").addEventListener("pointerdown", cancelEditBeforeLock);
   $("#lock-btn").addEventListener("click", toggleScreenLock);
   $("#devices").addEventListener("click", onDeviceClick);

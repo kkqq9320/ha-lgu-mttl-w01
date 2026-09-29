@@ -1,33 +1,13 @@
 // Page wiring for logview.html, the backend log. Rows reach the page only through textContent;
 // filtering and formatting live in dashboard-core.mjs.
-import {
-  t, pickLang, resolveTheme, logFilters, filterLogs, fmtLogTime, logText, demoLogs,
-} from "./dashboard-core.mjs";
+import { t, logFilters, filterLogs, fmtLogTime, logText, demoLogs } from "./dashboard-core.mjs";
+import { page, applyTheme, initPage, useDemoLinks } from "./page.mjs";
 
-const THEME_KEY = "mttl.theme";
-const LANG_KEY = "mttl.lang";
 const AUTO_MS = 2000;
 const DEMO_BUFFER = 5000;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
-function storageGet(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function storageSet(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // Storage can be blocked inside the HA frame; the choice then lasts for this page only.
-  }
-}
-
-const savedTheme = storageGet(THEME_KEY);
 const state = {
   source: null,
   rows: [],
@@ -36,8 +16,6 @@ const state = {
   stale: false,
   loading: false,
   status: null, // {key, vars} so a language switch can redraw it
-  lang: pickLang(storageGet(LANG_KEY), navigator.language),
-  theme: ["auto", "dark", "light"].includes(savedTheme) ? savedTheme : "auto",
   timer: null,
   clearTimer: null,
   copyTimer: null,
@@ -74,38 +52,6 @@ function createDemoLogSource() {
       add("INFO", "other", "web log buffer cleared by administrator");
     },
   };
-}
-
-// ---- Theme and language (same rules as the dashboard) ----
-
-function haDarkMode() {
-  try {
-    if (window.parent === window) return undefined;
-    const dark = window.parent.document.querySelector("home-assistant")?.hass?.themes?.darkMode;
-    return typeof dark === "boolean" ? dark : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-const lightQuery = window.matchMedia("(prefers-color-scheme: light)");
-
-function applyTheme() {
-  document.documentElement.dataset.theme = resolveTheme(state.theme, haDarkMode(), lightQuery.matches);
-  $("#theme-select").value = state.theme;
-}
-
-function applyStrings(root = document) {
-  for (const el of root.querySelectorAll("[data-i18n]")) el.textContent = t(state.lang, el.dataset.i18n);
-}
-
-function applyLang() {
-  document.documentElement.lang = state.lang;
-  for (const b of document.querySelectorAll("[data-lang]")) b.setAttribute("aria-pressed", String(b.dataset.lang === state.lang));
-  $("#lang-group").setAttribute("aria-label", t(state.lang, "language"));
-  $("#theme-select").closest("label").title = t(state.lang, "theme");
-  applyStrings();
-  disarmClear();
 }
 
 function setText(el, value) {
@@ -161,9 +107,9 @@ function renderHeader() {
   const server = $("#server-badge");
   const serverState = state.stale ? "bad" : state.loaded ? "ok" : "idle";
   if (server.dataset.state !== serverState) server.dataset.state = serverState;
-  setText($("[data-f=text]", server), t(state.lang, { ok: "server_online", bad: "server_offline", idle: "server_checking" }[serverState]));
-  setText($("#backend-version"), state.version ? t(state.lang, "backend", { v: state.version }) : "");
-  setText($("#log-status"), state.status ? t(state.lang, state.status.key, state.status.vars) : "");
+  setText($("[data-f=text]", server), t(page.lang, { ok: "server_online", bad: "server_offline", idle: "server_checking" }[serverState]));
+  setText($("#backend-version"), state.version ? t(page.lang, "backend", { v: state.version }) : "");
+  setText($("#log-status"), state.status ? t(page.lang, state.status.key, state.status.vars) : "");
 }
 
 function nearBottom() {
@@ -234,6 +180,7 @@ async function load() {
   } finally {
     state.loading = false;
   }
+  applyTheme(); // HA's dark mode may have changed since the last load.
   render(anchor);
 }
 
@@ -280,10 +227,10 @@ async function copyLogs() {
     return;
   }
   const btn = $("#log-copy");
-  btn.textContent = t(state.lang, "log_copied", { n: state.rows.length });
+  btn.textContent = t(page.lang, "log_copied", { n: state.rows.length });
   clearTimeout(state.copyTimer);
   state.copyTimer = setTimeout(() => {
-    btn.textContent = t(state.lang, "log_copy");
+    btn.textContent = t(page.lang, "log_copy");
   }, 1400);
 }
 
@@ -291,7 +238,7 @@ function disarmClear() {
   const btn = $("#log-clear");
   clearTimeout(state.clearTimer);
   btn.dataset.state = "idle";
-  btn.textContent = t(state.lang, "log_clear");
+  btn.textContent = t(page.lang, "log_clear");
 }
 
 // Clearing needs a second press within 4 seconds instead of a browser confirm() dialog.
@@ -300,7 +247,7 @@ async function onClear() {
   if (!state.source) return;
   if (btn.dataset.state !== "armed") {
     btn.dataset.state = "armed";
-    btn.textContent = t(state.lang, "log_clear_confirm");
+    btn.textContent = t(page.lang, "log_clear_confirm");
     clearTimeout(state.clearTimer);
     state.clearTimer = setTimeout(disarmClear, 4000);
     return;
@@ -322,26 +269,13 @@ function init() {
   const params = new URLSearchParams(location.search);
   state.source = params.has("demo") ? createDemoLogSource() : null;
   $("#demo-badge").hidden = !state.source?.demo;
-  if (state.source?.demo) {
-    // A static preview has no backend routes; stay inside the demo pages.
-    for (const a of document.querySelectorAll("[data-demo-href]")) a.setAttribute("href", a.dataset.demoHref);
-  }
+  if (state.source?.demo) useDemoLinks();
 
-  applyTheme();
-  applyLang();
-  lightQuery.addEventListener("change", applyTheme);
-  $("#theme-select").addEventListener("change", (e) => {
-    state.theme = e.target.value;
-    storageSet(THEME_KEY, state.theme);
-    applyTheme();
-  });
-  $("#lang-group").addEventListener("click", (e) => {
-    const lang = e.target.closest("[data-lang]")?.dataset.lang;
-    if (!lang || lang === state.lang) return;
-    state.lang = lang;
-    storageSet(LANG_KEY, lang);
-    applyLang();
-    renderHeader();
+  initPage({
+    onLangChange: () => {
+      disarmClear();
+      renderHeader();
+    },
   });
   for (const id of ["#log-level", "#log-category", "#log-limit"]) $(id).addEventListener("change", load);
   $("#log-view").addEventListener("change", () => render());
