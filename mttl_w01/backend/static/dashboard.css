@@ -3,9 +3,9 @@
  * (https://github.com/af950833/mttl_w01, web/index.html and web/style.css):
  * top bar, same-size setup cards in a row, device cards up to four columns,
  * 2x2 outlet cells with a full-width ON/OFF button.
- * Colors come from one four-color palette (#27374D #526D82 #9DB2BF #DDE6ED); extra shades are
- * mixes within it. Dark is the default, [data-theme="light"] the light theme. Every color is a
- * custom property, so another palette only has to redefine them.
+ * Neutrals have no blue cast in either theme: black and charcoal (dark, the default) or light
+ * grays and white ([data-theme="light"]). The one hue is the slate accent (#536284 family) for
+ * selected states and outlets that are on. Every color is a custom property.
  * Shared by dashboard.html and logview.html.
  */
 
@@ -17,46 +17,49 @@
     "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
   --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, "Roboto Mono", "DejaVu Sans Mono", ui-monospace,
     "Apple SD Gothic Neo", "Malgun Gothic", monospace;
-  --bg: #1d293a; /* #27374D toward black: the page behind the cards */
-  --surface: #27374d; /* cards */
-  --surface-2: #304258; /* outlet cells: #27374D + 20% #526D82 */
-  --card-border: #364a60;
-  --line: #34475d;
-  --text: #dde6ed;
-  --muted: #9db2bf;
-  --topbar: #151e2a;
-  --topbar-text: #dde6ed;
-  --topbar-muted: #9db2bf;
-  --topbar-line: #2e4057;
+  --bg: #050505;
+  --surface: #111111; /* cards: a deep black, set off from the page by the border */
+  --surface-2: #161616; /* outlet cells */
+  --card-border: #2c2c2c;
+  --line: #2b2b2b;
+  --text: #eeeae0;
+  --muted: #9c988d;
+  --topbar: #0d0d0d;
+  --topbar-text: #eeeae0;
+  --topbar-muted: #9c988d;
+  --topbar-line: #363634;
   --hover-tint: #ffffff14;
-  --btn: #3a4f65;
-  --btn-hover: #435a72;
-  /* Primary and selected states, outlets that are on. On dark the palette's light tone reads as
-     the accent (the light theme uses #526D82). */
-  --accent: #9db2bf;
-  --accent-hover: #b0c2cd;
-  --accent-text: #27374d;
-  --accent-line: #9db2bf; /* rings and icons on dark */
-  --accent-soft: #526d8266; /* firmware update banner */
-  --accent-soft-text: #dde6ed;
-  --action-bg: #dde6ed; /* summary card buttons */
-  --action-hover: #eef3f7;
-  --action-text: #27374d;
-  --on-line: #9db2bf73; /* border of an outlet that is on */
-  --demo-bg: #9db2bf;
-  --demo-text: #27374d;
-  --ok: #6fcf8a;
-  --ok-soft: #4caf6a2e;
+  --btn: #222222;
+  --btn-hover: #2d2d2d;
+  /* Slate accent (#536284 family) for selected states and outlets that are on. This step is light
+     enough to keep a 3:1 fill contrast between an ON and an OFF outlet button. */
+  --accent: #5a6b8f;
+  --accent-hover: #4b5a79;
+  --accent-text: #f4f2ec;
+  --accent-line: #8594b8; /* the same slate for rings and icons on dark */
+  --accent-soft: #8594b82e; /* firmware update banner */
+  --accent-soft-text: #b9c4de;
+  --action-bg: #eeeae0; /* summary card buttons: off-white on dark */
+  --action-hover: #ffffff;
+  --action-text: #161616;
+  --on-bg: var(--accent); /* ON outlet button: filled */
+  --on-text: var(--accent-text);
+  --on-line: #8594b873; /* border of an outlet cell that is on */
+  --off-line: #5c5c58; /* OFF outlet button: outlined */
+  --demo-bg: #b1b1a7;
+  --demo-text: #161616;
+  --ok: #72c77e;
+  --ok-soft: #3aa14f2e;
   --warn: #f2b01e;
   --warn-soft: #f2b01e24;
-  --bad: #ff9a90;
-  --bad-soft: #ff8f8421;
-  --idle: #9db2bf;
-  --idle-soft: #9db2bf1f;
-  --topbar-ok: #8ee0a4; /* the top bar is dark in both themes */
-  --topbar-ok-bg: #4caf6a33;
-  --topbar-bad: #ffb1a9;
-  --topbar-bad-bg: #ff8f8433;
+  --bad: #f06b5f;
+  --bad-soft: #f06b5f26;
+  --idle: #9c988d;
+  --idle-soft: #ffffff0f;
+  --topbar-ok: #86d692; /* the top bar is dark in both themes */
+  --topbar-ok-bg: #3aa14f33;
+  --topbar-bad: #f59a90;
+  --topbar-bad-bg: #f06b5f33;
   --pad: 16px;
   --track: 0.06em;
   --label: 11px;
@@ -82,39 +85,35 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #dde6ed;
-  --surface: #f7f9fb;
-  --surface-2: #ebf0f4;
-  --card-border: #c4d1db;
-  --line: #cdd9e2;
-  --text: #27374d;
-  --muted: #4a6275; /* #526D82 a step darker for 4.5:1 on the page */
-  --topbar: #27374d;
-  --topbar-text: #dde6ed;
-  --topbar-muted: #9db2bf;
-  --topbar-line: #3a4d66;
-  --btn: #dde6ed;
-  --btn-hover: #cfdbe4;
-  --accent: #526d82;
-  --accent-hover: #475f73;
+  --bg: #ededeb;
+  --surface: #ffffff;
+  --surface-2: #f6f6f4;
+  --card-border: #dedcd7;
+  --line: #e3e2de;
+  --text: #1b1b1a;
+  --muted: #6b675e;
+  --topbar: #161616;
+  --btn: #e8e7e3;
+  --btn-hover: #dcdbd6;
+  --accent: #536284;
+  --accent-hover: #45536f;
   --accent-text: #ffffff;
-  --accent-line: #526d82;
-  --accent-soft: #d3dee6;
-  --accent-soft-text: #27374d;
-  --action-bg: #27374d; /* the same role inverted: dark buttons on light cards */
-  --action-hover: #33465f;
-  --action-text: #dde6ed;
-  --on-line: #526d8266;
-  --demo-bg: #9db2bf;
-  --demo-text: #27374d;
+  --accent-line: #536284;
+  --accent-soft: #e3e7f0;
+  --accent-soft-text: #3f4b66;
+  --action-bg: #1f1f1e; /* summary card buttons: the same role inverted, near-black on light */
+  --action-hover: #34342f;
+  --action-text: #eeeae0;
+  --on-line: #53628473;
+  --off-line: #9f9c93;
   --ok: #1a6e2e;
   --ok-soft: #dcefdf;
   --warn: #8a5a00;
   --warn-soft: #fcefc7;
   --bad: #b3261e;
   --bad-soft: #fbe3e0;
-  --idle: #4a6275;
-  --idle-soft: #e3eaf0;
+  --idle: #6b675e;
+  --idle-soft: #ecebe7;
 }
 
 @media (min-width: 680px) {
@@ -772,8 +771,28 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   margin: 12px 0;
 }
 
+/* Offline: the last received states are shown, but never as a lit or clickable button. */
 .card[data-online="off"] .outlets {
-  opacity: 0.7;
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+
+.card[data-online="off"] .outlet,
+.card[data-online="off"] .outlet[data-state="on"] {
+  border-style: dashed;
+  border-color: var(--line);
+}
+
+.card[data-online="off"] .toggle,
+.card[data-online="off"] .outlet[data-state="on"] .toggle {
+  border-style: dashed;
+  border-color: var(--off-line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.card[data-online="off"] .stats dd {
+  color: var(--muted);
 }
 
 /* A locked screen is a view mode: keep states readable, just not clickable. */
@@ -847,16 +866,24 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   font-weight: 500;
 }
 
+/* OFF: outlined; ON: filled; offline: dashed and dimmed (see below). */
 .toggle {
   width: 100%;
   margin-top: auto;
+  border: 1px solid var(--off-line);
+  background: transparent;
   font-weight: 700;
+}
+
+.toggle:hover:not(:disabled) {
+  background: var(--hover-tint);
 }
 
 .outlet[data-state="on"] .toggle,
 .outlet[data-state="on"] .toggle:hover:not(:disabled) {
-  background: var(--accent);
-  color: var(--accent-text);
+  border-color: var(--on-bg);
+  background: var(--on-bg);
+  color: var(--on-text);
 }
 
 .outlet[data-busy="yes"] .toggle {
