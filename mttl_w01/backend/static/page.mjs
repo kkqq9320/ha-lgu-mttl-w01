@@ -1,7 +1,7 @@
 // Theme, language and demo-link wiring shared by dashboard.html and logview.html.
 // The decisions (pickLang, resolveTheme, t) live in dashboard-core.mjs; this module only
 // reads and writes the browser state and the page's top-bar controls.
-import { t, pickLang, resolveTheme } from "./dashboard-core.mjs";
+import { t, pickLang, resolveTheme, scriptLang } from "./dashboard-core.mjs";
 
 const THEME_KEY = "mttl.theme";
 const LANG_KEY = "mttl.lang";
@@ -50,9 +50,20 @@ export function applyTheme() {
   if (select) select.value = page.theme;
 }
 
+/**
+ * Writes text only when it changed and marks the element's language by the text's script,
+ * so tracking and font follow the text itself: the same English looks the same in EN and KR.
+ */
+export function setText(el, value) {
+  const text = String(value ?? "");
+  if (el.textContent !== text) el.textContent = text;
+  const lang = scriptLang(text);
+  if (el.lang !== lang) el.lang = lang;
+}
+
 /** Static labels: `data-i18n` sets the text, `data-i18n-title` the tooltip and accessible name. */
 export function applyStrings(root = document) {
-  for (const el of root.querySelectorAll("[data-i18n]")) el.textContent = t(page.lang, el.dataset.i18n);
+  for (const el of root.querySelectorAll("[data-i18n]")) setText(el, t(page.lang, el.dataset.i18n));
   for (const el of root.querySelectorAll("[data-i18n-title]")) {
     const label = t(page.lang, el.dataset.i18nTitle);
     el.title = label;

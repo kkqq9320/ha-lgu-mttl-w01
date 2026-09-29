@@ -61,6 +61,10 @@ export const STRINGS = {
     on: "ON",
     off: "OFF",
     rename: "Rename",
+    hide_device: "Hide device",
+    hide_confirm: "Confirm hide",
+    hide_hint: "Removes the device from the dashboard and Home Assistant. Restore it in Settings.",
+    hide_note: "Restore it later in Settings",
     lock: "Button lock",
     lock_all: "All",
     lock_pending: "Waiting for sync",
@@ -104,8 +108,6 @@ export const STRINGS = {
     log_empty: "No log rows for this filter.",
   },
   ko: {
-    unlock_hint: "조작 버튼이 잠겨 있습니다. 해제하면 켜고 끄기와 이름 바꾸기를 할 수 있습니다.",
-    relock_hint: "조작할 수 있습니다. 잠그면 실수로 누르는 것을 막습니다.",
     sum_mqtt: "Home Assistant MQTT",
     mqtt_connected: "Connected",
     mqtt_disconnected: "Disconnected",
@@ -144,6 +146,10 @@ export const STRINGS = {
     on: "ON",
     off: "OFF",
     rename: "이름 바꾸기",
+    hide_device: "숨기기",
+    hide_confirm: "숨기기 확인",
+    hide_hint: "대시보드와 Home Assistant에서 빠집니다. 설정 화면에서 되살릴 수 있습니다.",
+    hide_note: "설정 화면에서 되살릴 수 있음",
     lock: "버튼 잠금",
     lock_all: "전체",
     lock_pending: "동기화 대기",
@@ -188,13 +194,32 @@ export const STRINGS = {
 export const ENGLISH_ONLY = [
   "demo", "server_online", "server_offline", "server_checking", "backend", "online_count",
   "unlock", "relock", "settings", "logs", "theme", "theme_auto", "theme_dark", "theme_light",
-  "language", "log_back", "fw_update", "fw_downgrade", "fw_reflash",
+  "language", "log_back", "unlock_hint", "relock_hint", "fw_update", "fw_downgrade", "fw_reflash",
 ];
 for (const key of ENGLISH_ONLY) STRINGS.ko[key] = STRINGS.en[key];
 
 export function t(lang, key, vars = {}) {
   const text = STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key;
   return text.replace(/\{(\w+)\}/g, (whole, name) => (name in vars ? String(vars[name]) : whole));
+}
+
+const HANGUL = /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/;
+
+/**
+ * Language of a rendered string by its script: "ko" when it has Hangul, else "en".
+ * Pages set it as the element's lang so the same English looks the same in EN and KR.
+ */
+export function scriptLang(text) {
+  return HANGUL.test(String(text ?? "")) ? "ko" : "en";
+}
+
+/**
+ * Two-press confirm: the first press arms, a second press within `windowMs` confirms.
+ * `armedAt` is the time of the arming press or null. Returns the next state.
+ */
+export function pressConfirm(armedAt, now, windowMs = 4000) {
+  if (armedAt !== null && now - armedAt <= windowMs) return { armedAt: null, confirmed: true };
+  return { armedAt: now, confirmed: false };
 }
 
 export function pickLang(saved, navigatorLanguage) {

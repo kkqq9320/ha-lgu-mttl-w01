@@ -9,7 +9,7 @@
 <script type="module" src="dashboard.mjs"></script>
 </head>
 <body>
-<header class="topbar">
+<header class="topbar" lang="en">
   <div class="brand">
     <h1>MTTL-W01</h1>
     <span class="badge badge-demo" id="demo-badge" data-i18n="demo" hidden></span>
@@ -122,13 +122,17 @@
         </span>
         <span class="lock-state" data-f="lockState"></span>
       </div>
-      <div class="lock-bits">
+      <div class="lock-bits" lang="en">
         <button type="button" data-act="lock" data-bit="0" data-i18n="lock_all"></button>
         <button type="button" data-act="lock" data-bit="1">1</button>
         <button type="button" data-act="lock" data-bit="2">2</button>
         <button type="button" data-act="lock" data-bit="3">3</button>
         <button type="button" data-act="lock" data-bit="4">4</button>
       </div>
+    </div>
+    <div class="card-tools">
+      <span class="tools-note" data-f="hideNote"></span>
+      <button class="hide-btn" type="button" data-act="hide" data-f="hideBtn"></button>
     </div>
   </article>
 </template>

@@ -7,7 +7,10 @@ const {
   STRINGS, t, pickLang, resolveTheme, normalizeMac,
   fmtWatts, fmtKwh, fmtTemp, fmtVolt, fmtRssi,
   cardModel, demoResponse, demoHa, summaryModel, fmtMac, apkUrl, apkUrlForHost, ENGLISH_ONLY,
+  pressConfirm, scriptLang,
 } = core;
+
+const staticFile = (name) => readFileSync(new URL(`../../mttl_w01/backend/static/${name}`, import.meta.url), "utf-8");
 
 const fixture = JSON.parse(
   readFileSync(new URL("../fixtures/api_devices_guest.json", import.meta.url), "utf-8"),
@@ -45,22 +48,53 @@ test("KR keeps awkward technical terms in English", () => {
   assert.equal(t("ko", "all_on"), "전체 켜기");
 });
 
-test("top bar and firmware banner read the same in EN and KR", () => {
-  const topBar = [
-    "demo", "server_online", "server_offline", "server_checking", "backend", "online_count",
-    "unlock", "relock", "settings", "logs", "theme", "theme_auto", "theme_dark", "theme_light",
-    "language", "log_back",
-  ];
-  const banner = ["fw_update", "fw_downgrade", "fw_reflash"];
-  for (const key of [...topBar, ...banner]) {
+test("top bar text is English in both languages (keys read from the pages)", () => {
+  const keys = new Set();
+  for (const page of ["dashboard.html", "logview.html"]) {
+    const header = staticFile(page).match(/<header class="topbar"[\s\S]*?<\/header>/)[0];
+    for (const m of header.matchAll(/data-i18n(?:-title)?="([^"]+)"/g)) keys.add(m[1]);
+  }
+  for (const mod of ["dashboard.mjs", "logview.mjs"]) {
+    const body = staticFile(mod).match(/\nfunction renderTopbar\(\) \{[\s\S]*?\n\}\n/)[0];
+    for (const m of body.matchAll(/"([a-z_]+)"/g)) if (m[1] in STRINGS.en) keys.add(m[1]);
+  }
+  for (const must of ["settings", "logs", "log_back", "server_online", "online_count", "unlock_hint", "relock_hint"]) {
+    assert.ok(keys.has(must), `scan found ${must}`);
+  }
+  for (const key of keys) {
     assert.ok(ENGLISH_ONLY.includes(key), key);
-    assert.ok(key in STRINGS.en, key);
+    assert.equal(STRINGS.ko[key], STRINGS.en[key], key);
+  }
+});
+
+test("firmware banner reads the same in EN and KR", () => {
+  for (const key of ["fw_update", "fw_downgrade", "fw_reflash"]) {
+    assert.ok(ENGLISH_ONLY.includes(key), key);
     assert.equal(STRINGS.ko[key], STRINGS.en[key], key);
   }
   assert.equal(t("ko", "fw_update", { v: "1.0.111" }), "Firmware update → 1.0.111");
-  assert.equal(t("ko", "online_count", { n: 3, total: 4 }), "3/4 devices online");
-  // Card text outside the top bar stays Korean.
+  // Card text outside the top bar and the banner stays Korean.
   assert.equal(t("ko", "open_settings"), "설정 열기");
+  assert.equal(t("ko", "hide_device"), "숨기기");
+  assert.equal(t("en", "hide_device"), "Hide device");
+});
+
+test("scriptLang marks text by script so English renders the same in both languages", () => {
+  for (const text of ["BROKER", "Server online", "N/A", "Firmware update → 1.0.111", "0.0 W", "", "TV"]) {
+    assert.equal(scriptLang(text), "en", text);
+  }
+  for (const text of ["전력", "콘센트 3", "Offline · 마지막으로 받은 값", "ㄱ"]) {
+    assert.equal(scriptLang(text), "ko", text);
+  }
+});
+
+test("pressConfirm needs a second press within the window", () => {
+  const first = pressConfirm(null, 1000);
+  assert.deepEqual(first, { armedAt: 1000, confirmed: false });
+  assert.deepEqual(pressConfirm(first.armedAt, 4500), { armedAt: null, confirmed: true });
+  // Too late: the second press arms again instead of confirming.
+  assert.deepEqual(pressConfirm(first.armedAt, 5001), { armedAt: 5001, confirmed: false });
+  assert.deepEqual(pressConfirm(1000, 1500, 400), { armedAt: 1500, confirmed: false });
 });
 
 test("pickLang prefers saved, then browser", () => {
@@ -178,6 +212,8 @@ test("cardModel locked view disables controls", () => {
   assert.equal(open.editable, true);
   const offline = demoResponse().devices.find((d) => !d.online);
   const offlineOpen = cardModel(offline, { authenticated: true, unlocked: true, lang: "en" });
+  // Rename and hide follow the screen lock, not the device being online.
+  assert.equal(offlineOpen.editable, true);
   assert.equal(offlineOpen.controls, false);
   assert.equal(offlineOpen.editable, true);
   // Missing option means locked.

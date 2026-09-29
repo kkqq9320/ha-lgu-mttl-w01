@@ -9,8 +9,12 @@
 
 :root {
   color-scheme: dark;
-  --font: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --mono: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  /* Named Latin families come first so Latin glyphs do not depend on the page language
+     (generic families such as system-ui resolve per language); Hangul falls through. */
+  --font: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, system-ui,
+    "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, "Roboto Mono", "DejaVu Sans Mono", ui-monospace,
+    "Apple SD Gothic Neo", "Malgun Gothic", monospace;
   --bg: #111111;
   --surface: #1b1b1b;
   --surface-2: #232323;
@@ -29,8 +33,12 @@
   --accent-text: #f4f2ec;
   --accent-line: #8594b8; /* the same slate, light enough for rings and icons on dark */
   --greige: #b1b1a7;
-  --on-bg: #2f7a3c;
-  --on-line: #3f9a4f80;
+  --on-line: #8594b873; /* border of an outlet that is on (accent) */
+  --accent-soft: #8594b82e; /* light slate tint: firmware update banner */
+  --accent-soft-text: #b9c4de;
+  --action-bg: #eeeae0; /* summary card buttons: off-white on dark */
+  --action-hover: #ffffff;
+  --action-text: #161616;
   --ok: #72c77e;
   --ok-soft: #3aa14f2e;
   --warn: #f2b01e;
@@ -45,8 +53,18 @@
   --label-sm: 10px;
 }
 
-/* Wide tracking and tiny caps suit Latin labels; Hangul reads better untracked and a size up. */
-:root:lang(ko) {
+/*
+ * Tracking and label size follow each element's language, which page.mjs sets from the text's
+ * script: wide caps for Latin, untracked and a size up for Hangul. The same English therefore
+ * looks the same in EN and KR.
+ */
+:lang(en) {
+  --track: 0.06em;
+  --label: 11px;
+  --label-sm: 10px;
+}
+
+:lang(ko) {
   --track: 0;
   --label: 12px;
   --label-sm: 11px;
@@ -67,8 +85,13 @@
   --accent-hover: #45536f;
   --accent-text: #ffffff;
   --accent-line: #536284;
-  --on-line: #2f7a3c66;
-  --ok: #1f7a34;
+  --on-line: #53628466;
+  --accent-soft: #e3e7f0;
+  --accent-soft-text: #3f4b66;
+  --action-bg: #1f1f1e; /* the same role inverted: near-black on light */
+  --action-hover: #34342f;
+  --action-text: #eeeae0;
+  --ok: #1a6e2e;
   --ok-soft: #dcefdf;
   --warn: #8a5a00;
   --warn-soft: #fcefc7;
@@ -148,6 +171,12 @@ button,
   font-family: var(--mono);
   letter-spacing: var(--track);
   text-transform: uppercase;
+}
+
+/* A child marked with its own lang (page.mjs setText) re-reads the tracking for its script;
+   letter-spacing would otherwise inherit the parent's computed value. */
+:is(.kv dt, .reading span, .sum-head h2, .lock-label, .field > span, .check, .badge, button, .tool, .action) [lang] {
+  letter-spacing: var(--track);
 }
 
 button {
@@ -231,7 +260,6 @@ select {
 /* ---- Top bar (near-black in both themes) ---- */
 
 .topbar {
-  --track: 0.06em; /* the top bar is English in both languages */
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -532,8 +560,8 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   padding: 0 10px;
   overflow: hidden;
   border-radius: 3px;
-  background: var(--accent);
-  color: var(--accent-text);
+  background: var(--action-bg);
+  color: var(--action-text);
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
@@ -542,7 +570,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 }
 
 .action:hover {
-  background: var(--accent-hover);
+  background: var(--action-hover);
 }
 
 .qr-body {
@@ -569,7 +597,10 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   color: var(--muted);
   font-size: 12px;
   text-align: center;
-  word-break: break-all;
+}
+
+.qr-url span {
+  white-space: nowrap; /* the address wraps only at the <wbr> after each slash */
 }
 
 /* ---- Device card: every row has a fixed place so cards line up ---- */
@@ -672,7 +703,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 
 .notice[data-kind="fw"] {
   padding: 0;
-  background: var(--warn-soft);
+  background: var(--accent-soft);
 }
 
 /* The whole slot is the link: text on the left, a chevron at the right edge. */
@@ -683,7 +714,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   gap: 8px;
   align-self: stretch;
   padding: 0 10px;
-  color: var(--warn);
+  color: var(--accent-soft-text);
   font-weight: 600;
   text-decoration: none;
 }
@@ -748,7 +779,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-  padding: 9px;
+  padding: 8px;
   border: 1px solid var(--line);
   border-radius: 3px;
   background: var(--surface-2);
@@ -782,7 +813,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
+  gap: 4px;
   white-space: nowrap;
 }
 
@@ -796,7 +827,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 .reading strong {
   flex: none;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -808,8 +839,8 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 
 .outlet[data-state="on"] .toggle,
 .outlet[data-state="on"] .toggle:hover:not(:disabled) {
-  background: var(--on-bg);
-  color: #f4f2ec;
+  background: var(--accent);
+  color: var(--accent-text);
 }
 
 .outlet[data-busy="yes"] .toggle {
@@ -878,6 +909,47 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 .lock-bits button[aria-pressed="true"]:hover:not(:disabled) {
   background: var(--accent);
   color: var(--accent-text);
+}
+
+/* ---- Bottom row: hide the device (Tuo's hide; restore in Settings) ---- */
+
+.card-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.tools-note {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Fixed width: "Confirm hide" must not move anything when it replaces "Hide device". */
+.hide-btn {
+  flex: none;
+  width: 132px;
+  padding: 7px 8px;
+  background: var(--bad-soft);
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.hide-btn:hover:not(:disabled) {
+  background: var(--bad-soft);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.hide-btn[data-state="armed"],
+.hide-btn[data-state="armed"]:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 2px currentColor;
 }
 
 /* ---- Log page (logview.html) ---- */

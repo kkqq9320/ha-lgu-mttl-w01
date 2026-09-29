@@ -1,13 +1,14 @@
 // Page wiring for dashboard.html. Values reach the page only through textContent,
 // attributes and data-* states; see dashboard-core.mjs for the logic.
 import {
-  NA, t, normalizeMac, fmtMac,
+  NA, t, normalizeMac, fmtMac, pressConfirm, scriptLang,
   cardModel, summaryModel, apkUrl, apkUrlForHost, demoResponse, demoHa,
 } from "./dashboard-core.mjs";
-import { page, applyTheme, applyStrings, initPage, useDemoLinks } from "./page.mjs";
+import { page, applyTheme, applyStrings, initPage, setText, useDemoLinks } from "./page.mjs";
 import { encodeQr } from "./qr.mjs";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const HIDE_CONFIRM_MS = 4000;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -21,6 +22,7 @@ const state = {
   editing: null, // "<mac>" or "<mac>:<n>" while a name field is open
   cancelEdit: null,
   qrUrl: null,
+  hideArmed: new Map(), // mac -> {at, timer} after the first press of "Hide device"
 };
 
 // ---- Data sources ----
@@ -67,14 +69,15 @@ function createDemoSource() {
     async lock(mac, mask) {
       device(mac).childlock_mask = mask;
     },
+    async hide(mac) {
+      const d = device(mac);
+      data.devices = data.devices.filter((x) => x !== d);
+      data.removed.push({ ...d, removed: true, removed_at: Date.now() / 1000 });
+    },
   };
 }
 
 // ---- Small DOM helpers that only write when the value changed ----
-
-function setText(el, value) {
-  if (el.textContent !== value) el.textContent = value;
-}
 
 function setData(el, name, value) {
   if (el.dataset[name] !== value) el.dataset[name] = value;
@@ -209,6 +212,13 @@ function updateCard(card, m, raw) {
     setAttr(b, "title", t(lang, "lock_bit", { name }));
   });
 
+  const hideArmed = state.hideArmed.has(m.mac);
+  setData(f.hideBtn, "state", hideArmed ? "armed" : "idle");
+  setText(f.hideBtn, t(lang, hideArmed ? "hide_confirm" : "hide_device"));
+  setAttr(f.hideBtn, "title", t(lang, "hide_hint"));
+  setDisabled(f.hideBtn, !m.editable || cardBusy);
+  setText(f.hideNote, hideArmed ? t(lang, "hide_note") : "");
+
   m.outlets.forEach((o, i) => {
     const key = `${m.mac}:${o.n}`;
     const { root: el, f: of } = card.outlets[i];
@@ -253,6 +263,7 @@ function renderCards() {
     if (!seen.has(mac)) {
       card.root.remove();
       cards.delete(mac);
+      disarmHide(mac);
     }
   }
   setHidden($("#empty"), resp === null || seen.size > 0);
@@ -260,7 +271,7 @@ function renderCards() {
 
 const MQTT_BADGE = { connected: "ok", disconnected: "bad", off: "idle", unknown: "idle" };
 
-function renderHeader() {
+function renderTopbar() {
   const s = summaryModel(state.resp, state.ha);
   const lang = page.lang;
 
@@ -275,6 +286,26 @@ function renderHeader() {
   setData(lockBtn, "state", state.unlocked ? "unlocked" : "locked");
   setAttr(lockBtn, "aria-pressed", String(state.unlocked));
   setAttr(lockBtn, "title", t(lang, state.unlocked ? "relock_hint" : "unlock_hint"));
+}
+
+/** Text with a line-break opportunity after every slash, so a long address wraps between its parts. */
+function setUrlText(el, url) {
+  if (el.dataset.url === url) return;
+  el.dataset.url = url;
+  const parts = url.split(/(?<=\/)/);
+  el.replaceChildren();
+  parts.forEach((part, i) => {
+    if (i > 0) el.append(document.createElement("wbr"));
+    const span = document.createElement("span"); // no-wrap: breaks only at the <wbr>, not at "-"
+    span.textContent = part;
+    el.append(span);
+  });
+  el.lang = scriptLang(url);
+}
+
+function renderSummary() {
+  const s = summaryModel(state.resp, state.ha);
+  const lang = page.lang;
 
   const mqtt = fieldMap($("#sum-mqtt"));
   setData(mqtt.badge, "state", MQTT_BADGE[s.mqtt]);
@@ -299,7 +330,7 @@ function renderHeader() {
     : state.source?.demo
       ? apkUrlForHost(state.resp.firmware, location.hostname)
       : apkUrl(state.resp.firmware, location);
-  setText(app.url, url);
+  setUrlText(app.url, url);
   setAttr(app.qr, "aria-label", url ? t(lang, "qr_label", { url }) : "");
   if (url !== state.qrUrl) {
     state.qrUrl = url;
@@ -309,7 +340,8 @@ function renderHeader() {
 }
 
 function render() {
-  renderHeader();
+  renderTopbar();
+  renderSummary();
   renderCards();
 }
 
@@ -327,7 +359,7 @@ async function refresh() {
 
 function showError(err) {
   const el = $("#action-error");
-  el.textContent = t(page.lang, "action_failed", { msg: err?.message ?? String(err) });
+  setText(el, t(page.lang, "action_failed", { msg: err?.message ?? String(err) }));
   el.hidden = false;
   clearTimeout(showError.timer);
   showError.timer = setTimeout(() => {
@@ -379,6 +411,8 @@ function onDeviceClick(event) {
     const bit = Number(btn.dataset.bit);
     const next = mask & (1 << bit) ? mask & ~(1 << bit) : mask | (1 << bit);
     run(`${mac}:lock`, () => state.source.lock(mac, next));
+  } else if (act === "hide") {
+    pressHide(mac);
   } else if (act === "rename") {
     startEdit(mac, card.f.title, card.f.titleInput, card.raw?.alias ?? "", (v) => state.source.rename(mac, v));
   } else if (act === "rename-outlet") {
@@ -422,9 +456,34 @@ function startEdit(key, label, input, current, save) {
   state.cancelEdit = () => finish(false);
 }
 
+function disarmHide(mac) {
+  clearTimeout(state.hideArmed.get(mac)?.timer);
+  state.hideArmed.delete(mac);
+}
+
+// Hiding needs a second press within HIDE_CONFIRM_MS; the label says what the second press does.
+function pressHide(mac) {
+  const armed = state.hideArmed.get(mac);
+  const next = pressConfirm(armed?.at ?? null, Date.now(), HIDE_CONFIRM_MS);
+  disarmHide(mac);
+  if (next.confirmed) {
+    run(mac, () => state.source.hide(mac));
+    return;
+  }
+  const timer = setTimeout(() => {
+    state.hideArmed.delete(mac);
+    render();
+  }, HIDE_CONFIRM_MS);
+  state.hideArmed.set(mac, { at: next.armedAt, timer });
+  render();
+}
+
 function toggleScreenLock() {
   state.unlocked = !state.unlocked;
-  if (!state.unlocked) state.cancelEdit?.();
+  if (!state.unlocked) {
+    state.cancelEdit?.();
+    for (const mac of [...state.hideArmed.keys()]) disarmHide(mac);
+  }
   render();
 }
 

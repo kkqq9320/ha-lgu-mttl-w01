@@ -1,10 +1,11 @@
 // Page wiring for logview.html, the backend log. Rows reach the page only through textContent;
 // filtering and formatting live in dashboard-core.mjs.
-import { t, logFilters, filterLogs, fmtLogTime, logText, logRowKey, demoLogs } from "./dashboard-core.mjs";
-import { page, applyTheme, initPage, useDemoLinks } from "./page.mjs";
+import { t, logFilters, filterLogs, fmtLogTime, logText, logRowKey, pressConfirm, demoLogs } from "./dashboard-core.mjs";
+import { page, applyTheme, initPage, setText, useDemoLinks } from "./page.mjs";
 
 const AUTO_MS = 2000;
 const DEMO_BUFFER = 5000;
+const CLEAR_CONFIRM_MS = 4000;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -17,6 +18,7 @@ const state = {
   loading: false,
   status: null, // {key, vars} so a language switch can redraw it
   timer: null,
+  clearArmedAt: null, // time of the first "Clear buffer" press, see pressConfirm
   clearTimer: null,
   copyTimer: null,
 };
@@ -54,10 +56,6 @@ function createDemoLogSource() {
   };
 }
 
-function setText(el, value) {
-  if (el.textContent !== value) el.textContent = value;
-}
-
 function setHidden(el, hidden) {
   if (el.hidden !== hidden) el.hidden = hidden;
 }
@@ -71,10 +69,10 @@ function createRow(r) {
   el.dataset.level = String(r.level ?? "");
   const f = {};
   for (const x of el.querySelectorAll("[data-f]")) f[x.dataset.f] = x;
-  f.time.textContent = fmtLogTime(r.ts);
-  f.level.textContent = String(r.level ?? "");
-  f.cat.textContent = String(r.category || "other");
-  f.msg.textContent = String(r.message ?? "");
+  setText(f.time, fmtLogTime(r.ts));
+  setText(f.level, r.level ?? "");
+  setText(f.cat, r.category || "other");
+  setText(f.msg, r.message ?? "");
   return el;
 }
 
@@ -103,13 +101,21 @@ function renderRows() {
   }
 }
 
-function renderHeader() {
+function renderTopbar() {
   const server = $("#server-badge");
   const serverState = state.stale ? "bad" : state.loaded ? "ok" : "idle";
   if (server.dataset.state !== serverState) server.dataset.state = serverState;
   setText($("[data-f=text]", server), t(page.lang, { ok: "server_online", bad: "server_offline", idle: "server_checking" }[serverState]));
   setText($("#backend-version"), state.version ? t(page.lang, "backend", { v: state.version }) : "");
+}
+
+function renderStatus() {
   setText($("#log-status"), state.status ? t(page.lang, state.status.key, state.status.vars) : "");
+}
+
+function renderChrome() {
+  renderTopbar();
+  renderStatus();
 }
 
 function nearBottom() {
@@ -144,7 +150,7 @@ function render(anchor = captureAnchor()) {
   setHidden($("#log-empty"), !(view === "compact" && state.loaded && state.rows.length === 0));
   if (view === "compact") renderRows();
   else setText($(`#log-${view}`), logText(state.rows, view));
-  renderHeader();
+  renderChrome();
   restoreAnchor(anchor);
 }
 
@@ -223,33 +229,36 @@ async function copyLogs() {
   }
   if (!ok) {
     state.status = { key: "log_copy_failed", vars: {} };
-    renderHeader();
+    renderChrome();
     return;
   }
   const btn = $("#log-copy");
-  btn.textContent = t(page.lang, "log_copied", { n: state.rows.length });
+  setText(btn, t(page.lang, "log_copied", { n: state.rows.length }));
   clearTimeout(state.copyTimer);
   state.copyTimer = setTimeout(() => {
-    btn.textContent = t(page.lang, "log_copy");
+    setText(btn, t(page.lang, "log_copy"));
   }, 1400);
 }
 
 function disarmClear() {
   const btn = $("#log-clear");
   clearTimeout(state.clearTimer);
+  state.clearArmedAt = null;
   btn.dataset.state = "idle";
-  btn.textContent = t(page.lang, "log_clear");
+  setText(btn, t(page.lang, "log_clear"));
 }
 
-// Clearing needs a second press within 4 seconds instead of a browser confirm() dialog.
+// Clearing needs a second press within CLEAR_CONFIRM_MS instead of a browser confirm() dialog.
 async function onClear() {
   const btn = $("#log-clear");
   if (!state.source) return;
-  if (btn.dataset.state !== "armed") {
-    btn.dataset.state = "armed";
-    btn.textContent = t(page.lang, "log_clear_confirm");
+  const next = pressConfirm(state.clearArmedAt, Date.now(), CLEAR_CONFIRM_MS);
+  if (!next.confirmed) {
     clearTimeout(state.clearTimer);
-    state.clearTimer = setTimeout(disarmClear, 4000);
+    state.clearArmedAt = next.armedAt;
+    btn.dataset.state = "armed";
+    setText(btn, t(page.lang, "log_clear_confirm"));
+    state.clearTimer = setTimeout(disarmClear, CLEAR_CONFIRM_MS);
     return;
   }
   disarmClear();
@@ -257,7 +266,7 @@ async function onClear() {
     await state.source.clear();
   } catch (err) {
     state.status = { key: "log_error", vars: { msg: err?.message ?? String(err) } };
-    renderHeader();
+    renderChrome();
     return;
   }
   await load();
@@ -274,7 +283,7 @@ function init() {
   initPage({
     onLangChange: () => {
       disarmClear();
-      renderHeader();
+      renderChrome();
     },
   });
   for (const id of ["#log-level", "#log-category", "#log-limit"]) $(id).addEventListener("change", load);
@@ -284,7 +293,7 @@ function init() {
   $("#log-copy").addEventListener("click", copyLogs);
   $("#log-clear").addEventListener("click", onClear);
 
-  renderHeader();
+  renderChrome();
   load();
   setAuto();
 }
