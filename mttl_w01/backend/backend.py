@@ -1156,7 +1156,7 @@ class Web(BaseHTTPRequestHandler):
   if len(b)!=n:raise ValueError('incomplete request body')
   return b
  def _headers(self,ctype,length,extra=None,cache='no-store'):
-  self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(length));self.send_header('Cache-Control',cache);self.send_header('X-Content-Type-Options','nosniff');self.send_header('X-Frame-Options','DENY');self.send_header('Referrer-Policy','no-referrer')
+  self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(length));self.send_header('Cache-Control',cache);self.send_header('X-Content-Type-Options','nosniff');self.send_header('X-Frame-Options','SAMEORIGIN');self.send_header('Referrer-Policy','no-referrer')
   for k,v in extra or []:self.send_header(k,v)
  def send_json(self,obj,status=200,extra=None):
   b=json.dumps(obj,ensure_ascii=False,separators=(',',':')).encode();self.send_response(status);self._headers('application/json; charset=utf-8',len(b),extra);self.end_headers();self.wfile.write(b)
