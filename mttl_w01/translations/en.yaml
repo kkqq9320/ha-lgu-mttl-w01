@@ -1,0 +1,11 @@
+configuration:
+  host_ip:
+    name: Host IP address
+    description: IPv4 address of this Home Assistant machine on the LAN, the address the power strip connects to. Leave empty to detect it automatically from the primary network interface.
+  log_level:
+    name: Log level
+    description: Verbosity of the backend log. Use DEBUG only while troubleshooting.
+network:
+  10086/tcp: Power strip connection (fixed in firmware)
+  8080/tcp: Web UI and API
+  10080/tcp: Firmware update (OTA) for 1.0.111

@@ -1,0 +1,31 @@
+name: LG U+ Multitap (MTTL-W01)
+version: "0.2.11-1"
+slug: mttl_w01
+url: https://github.com/kkqq9320/ha-lgu-mttl-w01
+description: Local backend for the LG U+ MTTL-W01 power strip (based on Tuo standalone 0.2.11)
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+ports:
+  10086/tcp: 10086
+  8080/tcp: 18282
+  10080/tcp: 49217
+ports_description:
+  10086/tcp: Power strip connection (fixed in firmware)
+  8080/tcp: Web UI and API
+  10080/tcp: Firmware update (OTA) for 1.0.111
+ingress: true
+ingress_port: 8080
+panel_title: MTTL-W01
+panel_icon: mdi:power-socket-de
+hassio_api: true
+watchdog: http://[HOST]:[PORT:8080]/api/health
+services:
+  - mqtt:want
+options:
+  log_level: INFO
+schema:
+  host_ip: match(^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$)?
+  log_level: list(DEBUG|INFO|WARNING|ERROR)

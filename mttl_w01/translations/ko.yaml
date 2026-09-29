@@ -1,0 +1,11 @@
+configuration:
+  host_ip:
+    name: 호스트 IP 주소
+    description: 멀티탭이 접속할 이 Home Assistant 기기의 LAN IPv4 주소. 비워 두면 기본 네트워크 인터페이스에서 자동으로 감지한다.
+  log_level:
+    name: 로그 수준
+    description: 백엔드 로그의 상세 정도. DEBUG는 문제를 조사할 때만 사용한다.
+network:
+  10086/tcp: 멀티탭 접속 (펌웨어 고정)
+  8080/tcp: 웹 화면과 API
+  10080/tcp: 1.0.111 펌웨어 교체(OTA)
