@@ -12,11 +12,16 @@
 <header class="topbar">
   <div class="brand">
     <h1>MTTL-W01</h1>
-    <span class="demo-badge" id="demo-badge" data-i18n="demo" hidden></span>
-    <p class="brand-sub num"><span id="backend-version"></span><span id="online-count"></span></p>
+    <span class="badge badge-demo" id="demo-badge" data-i18n="demo" hidden></span>
+    <span class="badge" id="server-badge" data-state="ok"><span class="badge-dot"></span><span data-f="text"></span></span>
+    <span class="brand-sub num"><span id="backend-version"></span><span id="online-count"></span></span>
   </div>
   <nav class="tools">
-    <button class="tool" id="auth-btn" type="button"></button>
+    <button class="tool tool-lock" id="lock-btn" type="button" data-state="locked">
+      <svg class="icon icon-locked" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg>
+      <svg class="icon icon-unlocked" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 7.7-1.5" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg>
+      <span data-f="label"></span>
+    </button>
     <a class="tool" href="tuo.html" data-i18n="settings"></a>
     <a class="tool" href="logs.html" data-i18n="logs"></a>
     <label class="tool tool-select">
@@ -34,57 +39,84 @@
   </nav>
 </header>
 
-<section class="grid summary">
-  <article class="panel sum-card" id="sum-mqtt" data-state="login">
-    <h2 data-i18n="sum_mqtt"></h2>
-    <p class="sum-value"><span class="dot"></span><span data-f="value"></span></p>
+<section class="summary">
+  <article class="panel sum-card" id="sum-mqtt">
+    <div class="sum-head"><h2 data-i18n="sum_mqtt"></h2><span class="badge" data-f="badge"><span class="badge-dot"></span><span data-f="badgeText"></span></span></div>
+    <dl class="kv sum-body">
+      <div><dt data-i18n="mqtt_broker"></dt><dd class="num" data-f="broker"></dd></div>
+      <div><dt data-i18n="mqtt_topic"></dt><dd data-f="topic"></dd></div>
+      <div><dt data-i18n="mqtt_discovery"></dt><dd data-f="discovery"></dd></div>
+    </dl>
+    <div class="sum-actions">
+      <a class="action" href="tuo.html" data-i18n="open_settings"></a>
+      <a class="action" href="logs.html" data-i18n="open_logs"></a>
+    </div>
   </article>
-  <article class="panel sum-card" id="sum-fw" data-state="login">
-    <h2 data-i18n="sum_fw"></h2>
-    <p class="sum-value num"><span class="dot"></span><span data-f="value"></span></p>
-    <p class="sum-sub" data-f="sub"></p>
+  <article class="panel sum-card" id="sum-fw">
+    <div class="sum-head"><h2 data-i18n="sum_fw"></h2><span class="badge" data-f="badge"><span class="badge-dot"></span><span data-f="badgeText"></span></span></div>
+    <dl class="kv sum-body">
+      <div><dt data-i18n="fw_target_label"></dt><dd class="num" data-f="target"></dd></div>
+      <div><dt data-i18n="fw_pending_label"></dt><dd class="num" data-f="pending"></dd></div>
+      <div><dt data-i18n="fw_ota_host"></dt><dd class="num" data-f="otaHost"></dd></div>
+    </dl>
+    <div class="sum-actions">
+      <a class="action" href="tuo.html" data-i18n="open_settings"></a>
+      <a class="action" href="logs.html" data-i18n="open_logs"></a>
+    </div>
+  </article>
+  <article class="panel sum-card" id="sum-app">
+    <div class="sum-head"><h2 data-i18n="sum_app"></h2><span class="badge" data-state="info"><span class="badge-dot"></span><span data-i18n="app_badge"></span></span></div>
+    <div class="sum-body qr-body">
+      <div class="qr" data-f="qr" role="img"></div>
+      <p class="qr-url num" data-f="url"></p>
+    </div>
+    <div class="sum-actions">
+      <a class="action" href="provision-android.apk" download data-i18n="apk_download"></a>
+      <a class="action" href="provision.zip" download data-i18n="pc_download"></a>
+    </div>
   </article>
 </section>
 
-<p class="banner" id="guest-banner" data-i18n="guest_note" hidden></p>
 <p class="banner banner-bad" id="action-error" role="alert" hidden></p>
 
-<main class="grid devices" id="devices"></main>
+<main class="devices" id="devices"></main>
 <p class="empty" id="empty" data-i18n="empty" hidden></p>
 
 <template id="card-tpl">
   <article class="panel card" data-online="on">
     <div class="card-head">
-      <div class="heading">
-        <div class="name-row">
-          <h2 class="name" data-f="title"></h2>
-          <input class="name-input" data-f="titleInput" maxlength="64" hidden>
-          <button class="icon-btn" type="button" data-act="rename" data-f="renameBtn" data-i18n-title="rename">✎</button>
-        </div>
-        <p class="meta num"><span data-f="mac"></span> · FW <span data-f="fw"></span></p>
-        <p class="meta num" data-f="ip"></p>
+      <div class="name-row">
+        <h2 class="name" data-f="title"></h2>
+        <input class="name-input" data-f="titleInput" maxlength="64" hidden>
+        <button class="icon-btn" type="button" data-act="rename" data-f="renameBtn" data-i18n-title="rename">✎</button>
       </div>
-      <span class="status"><span class="dot"></span><span data-f="status"></span></span>
+      <span class="badge" data-f="status"><span class="badge-dot"></span><span data-f="statusText"></span></span>
     </div>
-    <a class="fw-update" data-f="fwUpdate" href="tuo.html" hidden></a>
-    <dl class="stats">
+    <p class="meta num"><span data-f="mac"></span> · FW <span data-f="fw"></span></p>
+    <p class="meta num" data-f="ip"></p>
+    <div class="notice" data-f="notice" data-kind="none">
+      <a class="notice-fw" data-f="fwUpdate" href="tuo.html"></a>
+      <span class="notice-offline" data-i18n="offline_note"></span>
+    </div>
+    <dl class="kv stats">
       <div><dt data-i18n="total_power"></dt><dd class="num" data-f="totalW"></dd></div>
       <div><dt data-i18n="total_energy"></dt><dd class="num" data-f="totalKwh"></dd></div>
-      <div data-f="voltageRow" hidden><dt data-i18n="voltage"></dt><dd class="num" data-f="voltage"></dd></div>
-      <div data-f="rssiRow" hidden><dt data-i18n="rssi"></dt><dd class="num" data-f="rssi"></dd></div>
+      <div><dt data-i18n="voltage"></dt><dd class="num" data-f="voltage"></dd></div>
+      <div><dt data-i18n="rssi"></dt><dd class="num" data-f="rssi"></dd></div>
     </dl>
-    <p class="note" data-f="note" data-i18n="offline_note" hidden></p>
     <div class="bulk">
       <button type="button" data-act="all" data-on="1" data-f="allOn" data-i18n="all_on"></button>
       <button type="button" data-act="all" data-on="0" data-f="allOff" data-i18n="all_off"></button>
     </div>
     <div class="outlets" data-f="outlets"></div>
-    <div class="lock" data-f="lock" data-synced="yes" hidden>
-      <span class="lock-label">
-        <svg class="lock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg>
-        <span data-i18n="lock"></span>
+    <div class="lock" data-f="lock" data-supported="yes" data-synced="yes">
+      <div class="lock-line">
+        <span class="lock-label">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg>
+          <span data-i18n="lock"></span>
+        </span>
         <span class="lock-state" data-f="lockState"></span>
-      </span>
+      </div>
       <div class="lock-bits">
         <button type="button" data-act="lock" data-bit="0" data-i18n="lock_all"></button>
         <button type="button" data-act="lock" data-bit="1">1</button>
@@ -102,7 +134,7 @@
       <button class="icon-btn" type="button" data-act="rename-outlet" data-f="renameBtn" data-i18n-title="rename">✎</button>
       <b class="outlet-name" data-f="name"></b>
       <input class="name-input" data-f="nameInput" maxlength="64" hidden>
-      <span class="lock-mark" data-f="lockMark" hidden><svg class="lock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg></span>
+      <span class="lock-mark" data-f="lockMark" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"></rect></svg></span>
     </div>
     <div class="readings">
       <div class="reading"><span data-i18n="power"></span><strong class="num" data-f="w"></strong></div>
@@ -112,18 +144,5 @@
     <button class="toggle num" type="button" data-act="power" data-f="toggle"></button>
   </div>
 </template>
-
-<dialog class="panel login" id="login-dialog">
-  <form id="login-form">
-    <h2 data-i18n="login_title"></h2>
-    <p class="muted" id="login-demo-note" data-i18n="login_demo_note" hidden></p>
-    <label class="field"><span data-i18n="password"></span><input type="password" name="password" autocomplete="current-password" required></label>
-    <p class="login-error" id="login-error" hidden></p>
-    <div class="dialog-actions">
-      <button type="button" id="login-cancel" data-i18n="cancel"></button>
-      <button type="submit" class="primary" data-i18n="login"></button>
-    </div>
-  </form>
-</dialog>
 </body>
 </html>

@@ -1,35 +1,42 @@
 /*
- * Layout and card styling adapted from af950833's MTTL-W01 dashboard
+ * Layout, palette and card styling adapted from af950833's MTTL-W01 dashboard
  * (https://github.com/af950833/mttl_w01, web/index.html and web/style.css):
- * navy top bar, card grid up to four columns, 2x2 outlet cells with a full-width
- * ON/OFF button. Colors are theme tokens; dark is the default.
+ * navy #14213d top bar, same-size setup cards in a row, device cards up to four
+ * columns, 2x2 outlet cells with a full-width ON/OFF button.
+ * Dark (default) is navy and black; [data-theme="light"] is af950833's own palette.
  */
 
 :root {
   color-scheme: dark;
-  --bg: #0e1522;
-  --surface: #162033;
-  --surface-2: #1b2840;
-  --line: #2a3a55;
-  --text: #e6edf7;
-  --muted: #95a4b9;
-  --topbar: #0b1322;
-  --topbar-text: #f1f5f9;
-  --topbar-muted: #a9b6c8;
-  --topbar-line: #ffffff33;
-  --btn: #26365a;
-  --btn-hover: #2f4169;
-  --on-bg: #22c55e;
-  --on-fg: #052e14;
-  --on-line: #22c55e73;
+  --bg: #04070d;
+  --surface: #0b1322;
+  --surface-2: #101b30;
+  --card-border: #1a2847;
+  --line: #1f2e4f;
+  --text: #e9eef7;
+  --muted: #97a5c2;
+  --topbar: #14213d;
+  --topbar-text: #ffffff;
+  --topbar-muted: #c3cde0;
+  --topbar-line: #ffffff4d;
+  --btn: #17264a;
+  --btn-hover: #203463;
+  --action: #22386b;
+  --action-hover: #2c4684;
+  --on-bg: #15803d;
+  --on-line: #22c55e66;
   --ok: #4ade80;
+  --ok-soft: #22c55e24;
   --warn: #fbbf24;
-  --warn-soft: #fbbf2424;
+  --warn-soft: #f59e0b24;
   --bad: #f87171;
-  --bad-soft: #f8717122;
+  --bad-soft: #ef444424;
+  --info: #93c5fd;
+  --info-soft: #3b82f626;
+  --idle: #97a5c2;
+  --idle-soft: #94a3b81f;
   --accent: #60a5fa;
-  --accent-soft: #60a5fa22;
-  --shadow: 0 8px 30px #00000059;
+  --shadow: 0 8px 30px #000000a6;
   --pad: 16px;
 }
 
@@ -38,56 +45,29 @@
   --bg: #f3f6fa;
   --surface: #ffffff;
   --surface-2: #f8fafc;
+  --card-border: transparent;
   --line: #e2e8f0;
   --text: #172033;
   --muted: #64748b;
-  --topbar: #14213d;
-  --topbar-text: #ffffff;
   --topbar-muted: #cbd5e1;
   --topbar-line: #ffffff66;
   --btn: #e2e8f0;
-  --btn-hover: #d4dce8;
-  --on-bg: #16a34a;
-  --on-fg: #ffffff;
+  --btn-hover: #d5dde8;
+  --action: #14213d;
+  --action-hover: #22335c;
   --on-line: #16a34a66;
-  --ok: #16a34a;
+  --ok: #15803d;
+  --ok-soft: #dcfce7;
   --warn: #b45309;
   --warn-soft: #fef3c7;
   --bad: #b91c1c;
   --bad-soft: #fee2e2;
+  --info: #1d4ed8;
+  --info-soft: #dbeafe;
+  --idle: #64748b;
+  --idle-soft: #e2e8f0;
   --accent: #2563eb;
-  --accent-soft: #dbeafe;
   --shadow: 0 8px 30px #14213d18;
-}
-
-/* Before dashboard.mjs sets data-theme, follow the device setting. */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme]) {
-    color-scheme: light;
-    --bg: #f3f6fa;
-    --surface: #ffffff;
-    --surface-2: #f8fafc;
-    --line: #e2e8f0;
-    --text: #172033;
-    --muted: #64748b;
-    --topbar: #14213d;
-    --topbar-text: #ffffff;
-    --topbar-muted: #cbd5e1;
-    --topbar-line: #ffffff66;
-    --btn: #e2e8f0;
-    --btn-hover: #d4dce8;
-    --on-bg: #16a34a;
-    --on-fg: #ffffff;
-    --on-line: #16a34a66;
-    --ok: #16a34a;
-    --warn: #b45309;
-    --warn-soft: #fef3c7;
-    --bad: #b91c1c;
-    --bad-soft: #fee2e2;
-    --accent: #2563eb;
-    --accent-soft: #dbeafe;
-    --shadow: 0 8px 30px #14213d18;
-  }
 }
 
 @media (min-width: 680px) {
@@ -164,7 +144,57 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* ---- Top bar ---- */
+.icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+/* ---- Badges ---- */
+
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--idle-soft);
+  color: var(--idle);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge[data-state="ok"] {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.badge[data-state="warn"] {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.badge[data-state="bad"] {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.badge[data-state="info"] {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+/* ---- Top bar (navy in both themes, as in af950833) ---- */
 
 .topbar {
   display: flex;
@@ -180,8 +210,8 @@ button:disabled {
 .brand {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
+  align-items: center;
+  gap: 6px 12px;
   min-width: 0;
 }
 
@@ -197,14 +227,24 @@ button:disabled {
   font-size: 13px;
 }
 
-.demo-badge {
-  align-self: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--warn);
+.topbar .badge {
+  background: #ffffff1f;
+  color: var(--topbar-muted);
+}
+
+.topbar .badge[data-state="ok"] {
+  background: #22c55e2e;
+  color: #86efac;
+}
+
+.topbar .badge[data-state="bad"] {
+  background: #ef444433;
+  color: #fca5a5;
+}
+
+.topbar .badge-demo {
+  background: #fbbf24;
   color: #1f1300;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .tools {
@@ -217,6 +257,7 @@ button:disabled {
 .tool {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   min-height: 36px;
   padding: 0 11px;
   border: 1px solid var(--topbar-line);
@@ -230,6 +271,18 @@ button:disabled {
 .tool:hover,
 button.tool:hover:not(:disabled) {
   background: #ffffff1a;
+}
+
+.tool-lock[data-state="locked"] .icon-unlocked,
+.tool-lock[data-state="unlocked"] .icon-locked {
+  display: none;
+}
+
+.tool-lock[data-state="unlocked"],
+button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
+  border-color: #fbbf24;
+  background: #fbbf24;
+  color: #1f1300;
 }
 
 .tool-select {
@@ -278,31 +331,21 @@ button.tool:hover:not(:disabled) {
   color: var(--topbar-text);
 }
 
-/* ---- Page blocks: summary row, banners, device grid ---- */
+/* ---- Page blocks ---- */
 
-.grid,
+.summary,
+.devices,
 .banner,
 .empty {
   width: min(calc(100% - 2 * var(--pad)), 1920px);
   margin-inline: auto;
 }
 
-.grid {
+.summary,
+.devices {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 18px;
-}
-
-@media (min-width: 680px) {
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1024px) {
-  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1360px) {
-  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 .summary {
@@ -314,73 +357,38 @@ button.tool:hover:not(:disabled) {
   margin-bottom: 32px;
 }
 
+@media (min-width: 680px) {
+  .summary,
+  .devices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary { grid-auto-rows: 1fr; } /* same card size even when the row wraps */
+}
+
+@media (min-width: 1024px) {
+  .summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .devices { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1360px) {
+  .devices { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
 .panel {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 18px;
+  min-width: 0;
   padding: 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  background: var(--surface);
   box-shadow: var(--shadow);
-}
-
-.dot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--muted);
-}
-
-.sum-card h2 {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.sum-value {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 8px;
-  font-size: 19px;
-  font-weight: 700;
-}
-
-.sum-sub {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.sum-card[data-state="connected"] .dot,
-.sum-card[data-state="ok"] .dot {
-  background: var(--ok);
-}
-
-.sum-card[data-state="disconnected"] .dot {
-  background: var(--bad);
-}
-
-.sum-card[data-state="pending"] .dot {
-  background: var(--warn);
-}
-
-.sum-card[data-state="pending"] .sum-sub {
-  color: var(--warn);
-  font-weight: 600;
 }
 
 .banner {
   margin-top: 18px;
   padding: 10px 14px;
-  border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--surface-2);
-  color: var(--muted);
   font-size: 14px;
 }
 
 .banner-bad {
-  border-color: var(--bad);
   background: var(--bad-soft);
   color: var(--bad);
 }
@@ -390,15 +398,130 @@ button.tool:hover:not(:disabled) {
   color: var(--muted);
 }
 
-/* ---- Device card ---- */
+/* Label-value rows used by summary and device cards. */
+.kv {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.kv > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 22px;
+  line-height: 22px;
+}
+
+.kv dt {
+  flex: none;
+  color: var(--muted);
+}
+
+.kv dd {
+  overflow: hidden;
+  font-weight: 600;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kv dd[data-empty="yes"] {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* ---- Summary cards: same size, buttons in the same place ---- */
+
+.sum-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.sum-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 26px;
+}
+
+.sum-head h2 {
+  overflow: hidden;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sum-body {
+  flex: 1;
+  margin: 14px 0 16px;
+}
+
+.sum-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 10px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--action);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action:hover {
+  background: var(--action-hover);
+}
+
+.qr-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* A QR code needs dark modules on a light field in both themes. */
+.qr {
+  display: flex;
+  border-radius: 6px;
+  background: #ffffff;
+  line-height: 0;
+}
+
+.qr svg {
+  display: block;
+}
+
+.qr-url {
+  max-width: 100%;
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  text-align: center;
+  word-break: break-all;
+}
+
+/* ---- Device card: every row has a fixed place so cards line up ---- */
 
 .card {
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  transition: box-shadow 0.3s, outline-color 0.3s;
   outline: 3px solid transparent;
   outline-offset: 3px;
+  transition: outline-color 0.3s;
 }
 
 .card.is-target {
@@ -407,15 +530,10 @@ button.tool:hover:not(:disabled) {
 
 .card-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
-}
-
-.heading {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
+  height: 28px;
 }
 
 .name-row,
@@ -445,7 +563,7 @@ button.tool:hover:not(:disabled) {
 .name-input {
   width: 100%;
   min-width: 0;
-  padding: 4px 8px;
+  padding: 3px 8px;
   border: 1px solid var(--accent);
   border-radius: 6px;
   background: var(--surface);
@@ -455,90 +573,84 @@ button.tool:hover:not(:disabled) {
 }
 
 .meta {
+  height: 18px;
+  overflow: hidden;
   color: var(--muted);
   font-size: 12px;
-}
-
-.status {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
+  line-height: 18px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.card[data-online="on"] .status {
-  color: var(--ok);
+.card-head + .meta {
+  margin-top: 4px;
 }
 
-.card[data-online="on"] .status .dot {
-  background: var(--ok);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.fw-update {
-  margin-top: 12px;
-  padding: 7px 10px;
-  border-radius: 10px;
-  background: var(--accent-soft);
-  color: var(--accent);
+/* One slot for the firmware update link or the offline notice; empty otherwise. */
+.notice {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  margin-top: 10px;
+  padding: 0 10px;
+  border-radius: 9px;
   font-size: 13px;
+  white-space: nowrap;
+}
+
+.notice > * {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notice[data-kind="fw"] {
+  background: var(--info-soft);
+}
+
+.notice[data-kind="fw"] .notice-fw {
+  display: block;
+  color: var(--info);
   font-weight: 600;
   text-decoration: none;
 }
 
-.fw-update::after {
+.notice[data-kind="fw"] .notice-fw::after {
   content: " \203A";
 }
 
-.fw-update:hover {
+.notice[data-kind="fw"] .notice-fw:hover {
   text-decoration: underline;
 }
 
+.notice[data-kind="offline"] {
+  background: var(--idle-soft);
+}
+
+.notice[data-kind="offline"] .notice-offline {
+  display: block;
+  color: var(--muted);
+}
+
 .stats {
-  display: grid;
-  gap: 5px;
-  margin-top: 14px;
-  font-size: 14px;
-}
-
-.stats > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.stats dt {
-  color: var(--muted);
-}
-
-.stats dd {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.note {
   margin-top: 10px;
-  padding: 7px 9px;
-  border-radius: 8px;
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 12px;
 }
 
 .bulk {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin: 14px 0 12px;
+  margin: 12px 0;
 }
 
 .card[data-online="off"] .outlets {
-  opacity: 0.72;
+  opacity: 0.7;
+}
+
+/* A locked screen is a view mode: keep states readable, just not clickable. */
+.card[data-controls="locked"] button:disabled {
+  opacity: 0.8;
+  cursor: default;
 }
 
 /* ---- Outlet cells (2x2) ---- */
@@ -564,15 +676,19 @@ button.tool:hover:not(:disabled) {
   border-color: var(--on-line);
 }
 
+.outlet-title {
+  height: 24px;
+}
+
+.outlet-title .icon-btn {
+  margin-left: -4px;
+}
+
 .outlet-name {
   overflow: hidden;
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.outlet-title .icon-btn {
-  margin-left: -4px;
 }
 
 .readings {
@@ -585,17 +701,22 @@ button.tool:hover:not(:disabled) {
 
 .reading {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
-  column-gap: 6px;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.reading span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 
 .reading strong {
-  margin-left: auto;
+  flex: none;
   color: var(--text);
   font-size: 13px;
   font-weight: 600;
-  white-space: nowrap;
 }
 
 .toggle {
@@ -605,21 +726,14 @@ button.tool:hover:not(:disabled) {
   letter-spacing: 0.04em;
 }
 
-.outlet[data-state="on"] .toggle {
+.outlet[data-state="on"] .toggle,
+.outlet[data-state="on"] .toggle:hover:not(:disabled) {
   background: var(--on-bg);
-  color: var(--on-fg);
+  color: #ffffff;
 }
 
 .outlet[data-busy="yes"] .toggle {
   cursor: progress;
-}
-
-/* ---- Button lock (firmware 1.0.111) ---- */
-
-.lock-icon {
-  width: 14px;
-  height: 14px;
-  flex: none;
 }
 
 .lock-mark {
@@ -629,15 +743,25 @@ button.tool:hover:not(:disabled) {
   color: var(--warn);
 }
 
+/* ---- Button lock (firmware 1.0.111): two lines, same height on every card ---- */
+
 .lock {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.lock[data-supported="no"] {
+  visibility: hidden;
+}
+
+.lock-line {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
+  height: 20px;
+  font-size: 13px;
 }
 
 .lock-label {
@@ -645,23 +769,27 @@ button.tool:hover:not(:disabled) {
   align-items: center;
   gap: 6px;
   color: var(--muted);
-  font-size: 13px;
 }
 
 .lock-state {
+  overflow: hidden;
   color: var(--warn);
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .lock-bits {
   display: flex;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .lock-bits button {
-  min-width: 32px;
-  padding: 5px 8px;
-  font-size: 12px;
+  min-width: 42px;
+  padding: 6px 10px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -669,68 +797,6 @@ button.tool:hover:not(:disabled) {
   background: var(--warn-soft);
   color: var(--warn);
   box-shadow: inset 0 0 0 1px currentColor;
-}
-
-/* ---- Login dialog ---- */
-
-.login {
-  width: min(380px, calc(100vw - 32px));
-  color: var(--text);
-}
-
-.login::backdrop {
-  background: #00000080;
-}
-
-.login form {
-  display: grid;
-  gap: 14px;
-}
-
-.login h2 {
-  font-size: 18px;
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.field {
-  display: grid;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.field input {
-  padding: 9px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-2);
-  color: var(--text);
-  font: inherit;
-  font-size: 15px;
-}
-
-.login-error {
-  color: var(--bad);
-  font-size: 13px;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.dialog-actions button {
-  padding: 9px 14px;
-}
-
-button.primary {
-  background: var(--accent);
-  color: #ffffff;
 }
 
 /* ---- Phones ---- */
@@ -746,5 +812,11 @@ button.primary {
 
   .tools {
     width: 100%;
+  }
+
+  /* One card per row: nothing to line up with, so empty reserved slots can go. */
+  .notice[data-kind="none"],
+  .lock[data-supported="no"] {
+    display: none;
   }
 }

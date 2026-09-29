@@ -7,9 +7,14 @@ export const STRINGS = {
   en: {
     demo: "Demo",
     backend: "Backend {v}",
-    online_count: "{n}/{total} online",
-    login: "Log in",
-    logout: "Log out",
+    online_count: "{n}/{total} devices online",
+    server_online: "Server online",
+    server_offline: "Server offline",
+    server_checking: "Checking server",
+    unlock: "Unlock",
+    relock: "Lock",
+    unlock_hint: "Controls are locked. Unlock to switch outlets and rename.",
+    relock_hint: "Controls are live. Lock to prevent accidental presses.",
     settings: "Settings",
     logs: "Logs",
     theme: "Theme",
@@ -21,21 +26,33 @@ export const STRINGS = {
     mqtt_connected: "On · connected",
     mqtt_disconnected: "Disconnected",
     mqtt_off: "Off",
-    mqtt_unknown: "Unknown",
-    login_required: "Log in to view",
+    unknown: "Unknown",
+    mqtt_broker: "Broker",
+    mqtt_topic: "Topic prefix",
+    mqtt_discovery: "Discovery prefix",
     sum_fw: "Firmware",
-    fw_target: "Target {v}",
-    fw_pending: "{n} to update",
-    fw_none: "No updates pending",
-    guest_note: "View only. Log in to control outlets.",
+    fw_target_label: "Target version",
+    fw_pending_label: "Devices to update",
+    fw_pending_count: "{n}",
+    fw_ota_host: "OTA server",
+    fw_badge_pending: "{n} to update",
+    fw_badge_ok: "Up to date",
+    open_settings: "Open settings",
+    open_logs: "View logs",
+    sum_app: "Android setup app",
+    app_badge: "Scan to install",
+    apk_download: "Download APK",
+    pc_download: "Download PC tool",
+    qr_label: "QR code for {url}",
     empty: "Waiting for an MTTL-W01 device.",
     online: "Online",
     offline: "Offline",
-    offline_note: "Offline. Showing the last received values.",
+    offline_note: "Offline · last received values",
     total_power: "Total power",
     total_energy: "Energy",
     voltage: "Voltage",
     rssi: "Wi-Fi RSSI",
+    not_measured: "Not measured",
     all_on: "All ON",
     all_off: "All OFF",
     outlet: "Outlet {n}",
@@ -52,19 +69,19 @@ export const STRINGS = {
     fw_update: "Firmware update → {v}",
     fw_downgrade: "Firmware downgrade → {v}",
     fw_reflash: "Reinstall firmware {v}",
-    login_title: "Administrator login",
-    password: "Password",
-    cancel: "Cancel",
-    login_failed: "Login failed.",
-    login_demo_note: "Demo mode does not check the password.",
     action_failed: "Request failed: {msg}",
   },
   ko: {
     demo: "예시",
     backend: "백엔드 {v}",
-    online_count: "온라인 {n}/{total}",
-    login: "로그인",
-    logout: "로그아웃",
+    online_count: "기기 {n}/{total} 온라인",
+    server_online: "서버 온라인",
+    server_offline: "서버 오프라인",
+    server_checking: "서버 확인 중",
+    unlock: "해제",
+    relock: "잠금",
+    unlock_hint: "조작 버튼이 잠겨 있습니다. 해제하면 켜고 끄기와 이름 바꾸기를 할 수 있습니다.",
+    relock_hint: "조작할 수 있습니다. 잠그면 실수로 누르는 것을 막습니다.",
     settings: "설정",
     logs: "로그",
     theme: "테마",
@@ -76,21 +93,33 @@ export const STRINGS = {
     mqtt_connected: "켜짐·연결됨",
     mqtt_disconnected: "끊김",
     mqtt_off: "꺼짐",
-    mqtt_unknown: "알 수 없음",
-    login_required: "로그인 필요",
+    unknown: "알 수 없음",
+    mqtt_broker: "브로커",
+    mqtt_topic: "토픽 접두어",
+    mqtt_discovery: "발견 접두어",
     sum_fw: "펌웨어",
-    fw_target: "목표판 {v}",
-    fw_pending: "업데이트 대상 {n}대",
-    fw_none: "업데이트 대상 없음",
-    guest_note: "보기 전용입니다. 조작하려면 로그인하세요.",
+    fw_target_label: "목표판",
+    fw_pending_label: "업데이트 대상",
+    fw_pending_count: "{n}대",
+    fw_ota_host: "OTA 서버",
+    fw_badge_pending: "업데이트 {n}대",
+    fw_badge_ok: "최신",
+    open_settings: "설정 열기",
+    open_logs: "로그 보기",
+    sum_app: "안드로이드 설정 앱",
+    app_badge: "찍어서 설치",
+    apk_download: "APK 내려받기",
+    pc_download: "PC 도구 내려받기",
+    qr_label: "{url} QR 코드",
     empty: "MTTL-W01 기기를 기다리는 중입니다.",
     online: "온라인",
     offline: "오프라인",
-    offline_note: "오프라인입니다. 마지막으로 받은 값을 보여 줍니다.",
+    offline_note: "오프라인 · 마지막으로 받은 값",
     total_power: "전체 전력",
     total_energy: "누적 사용량",
     voltage: "전압",
     rssi: "Wi-Fi 신호",
+    not_measured: "측정 안 함",
     all_on: "전체 켜기",
     all_off: "전체 끄기",
     outlet: "콘센트 {n}",
@@ -107,11 +136,6 @@ export const STRINGS = {
     fw_update: "펌웨어 업데이트 → {v}",
     fw_downgrade: "펌웨어 다운그레이드 → {v}",
     fw_reflash: "펌웨어 다시 설치 {v}",
-    login_title: "관리자 로그인",
-    password: "암호",
-    cancel: "취소",
-    login_failed: "로그인하지 못했습니다.",
-    login_demo_note: "예시 모드에서는 암호를 확인하지 않습니다.",
     action_failed: "요청 실패: {msg}",
   },
 };
@@ -211,9 +235,10 @@ function outletChannels(device) {
   return bySel;
 }
 
-export function cardModel(device, { authenticated, lang }) {
+export function cardModel(device, { authenticated, unlocked, lang }) {
   const d = device ?? {};
   const admin = authenticated === true;
+  const open = admin && unlocked === true;
   const online = d.online === true;
   const mac = String(d.mac ?? "");
   const channels = outletChannels(d);
@@ -253,8 +278,8 @@ export function cardModel(device, { authenticated, lang }) {
       : null,
     fwAction: admin && FW_ACTIONS.includes(d.firmware_action) ? d.firmware_action : null,
     fwTarget: admin ? text(d.firmware_target?.version) : null,
-    editable: admin,
-    controls: admin && online,
+    editable: open,
+    controls: open && online,
   };
 }
 
@@ -262,44 +287,43 @@ export function cardModel(device, { authenticated, lang }) {
 export function summaryModel(resp, ha) {
   const devices = Array.isArray(resp?.devices) ? resp.devices : [];
   const admin = resp?.authenticated === true;
-  let mqtt = "login";
-  if (admin) mqtt = !ha ? "unknown" : ha.enabled !== true ? "off" : ha.connected === true ? "connected" : "disconnected";
+  const cfg = admin && ha ? ha : null;
+  let mqtt = "unknown";
+  if (cfg) mqtt = cfg.enabled !== true ? "off" : cfg.connected === true ? "connected" : "disconnected";
+  const host = text(cfg?.host);
   return {
     version: text(resp?.backend_version),
     online: devices.filter((d) => d?.online === true).length,
     total: devices.length,
     admin,
     mqtt,
+    broker: host ? (cfg.port ? `${host}:${cfg.port}` : host) : null,
+    topic: text(cfg?.topic_prefix),
+    discovery: text(cfg?.discovery_prefix),
     fwTarget: admin
       ? (devices.map((d) => text(d?.firmware_target?.version)).find(Boolean) ?? text(resp?.firmware?.target_profile))
       : null,
     fwPending: admin ? devices.filter((d) => FW_ACTIONS.includes(d?.firmware_action)).length : null,
+    otaHost: admin ? text(resp?.firmware?.ota_host_ip) : null,
   };
 }
 
-const GUEST_CHANNEL_KEYS = ["selector", "name", "on_state", "power_mw", "temperature_c", "energy_lifetime_wh", "last_seen"];
-const GUEST_DIAG_KEYS = ["voltage_mv", "voltage_updated_at", "rssi_dbm", "rssi_updated_at"];
+// The multi-outlet strip's Android app is served on the backend's own port (host 18282 -> app 8080),
+// which a phone can reach directly; the Ingress address needs a Home Assistant login.
+const APK_PORT = 18282;
+const APK_FILE = "provision-android.apk";
+const INGRESS_PATH = /^\/api\/hassio_ingress\//;
 
-/** What a visitor who is not logged in receives: mirrors backend.py `public_device_view`. */
-export function guestView(resp) {
-  const devices = (resp?.devices ?? []).map((d) => {
-    const diag = d.diagnostics ?? {};
-    const diagnostics = { voltage_enabled: Boolean(diag.voltage_enabled), rssi_enabled: Boolean(diag.rssi_enabled) };
-    for (const k of GUEST_DIAG_KEYS) if (k in diag) diagnostics[k] = diag[k];
-    const channels = (d.channels ?? [])
-      .filter((ch) => Number(ch.selector) >= 1 && Number(ch.selector) <= 4)
-      .map((ch) => Object.fromEntries(GUEST_CHANNEL_KEYS.map((k) => [k, ch[k] ?? null])));
-    return {
-      mac: d.mac,
-      alias: d.alias ?? null,
-      online: Boolean(d.online),
-      last_seen: d.last_seen ?? null,
-      firmware_version: d.firmware_version ?? null,
-      channels,
-      diagnostics,
-    };
-  });
-  return { authenticated: false, backend_version: resp?.backend_version ?? null, devices, removed: [], firmware: null };
+/** APK address on a given host: the OTA host address from the backend, else `hostname`. */
+export function apkUrlForHost(firmware, hostname) {
+  const host = text(firmware?.ota_host_ip) ?? hostname;
+  return `http://${host}:${APK_PORT}/${APK_FILE}`;
+}
+
+/** Address to put in the QR code. `loc` is window.location or an object with the same fields. */
+export function apkUrl(firmware, loc) {
+  if (!INGRESS_PATH.test(loc.pathname)) return new URL(APK_FILE, loc.href).href;
+  return apkUrlForHost(firmware, loc.hostname);
 }
 
 // ---- Demo data (`?demo`). Same keys as an administrator's `api/devices` response. ----
@@ -429,7 +453,20 @@ export function demoResponse() {
   };
 }
 
-/** Demo answer for `api/ha` (administrator only in the real backend). */
+/** Demo answer for `api/ha`. */
 export function demoHa() {
-  return { enabled: true, connected: true, last_error: null, connected_since: DEMO_NOW - 7200 };
+  return {
+    enabled: true,
+    host: "192.0.2.10",
+    port: 1883,
+    username: "mttl",
+    tls: false,
+    topic_prefix: "mttl",
+    discovery_prefix: "homeassistant",
+    birth_topic: "homeassistant/status",
+    password_set: true,
+    connected: true,
+    last_error: null,
+    connected_since: DEMO_NOW - 7200,
+  };
 }

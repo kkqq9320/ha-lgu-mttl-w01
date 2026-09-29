@@ -2,11 +2,13 @@
 // attributes and data-* states; see dashboard-core.mjs for the logic.
 import {
   DASH, t, pickLang, resolveTheme, normalizeMac, fmtMac,
-  cardModel, summaryModel, guestView, demoResponse, demoHa,
+  cardModel, summaryModel, apkUrl, apkUrlForHost, demoResponse, demoHa,
 } from "./dashboard-core.mjs";
+import { encodeQr } from "./qr.mjs";
 
 const THEME_KEY = "mttl.theme";
 const LANG_KEY = "mttl.lang";
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -31,40 +33,38 @@ const state = {
   source: null,
   resp: null,
   ha: null,
+  stale: false, // the last load failed; the real API source sets this
+  unlocked: false, // every page load starts locked; never stored
   lang: pickLang(storageGet(LANG_KEY), navigator.language),
   theme: ["auto", "dark", "light"].includes(savedTheme) ? savedTheme : "auto",
   busy: new Set(), // "<mac>" for the whole card, "<mac>:<n>" for one outlet, "<mac>:lock"
   editing: null, // "<mac>" or "<mac>:<n>" while a name field is open
+  cancelEdit: null,
+  qrUrl: null,
 };
 
 // ---- Data sources ----
-// A source answers load() with {status, body} (the `api/devices` response) and performs controls.
-// Demo mode keeps its data in memory; the real API source is added separately.
+// A source answers load() with {status, body} (the `api/devices` response), ha() with the
+// `api/ha` answer, and performs controls. Demo mode keeps its data in memory.
 
 function createDemoSource() {
   const data = demoResponse();
   const lastPower = new Map();
-  let authenticated = true;
   const device = (mac) => {
     const d = data.devices.find((x) => x.mac === mac);
     if (!d) throw new Error("device not found");
     return d;
   };
   const channel = (mac, n) => device(mac).channels.find((ch) => ch.selector === n);
-  const requireAdmin = () => {
-    if (!authenticated) throw new Error("login required");
-  };
   return {
     demo: true,
     async load() {
-      const body = structuredClone({ ...data, authenticated });
-      return { status: 200, body: authenticated ? body : guestView(body) };
+      return { status: 200, body: structuredClone(data) };
     },
     async ha() {
-      return authenticated ? demoHa() : null;
+      return demoHa();
     },
     async power(mac, n, on) {
-      requireAdmin();
       const d = device(mac);
       if (!d.online) throw new Error("device offline");
       for (const ch of d.channels) {
@@ -79,23 +79,13 @@ function createDemoSource() {
       }
     },
     async rename(mac, alias) {
-      requireAdmin();
       device(mac).alias = alias.trim() || null;
     },
     async renameOutlet(mac, n, name) {
-      requireAdmin();
       channel(mac, n).name = name.trim() || null;
     },
     async lock(mac, mask) {
-      requireAdmin();
       device(mac).childlock_mask = mask;
-    },
-    async login() {
-      authenticated = true;
-      return true;
-    },
-    async logout() {
-      authenticated = false;
     },
   };
 }
@@ -158,15 +148,62 @@ function setAttr(el, name, value) {
   if (el.getAttribute(name) !== value) el.setAttribute(name, value);
 }
 
+/** Value cell that shows a muted placeholder when there is no value. */
+function setValue(el, value, placeholder = DASH) {
+  setText(el, value ?? placeholder);
+  setData(el, "empty", value === null || value === undefined ? "yes" : "no");
+}
+
 function fieldMap(root) {
   const f = {};
   for (const el of root.querySelectorAll("[data-f]")) f[el.dataset.f] = el;
   return f;
 }
 
+// ---- QR code ----
+
+function drawQr(container, text) {
+  let modules;
+  try {
+    modules = encodeQr(text);
+  } catch {
+    container.replaceChildren();
+    return;
+  }
+  const quiet = 4;
+  const dim = modules.length + 2 * quiet;
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${dim} ${dim}`);
+  svg.setAttribute("width", String(dim * 3));
+  svg.setAttribute("height", String(dim * 3));
+  svg.setAttribute("shape-rendering", "crispEdges");
+  svg.setAttribute("aria-hidden", "true");
+  const rect = (x, y, w, h, fill) => {
+    const r = document.createElementNS(SVG_NS, "rect");
+    r.setAttribute("x", String(x));
+    r.setAttribute("y", String(y));
+    r.setAttribute("width", String(w));
+    r.setAttribute("height", String(h));
+    r.setAttribute("fill", fill);
+    svg.append(r);
+  };
+  rect(0, 0, dim, dim, "#ffffff");
+  modules.forEach((row, y) => {
+    // One rect per horizontal run of dark modules.
+    for (let x = 0; x < row.length; x++) {
+      if (!row[x]) continue;
+      let end = x;
+      while (end + 1 < row.length && row[end + 1]) end++;
+      rect(x + quiet, y + quiet, end - x + 1, 1, "#000000");
+      x = end;
+    }
+  });
+  container.replaceChildren(svg);
+}
+
 // ---- Cards ----
 
-const cards = new Map(); // mac -> {root, f, outlets: [{root, f}], lockBits: HTMLButtonElement[]}
+const cards = new Map(); // mac -> {root, f, outlets: [{root, f}], lockBits: HTMLButtonElement[], raw}
 
 function createCard(mac) {
   const root = $("#card-tpl").content.firstElementChild.cloneNode(true);
@@ -189,36 +226,35 @@ function updateCard(card, m, raw) {
   const cardBusy = state.busy.has(m.mac);
 
   setData(root, "online", m.online ? "on" : "off");
+  // "locked": only the screen lock holds the buttons back; "off": the device cannot be controlled.
+  setData(root, "controls", m.controls ? "live" : m.online && !state.unlocked ? "locked" : "off");
   if (state.editing !== m.mac) setText(f.title, m.title);
   setAttr(f.titleInput, "placeholder", `MTTL ${m.mac.slice(-6).toUpperCase()}`);
   setHidden(f.renameBtn, !m.editable);
+  setData(f.status, "state", m.online ? "ok" : "idle");
+  setText(f.statusText, t(lang, m.online ? "online" : "offline"));
   setText(f.mac, fmtMac(m.mac));
   setText(f.fw, m.firmware ?? DASH);
-  setHidden(f.ip, m.ip === null);
   setText(f.ip, m.ip ?? "");
-  setText(f.status, t(lang, m.online ? "online" : "offline"));
 
-  setHidden(f.fwUpdate, m.fwAction === null);
-  if (m.fwAction !== null) {
-    setText(f.fwUpdate, t(lang, `fw_${m.fwAction}`, { v: m.fwTarget ?? DASH }));
-    f.fwUpdate.href = `tuo.html#device=${m.mac}`;
-  }
+  // One reserved slot: offline notice first (an update cannot run offline), then the firmware link.
+  setData(f.notice, "kind", !m.online ? "offline" : m.fwAction ? "fw" : "none");
+  setText(f.fwUpdate, m.fwAction ? t(lang, `fw_${m.fwAction}`, { v: m.fwTarget ?? DASH }) : "");
+  setAttr(f.fwUpdate, "href", `tuo.html#device=${m.mac}`);
 
-  setText(f.totalW, m.totalW);
-  setText(f.totalKwh, m.totalKwh);
-  setHidden(f.voltageRow, m.voltage === null);
-  setText(f.voltage, m.voltage ?? "");
-  setHidden(f.rssiRow, m.rssi === null);
-  setText(f.rssi, m.rssi ?? "");
-  setHidden(f.note, m.online);
+  setValue(f.totalW, m.totalW);
+  setValue(f.totalKwh, m.totalKwh);
+  setValue(f.voltage, m.voltage, t(lang, "not_measured"));
+  setValue(f.rssi, m.rssi, t(lang, "not_measured"));
 
   setDisabled(f.allOn, !m.controls || cardBusy);
   setDisabled(f.allOff, !m.controls || cardBusy);
 
+  // The lock area keeps its height on every card; devices without 1.0.111 leave it blank.
   const lock = m.lock?.supported ? m.lock : null;
-  const lockBusy = state.busy.has(`${m.mac}:lock`);
   const synced = lock?.synced === true;
-  setHidden(f.lock, lock === null);
+  const lockBusy = state.busy.has(`${m.mac}:lock`);
+  setData(f.lock, "supported", lock ? "yes" : "no");
   setData(f.lock, "synced", synced ? "yes" : "no");
   setText(f.lockState, lock && !synced ? t(lang, "lock_pending") : "");
   card.lockBits.forEach((b, bit) => {
@@ -252,7 +288,7 @@ function renderCards() {
   const list = $("#devices");
   const resp = state.resp;
   const devices = Array.isArray(resp?.devices) ? resp.devices : [];
-  const opts = { authenticated: resp?.authenticated === true, lang: state.lang };
+  const opts = { authenticated: resp?.authenticated === true, unlocked: state.unlocked, lang: state.lang };
   const seen = new Set();
   let prev = null;
   for (const raw of devices) {
@@ -278,27 +314,54 @@ function renderCards() {
   setHidden($("#empty"), resp === null || seen.size > 0);
 }
 
+const MQTT_BADGE = { connected: "ok", disconnected: "bad", off: "idle", unknown: "idle" };
+
 function renderHeader() {
   const s = summaryModel(state.resp, state.ha);
   const lang = state.lang;
+
+  const server = $("#server-badge");
+  const serverState = state.stale ? "bad" : state.resp === null ? "idle" : "ok";
+  setData(server, "state", serverState);
+  setText($("[data-f=text]", server), t(lang, { ok: "server_online", bad: "server_offline", idle: "server_checking" }[serverState]));
   setText($("#backend-version"), s.version ? t(lang, "backend", { v: s.version }) : "");
   setText($("#online-count"), state.resp === null ? "" : t(lang, "online_count", { n: s.online, total: s.total }));
-  setText($("#auth-btn"), t(lang, s.admin ? "logout" : "login"));
-  setHidden($("#guest-banner"), state.resp === null || s.admin);
 
-  const mqtt = $("#sum-mqtt");
-  setData(mqtt, "state", s.mqtt);
-  setText($("[data-f=value]", mqtt), t(lang, s.mqtt === "login" ? "login_required" : `mqtt_${s.mqtt}`));
+  const lockBtn = $("#lock-btn");
+  setData(lockBtn, "state", state.unlocked ? "unlocked" : "locked");
+  setAttr(lockBtn, "aria-pressed", String(state.unlocked));
+  setAttr(lockBtn, "title", t(lang, state.unlocked ? "relock_hint" : "unlock_hint"));
+  setText($("[data-f=label]", lockBtn), t(lang, state.unlocked ? "relock" : "unlock"));
 
-  const fw = $("#sum-fw");
-  if (!s.admin) {
-    setData(fw, "state", "login");
-    setText($("[data-f=value]", fw), t(lang, "login_required"));
-    setText($("[data-f=sub]", fw), "");
-  } else {
-    setData(fw, "state", s.fwPending > 0 ? "pending" : "ok");
-    setText($("[data-f=value]", fw), t(lang, "fw_target", { v: s.fwTarget ?? DASH }));
-    setText($("[data-f=sub]", fw), s.fwPending > 0 ? t(lang, "fw_pending", { n: s.fwPending }) : t(lang, "fw_none"));
+  const mqtt = fieldMap($("#sum-mqtt"));
+  setData(mqtt.badge, "state", MQTT_BADGE[s.mqtt]);
+  setText(mqtt.badgeText, t(lang, s.mqtt === "unknown" ? "unknown" : `mqtt_${s.mqtt}`));
+  setValue(mqtt.broker, s.broker);
+  setValue(mqtt.topic, s.topic);
+  setValue(mqtt.discovery, s.discovery);
+
+  const fw = fieldMap($("#sum-fw"));
+  const pending = s.fwPending;
+  setData(fw.badge, "state", pending === null ? "idle" : pending > 0 ? "warn" : "ok");
+  setText(fw.badgeText, pending === null ? t(lang, "unknown") : pending > 0 ? t(lang, "fw_badge_pending", { n: pending }) : t(lang, "fw_badge_ok"));
+  setValue(fw.target, s.fwTarget);
+  setValue(fw.pending, pending === null ? null : t(lang, "fw_pending_count", { n: pending }));
+  setValue(fw.otaHost, s.otaHost);
+
+  const app = fieldMap($("#sum-app"));
+  // Demo mode is usually served from a plain local web server; it shows the address a phone
+  // would get under Home Assistant Ingress (the OTA host address) so the mockup stays the same.
+  const url = state.resp === null
+    ? ""
+    : state.source?.demo
+      ? apkUrlForHost(state.resp.firmware, location.hostname)
+      : apkUrl(state.resp.firmware, location);
+  setText(app.url, url);
+  setAttr(app.qr, "aria-label", url ? t(lang, "qr_label", { url }) : "");
+  if (url !== state.qrUrl) {
+    state.qrUrl = url;
+    if (url) drawQr(app.qr, url);
+    else app.qr.replaceChildren();
   }
 }
 
@@ -313,7 +376,7 @@ async function refresh() {
   if (!state.source) return;
   const result = await state.source.load();
   if (result.status === 200) state.resp = result.body;
-  state.ha = state.resp?.authenticated ? await state.source.ha() : null;
+  state.ha = await state.source.ha();
   applyTheme(); // HA's dark mode may have changed since the last load.
   render();
   focusHashDevice();
@@ -330,7 +393,8 @@ function showError(err) {
 }
 
 async function run(key, action) {
-  if (state.busy.has(key)) return;
+  // A locked screen never sends a control request.
+  if (!state.unlocked || state.busy.has(key)) return;
   state.busy.add(key);
   render();
   try {
@@ -349,7 +413,7 @@ function currentMask(raw) {
 
 function onDeviceClick(event) {
   const btn = event.target.closest("[data-act]");
-  if (!btn || btn.disabled) return;
+  if (!btn || btn.disabled || !state.unlocked) return;
   const cardEl = btn.closest(".card");
   const mac = cardEl?.dataset.mac;
   const card = cards.get(mac);
@@ -383,7 +447,7 @@ function onDeviceClick(event) {
 }
 
 function startEdit(key, label, input, current, save) {
-  if (state.editing) return;
+  if (state.editing || !state.unlocked) return;
   state.editing = key;
   input.value = current;
   label.hidden = true;
@@ -399,17 +463,26 @@ function startEdit(key, label, input, current, save) {
     input.hidden = true;
     label.hidden = false;
     state.editing = null;
+    state.cancelEdit = null;
     const value = input.value;
     if (commit && value.trim() !== String(current).trim()) run(key, () => save(value));
     else render();
   };
   const onKey = (e) => {
-    if (e.key === "Enter") finish(true);
+    // Enter that confirms a Korean IME composition must not save the name yet.
+    if (e.key === "Enter" && !e.isComposing) finish(true);
     else if (e.key === "Escape") finish(false);
   };
   const onBlur = () => finish(true);
   input.addEventListener("keydown", onKey);
   input.addEventListener("blur", onBlur);
+  state.cancelEdit = () => finish(false);
+}
+
+function toggleScreenLock() {
+  state.unlocked = !state.unlocked;
+  if (!state.unlocked) state.cancelEdit?.();
+  render();
 }
 
 // ---- #device=<mac> ----
@@ -418,7 +491,12 @@ let focusedHash = "";
 
 function focusHashDevice() {
   const match = location.hash.match(/^#device=(.+)$/);
-  const mac = match ? normalizeMac(decodeURIComponent(match[1])) : null;
+  let mac = null;
+  try {
+    mac = match ? normalizeMac(decodeURIComponent(match[1])) : null;
+  } catch {
+    mac = null; // malformed escape in the hash
+  }
   if (!mac || focusedHash === location.hash) return;
   const card = cards.get(mac);
   if (!card) return;
@@ -426,47 +504,6 @@ function focusHashDevice() {
   card.root.classList.add("is-target");
   card.root.scrollIntoView({ behavior: "smooth", block: "center" });
   setTimeout(() => card.root.classList.remove("is-target"), 3200);
-}
-
-// ---- Login ----
-
-function openLogin() {
-  const dialog = $("#login-dialog");
-  $("#login-error").hidden = true;
-  $("#login-demo-note").hidden = !state.source?.demo;
-  dialog.showModal();
-  $("#login-form").elements.password.focus();
-}
-
-async function submitLogin(event) {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const password = form.elements.password.value;
-  form.elements.password.value = "";
-  let ok = false;
-  try {
-    ok = await state.source.login(password);
-  } catch {
-    ok = false;
-  }
-  if (!ok) {
-    const err = $("#login-error");
-    err.textContent = t(state.lang, "login_failed");
-    err.hidden = false;
-    return;
-  }
-  $("#login-dialog").close();
-  await refresh();
-}
-
-async function onAuthClick() {
-  if (!state.source) return;
-  if (state.resp?.authenticated) {
-    await state.source.logout();
-    await refresh();
-  } else {
-    openLogin();
-  }
 }
 
 // ---- Start ----
@@ -492,9 +529,7 @@ function init() {
     applyLang();
     render();
   });
-  $("#auth-btn").addEventListener("click", onAuthClick);
-  $("#login-form").addEventListener("submit", submitLogin);
-  $("#login-cancel").addEventListener("click", () => $("#login-dialog").close());
+  $("#lock-btn").addEventListener("click", toggleScreenLock);
   $("#devices").addEventListener("click", onDeviceClick);
   window.addEventListener("hashchange", () => {
     focusedHash = "";

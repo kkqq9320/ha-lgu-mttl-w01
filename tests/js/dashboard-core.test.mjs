@@ -6,7 +6,7 @@ const core = await import(new URL("../../mttl_w01/backend/static/dashboard-core.
 const {
   STRINGS, t, pickLang, resolveTheme, normalizeMac,
   fmtWatts, fmtKwh, fmtTemp, fmtVolt, fmtRssi,
-  cardModel, demoResponse, demoHa, guestView, summaryModel, fmtMac,
+  cardModel, demoResponse, demoHa, summaryModel, fmtMac, apkUrl, apkUrlForHost,
 } = core;
 
 const fixture = JSON.parse(
@@ -124,10 +124,43 @@ test("cardModel guest view hides admin parts", () => {
 
   // Admin fields that leak into a guest render must still be ignored.
   const admin = demoResponse().devices.find((d) => d.childlock_supported);
-  const leaked = cardModel({ ...admin, firmware_action: "update" }, { authenticated: false, lang: "en" });
+  const leaked = cardModel({ ...admin, firmware_action: "update" }, { authenticated: false, unlocked: true, lang: "en" });
   assert.equal(leaked.lock, null);
   assert.equal(leaked.fwAction, null);
   assert.equal(leaked.controls, false);
+});
+
+test("cardModel locked view disables controls", () => {
+  const device = demoResponse().devices.find((d) => d.online && d.childlock_synced);
+  const locked = cardModel(device, { authenticated: true, unlocked: false, lang: "en" });
+  assert.equal(locked.controls, false);
+  assert.equal(locked.editable, false);
+  // Locking the screen hides nothing: lock bits and firmware hints stay visible.
+  assert.equal(locked.lock.supported, true);
+  const open = cardModel(device, { authenticated: true, unlocked: true, lang: "en" });
+  assert.equal(open.controls, true);
+  assert.equal(open.editable, true);
+  const offline = demoResponse().devices.find((d) => !d.online);
+  const offlineOpen = cardModel(offline, { authenticated: true, unlocked: true, lang: "en" });
+  assert.equal(offlineOpen.controls, false);
+  assert.equal(offlineOpen.editable, true);
+  // Missing option means locked.
+  assert.equal(cardModel(device, { authenticated: true, lang: "en" }).controls, false);
+});
+
+test("apkUrl prefers ota_host_ip", () => {
+  const ingress = (hostname) => ({
+    protocol: "http:", hostname, port: "8123",
+    pathname: "/api/hassio_ingress/AbCd123/", href: `http://${hostname}:8123/api/hassio_ingress/AbCd123/`,
+  });
+  assert.equal(apkUrl({ ota_host_ip: "192.0.2.10" }, ingress("192.0.2.31")), "http://192.0.2.10:18282/provision-android.apk");
+  assert.equal(apkUrl({ ota_host_ip: "" }, ingress("192.0.2.31")), "http://192.0.2.31:18282/provision-android.apk");
+  assert.equal(apkUrl(null, ingress("192.0.2.31")), "http://192.0.2.31:18282/provision-android.apk");
+  const direct = { protocol: "http:", hostname: "192.0.2.31", port: "18282", pathname: "/", href: "http://192.0.2.31:18282/" };
+  assert.equal(apkUrl({ ota_host_ip: "192.0.2.10" }, direct), "http://192.0.2.31:18282/provision-android.apk");
+  const directQuery = { ...direct, pathname: "/dashboard.html", href: "http://192.0.2.31:18282/dashboard.html?demo#x" };
+  assert.equal(apkUrl(null, directQuery), "http://192.0.2.31:18282/provision-android.apk");
+  assert.equal(apkUrlForHost({ ota_host_ip: "192.0.2.10" }, "localhost"), "http://192.0.2.10:18282/provision-android.apk");
 });
 
 test("cardModel admin lock bits", () => {
@@ -138,7 +171,7 @@ test("cardModel admin lock bits", () => {
     diagnostics: { voltage_enabled: true, voltage_mv: 221400, rssi_enabled: true, rssi_dbm: -54 },
     channels: [],
   };
-  const m = cardModel(device, { authenticated: true, lang: "en" });
+  const m = cardModel(device, { authenticated: true, unlocked: true, lang: "en" });
   assert.equal(m.title, "Desk");
   assert.deepEqual(m.lock, { supported: true, synced: true, bits: [true, false, true, false, false] });
   assert.equal(m.fwAction, "update");
@@ -150,7 +183,7 @@ test("cardModel admin lock bits", () => {
   assert.deepEqual(unknown.lock, { supported: true, synced: false, bits: [false, false, false, false, false] });
   assert.equal(unknown.fwAction, null);
 
-  const offline = cardModel({ ...device, online: false }, { authenticated: true, lang: "en" });
+  const offline = cardModel({ ...device, online: false }, { authenticated: true, unlocked: true, lang: "en" });
   assert.equal(offline.controls, false);
 
   const noLock = cardModel({ ...device, childlock_supported: false }, { authenticated: true, lang: "en" });
@@ -183,35 +216,28 @@ test("demo response has the fixture keys", () => {
   assert.notEqual(demoResponse().devices[0].alias, "changed");
 });
 
-test("guestView of the demo matches the fixture shape", () => {
-  const guest = guestView(demoResponse());
-  const keys = (o) => Object.keys(o).sort();
-  assert.deepEqual(keys(guest), keys(fixture));
-  assert.equal(guest.authenticated, false);
-  assert.equal(guest.firmware, null);
-  const want = fixture.devices[0];
-  for (const d of guest.devices) {
-    assert.deepEqual(keys(d), keys(want), d.mac);
-    assert.deepEqual(keys(d.channels[0]), keys(want.channels[0]), d.mac);
-    for (const k of Object.keys(want.diagnostics)) assert.ok(k in d.diagnostics, `${d.mac}.${k}`);
-    assert.ok(!("peer_ip" in d) && !("childlock_mask" in d) && !("firmware_action" in d), d.mac);
-  }
-});
-
-test("summaryModel counts devices and hides admin parts for guests", () => {
+test("summaryModel counts devices and tolerates missing admin parts", () => {
   const admin = summaryModel(demoResponse(), demoHa());
   assert.deepEqual(
-    { online: admin.online, total: admin.total, mqtt: admin.mqtt, fwTarget: admin.fwTarget, fwPending: admin.fwPending, version: admin.version },
-    { online: 3, total: 4, mqtt: "connected", fwTarget: "1.0.111", fwPending: 1, version: "0.2.11" },
+    {
+      online: admin.online, total: admin.total, mqtt: admin.mqtt, broker: admin.broker, topic: admin.topic,
+      discovery: admin.discovery, fwTarget: admin.fwTarget, fwPending: admin.fwPending, otaHost: admin.otaHost, version: admin.version,
+    },
+    {
+      online: 3, total: 4, mqtt: "connected", broker: "192.0.2.10:1883", topic: "mttl", discovery: "homeassistant",
+      fwTarget: "1.0.111", fwPending: 1, otaHost: "192.0.2.10", version: "0.2.11",
+    },
   );
   assert.equal(summaryModel(demoResponse(), { enabled: false, connected: false }).mqtt, "off");
   assert.equal(summaryModel(demoResponse(), { enabled: true, connected: false }).mqtt, "disconnected");
   assert.equal(summaryModel(demoResponse(), null).mqtt, "unknown");
 
   const guest = summaryModel(fixture, null);
-  assert.equal(guest.mqtt, "login");
+  assert.equal(guest.mqtt, "unknown");
+  assert.equal(guest.broker, null);
   assert.equal(guest.fwTarget, null);
   assert.equal(guest.fwPending, null);
+  assert.equal(guest.otaHost, null);
   assert.equal(guest.online, 1);
   assert.equal(summaryModel(null, null).total, 0);
 });
