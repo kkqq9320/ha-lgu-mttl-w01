@@ -51,7 +51,7 @@ export const STRINGS = {
     total_power: "Total power",
     total_energy: "Energy",
     voltage: "Voltage",
-    rssi: "Wi-Fi RSSI",
+    rssi: "RSSI",
     all_on: "All ON",
     all_off: "All OFF",
     refresh: "Refresh",
@@ -66,7 +66,7 @@ export const STRINGS = {
     hide_confirm: "Confirm hide",
     hide_hint: "Removes the device from the dashboard and Home Assistant. Restore it in Settings.",
     hide_note: "Restore it later in Settings",
-    lock: "Button lock",
+    lock: "Child lock",
     lock_all: "All",
     lock_pending: "Waiting for sync",
     lock_bit: "Lock {name}",
@@ -137,7 +137,6 @@ export const STRINGS = {
     total_power: "전체 전력",
     total_energy: "누적 사용량",
     voltage: "전압",
-    rssi: "Wi-Fi RSSI",
     all_on: "전체 켜기",
     all_off: "전체 끄기",
     refresh: "새로고침",
@@ -148,11 +147,8 @@ export const STRINGS = {
     on: "ON",
     off: "OFF",
     rename: "이름 바꾸기",
-    hide_device: "숨기기",
-    hide_confirm: "숨기기 확인",
     hide_hint: "대시보드와 Home Assistant에서 빠집니다. 설정 화면에서 되살릴 수 있습니다.",
     hide_note: "설정 화면에서 되살릴 수 있음",
-    lock: "버튼 잠금",
     lock_all: "전체",
     lock_pending: "동기화 대기",
     lock_bit: "{name} 잠금",
@@ -192,11 +188,12 @@ export const STRINGS = {
   },
 };
 
-/** Shown in English in both languages: the top bar and the firmware update banner. */
+/** Shown in English in both languages: the top bar, the firmware update banner and some card labels. */
 export const ENGLISH_ONLY = [
   "demo", "server_online", "server_offline", "server_checking", "backend", "online_count",
   "unlock", "relock", "settings", "logs", "theme", "theme_auto", "theme_dark", "theme_light",
   "language", "log_back", "unlock_hint", "relock_hint", "fw_update", "fw_downgrade", "fw_reflash",
+  "rssi", "lock", "hide_device", "hide_confirm",
 ];
 for (const key of ENGLISH_ONLY) STRINGS.ko[key] = STRINGS.en[key];
 

@@ -73,10 +73,20 @@ test("firmware banner reads the same in EN and KR", () => {
     assert.equal(STRINGS.ko[key], STRINGS.en[key], key);
   }
   assert.equal(t("ko", "fw_update", { v: "1.0.111" }), "Firmware update → 1.0.111");
-  // Card text outside the top bar and the banner stays Korean.
+  // Card text outside the top bar, the banner and the card labels below stays Korean.
   assert.equal(t("ko", "open_settings"), "설정 열기");
-  assert.equal(t("ko", "hide_device"), "숨기기");
-  assert.equal(t("en", "hide_device"), "Hide device");
+});
+
+test("card labels RSSI, CHILD LOCK and HIDE DEVICE read the same in EN and KR", () => {
+  for (const [key, want] of [
+    ["rssi", "RSSI"], ["lock", "Child lock"], ["hide_device", "Hide device"], ["hide_confirm", "Confirm hide"],
+  ]) {
+    assert.ok(ENGLISH_ONLY.includes(key), key);
+    assert.equal(STRINGS.en[key], want, key);
+    assert.equal(STRINGS.ko[key], want, key);
+  }
+  // The restore hint stays translated.
+  assert.notEqual(STRINGS.ko.hide_hint, STRINGS.en.hide_hint);
 });
 
 test("scriptLang marks text by script so English renders the same in both languages", () => {

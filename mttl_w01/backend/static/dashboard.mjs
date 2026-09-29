@@ -218,6 +218,7 @@ function updateCard(card, m, raw) {
   const lockBusy = state.busy.has(`${m.mac}:lock`);
   setData(f.lock, "supported", lock ? "yes" : "no");
   setData(f.lock, "synced", synced ? "yes" : "no");
+  setData(f.lock, "active", synced && lock.bits.some(Boolean) ? "yes" : "no");
   setText(f.lockState, lock && !synced ? t(lang, "lock_pending") : "");
   card.lockBits.forEach((b, bit) => {
     // Bits from an unverified mask are not shown as active (Tuo keeps the last value but does not trust it).
