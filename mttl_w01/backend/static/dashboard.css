@@ -1,0 +1,750 @@
+/*
+ * Layout and card styling adapted from af950833's MTTL-W01 dashboard
+ * (https://github.com/af950833/mttl_w01, web/index.html and web/style.css):
+ * navy top bar, card grid up to four columns, 2x2 outlet cells with a full-width
+ * ON/OFF button. Colors are theme tokens; dark is the default.
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #0e1522;
+  --surface: #162033;
+  --surface-2: #1b2840;
+  --line: #2a3a55;
+  --text: #e6edf7;
+  --muted: #95a4b9;
+  --topbar: #0b1322;
+  --topbar-text: #f1f5f9;
+  --topbar-muted: #a9b6c8;
+  --topbar-line: #ffffff33;
+  --btn: #26365a;
+  --btn-hover: #2f4169;
+  --on-bg: #22c55e;
+  --on-fg: #052e14;
+  --on-line: #22c55e73;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --warn-soft: #fbbf2424;
+  --bad: #f87171;
+  --bad-soft: #f8717122;
+  --accent: #60a5fa;
+  --accent-soft: #60a5fa22;
+  --shadow: 0 8px 30px #00000059;
+  --pad: 16px;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f3f6fa;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --line: #e2e8f0;
+  --text: #172033;
+  --muted: #64748b;
+  --topbar: #14213d;
+  --topbar-text: #ffffff;
+  --topbar-muted: #cbd5e1;
+  --topbar-line: #ffffff66;
+  --btn: #e2e8f0;
+  --btn-hover: #d4dce8;
+  --on-bg: #16a34a;
+  --on-fg: #ffffff;
+  --on-line: #16a34a66;
+  --ok: #16a34a;
+  --warn: #b45309;
+  --warn-soft: #fef3c7;
+  --bad: #b91c1c;
+  --bad-soft: #fee2e2;
+  --accent: #2563eb;
+  --accent-soft: #dbeafe;
+  --shadow: 0 8px 30px #14213d18;
+}
+
+/* Before dashboard.mjs sets data-theme, follow the device setting. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --bg: #f3f6fa;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --line: #e2e8f0;
+    --text: #172033;
+    --muted: #64748b;
+    --topbar: #14213d;
+    --topbar-text: #ffffff;
+    --topbar-muted: #cbd5e1;
+    --topbar-line: #ffffff66;
+    --btn: #e2e8f0;
+    --btn-hover: #d4dce8;
+    --on-bg: #16a34a;
+    --on-fg: #ffffff;
+    --on-line: #16a34a66;
+    --ok: #16a34a;
+    --warn: #b45309;
+    --warn-soft: #fef3c7;
+    --bad: #b91c1c;
+    --bad-soft: #fee2e2;
+    --accent: #2563eb;
+    --accent-soft: #dbeafe;
+    --shadow: 0 8px 30px #14213d18;
+  }
+}
+
+@media (min-width: 680px) {
+  :root { --pad: 24px; }
+}
+
+@media (min-width: 1024px) {
+  :root { --pad: 32px; }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1,
+h2,
+p,
+dl,
+dd {
+  margin: 0;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button {
+  font: inherit;
+  font-size: 14px;
+  border: 0;
+  border-radius: 8px;
+  padding: 9px;
+  background: var(--btn);
+  color: var(--text);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--btn-hover);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- Top bar ---- */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 16px var(--pad);
+  background: var(--topbar);
+  color: var(--topbar-text);
+}
+
+.brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.brand h1 {
+  font-size: 24px;
+  letter-spacing: 0.01em;
+}
+
+.brand-sub {
+  display: flex;
+  gap: 10px;
+  color: var(--topbar-muted);
+  font-size: 13px;
+}
+
+.demo-badge {
+  align-self: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--warn);
+  color: #1f1300;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--topbar-line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--topbar-text);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.tool:hover,
+button.tool:hover:not(:disabled) {
+  background: #ffffff1a;
+}
+
+.tool-select {
+  padding: 0 4px;
+}
+
+.tool-select select {
+  min-height: 34px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tool-select option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--topbar-line);
+  border-radius: 8px;
+}
+
+.seg button {
+  min-width: 38px;
+  min-height: 30px;
+  padding: 0 8px;
+  background: transparent;
+  color: var(--topbar-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.seg button:hover:not(:disabled) {
+  background: #ffffff1a;
+}
+
+.seg button[aria-pressed="true"] {
+  background: #ffffff2e;
+  color: var(--topbar-text);
+}
+
+/* ---- Page blocks: summary row, banners, device grid ---- */
+
+.grid,
+.banner,
+.empty {
+  width: min(calc(100% - 2 * var(--pad)), 1920px);
+  margin-inline: auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+
+@media (min-width: 680px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1360px) {
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.summary {
+  margin-top: 22px;
+}
+
+.devices {
+  margin-top: 18px;
+  margin-bottom: 32px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+.dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.sum-card h2 {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sum-value {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 8px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.sum-sub {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sum-card[data-state="connected"] .dot,
+.sum-card[data-state="ok"] .dot {
+  background: var(--ok);
+}
+
+.sum-card[data-state="disconnected"] .dot {
+  background: var(--bad);
+}
+
+.sum-card[data-state="pending"] .dot {
+  background: var(--warn);
+}
+
+.sum-card[data-state="pending"] .sum-sub {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.banner {
+  margin-top: 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.banner-bad {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.empty {
+  margin-top: 24px;
+  color: var(--muted);
+}
+
+/* ---- Device card ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transition: box-shadow 0.3s, outline-color 0.3s;
+  outline: 3px solid transparent;
+  outline-offset: 3px;
+}
+
+.card.is-target {
+  outline-color: var(--accent);
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.heading {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.name-row,
+.outlet-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-size: 19px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon-btn {
+  flex: none;
+  padding: 2px 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.name-input {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.card[data-online="on"] .status {
+  color: var(--ok);
+}
+
+.card[data-online="on"] .status .dot {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.fw-update {
+  margin-top: 12px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.fw-update::after {
+  content: " \203A";
+}
+
+.fw-update:hover {
+  text-decoration: underline;
+}
+
+.stats {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+.stats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stats dt {
+  color: var(--muted);
+}
+
+.stats dd {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.note {
+  margin-top: 10px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.bulk {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0 12px;
+}
+
+.card[data-online="off"] .outlets {
+  opacity: 0.72;
+}
+
+/* ---- Outlet cells (2x2) ---- */
+
+.outlets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.outlet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.outlet[data-state="on"] {
+  border-color: var(--on-line);
+}
+
+.outlet-name {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outlet-title .icon-btn {
+  margin-left: -4px;
+}
+
+.readings {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: 6px;
+}
+
+.reading strong {
+  margin-left: auto;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.toggle {
+  width: 100%;
+  margin-top: auto;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.outlet[data-state="on"] .toggle {
+  background: var(--on-bg);
+  color: var(--on-fg);
+}
+
+.outlet[data-busy="yes"] .toggle {
+  cursor: progress;
+}
+
+/* ---- Button lock (firmware 1.0.111) ---- */
+
+.lock-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.lock-mark {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+  color: var(--warn);
+}
+
+.lock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.lock-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.lock-state {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.lock-bits {
+  display: flex;
+  gap: 4px;
+}
+
+.lock-bits button {
+  min-width: 32px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lock-bits button[aria-pressed="true"] {
+  background: var(--warn-soft);
+  color: var(--warn);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+/* ---- Login dialog ---- */
+
+.login {
+  width: min(380px, calc(100vw - 32px));
+  color: var(--text);
+}
+
+.login::backdrop {
+  background: #00000080;
+}
+
+.login form {
+  display: grid;
+  gap: 14px;
+}
+
+.login h2 {
+  font-size: 18px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.field input {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+
+.login-error {
+  color: var(--bad);
+  font-size: 13px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-actions button {
+  padding: 9px 14px;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* ---- Phones ---- */
+
+@media (max-width: 679px) {
+  .topbar {
+    padding-block: 12px;
+  }
+
+  .brand h1 {
+    font-size: 21px;
+  }
+
+  .tools {
+    width: 100%;
+  }
+}

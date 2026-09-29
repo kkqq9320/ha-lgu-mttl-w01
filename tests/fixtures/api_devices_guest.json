@@ -1,0 +1,8 @@
+{"authenticated": false, "backend_version": "0.2.11", "removed": [], "firmware": null,
+ "devices": [{"mac": "0a1b2c3d4e5f", "alias": null, "online": true, "last_seen": 1790682546.5,
+   "firmware_version": "1.0.66", "diagnostics": {"voltage_enabled": false, "rssi_enabled": false},
+   "channels": [
+     {"selector": 1, "name": null, "on_state": 0, "power_mw": 0, "temperature_c": 26, "energy_lifetime_wh": 0, "last_seen": 1790682546.5},
+     {"selector": 2, "name": null, "on_state": 0, "power_mw": 0, "temperature_c": 26, "energy_lifetime_wh": 0, "last_seen": 1790682546.5},
+     {"selector": 3, "name": null, "on_state": 1, "power_mw": 0, "temperature_c": 25, "energy_lifetime_wh": 0, "last_seen": 1790682546.5},
+     {"selector": 4, "name": null, "on_state": 1, "power_mw": 0, "temperature_c": 27, "energy_lifetime_wh": 0, "last_seen": 1790682546.5}]}]}

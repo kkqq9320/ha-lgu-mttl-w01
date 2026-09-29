@@ -1,0 +1,435 @@
+// Dashboard logic without DOM access. dashboard.mjs wires it to the page;
+// tests/js/dashboard-core.test.mjs runs it under Node.
+
+export const DASH = "–";
+
+export const STRINGS = {
+  en: {
+    demo: "Demo",
+    backend: "Backend {v}",
+    online_count: "{n}/{total} online",
+    login: "Log in",
+    logout: "Log out",
+    settings: "Settings",
+    logs: "Logs",
+    theme: "Theme",
+    theme_auto: "Auto",
+    theme_dark: "Dark",
+    theme_light: "Light",
+    language: "Language",
+    sum_mqtt: "Home Assistant MQTT",
+    mqtt_connected: "On · connected",
+    mqtt_disconnected: "Disconnected",
+    mqtt_off: "Off",
+    mqtt_unknown: "Unknown",
+    login_required: "Log in to view",
+    sum_fw: "Firmware",
+    fw_target: "Target {v}",
+    fw_pending: "{n} to update",
+    fw_none: "No updates pending",
+    guest_note: "View only. Log in to control outlets.",
+    empty: "Waiting for an MTTL-W01 device.",
+    online: "Online",
+    offline: "Offline",
+    offline_note: "Offline. Showing the last received values.",
+    total_power: "Total power",
+    total_energy: "Energy",
+    voltage: "Voltage",
+    rssi: "Wi-Fi RSSI",
+    all_on: "All ON",
+    all_off: "All OFF",
+    outlet: "Outlet {n}",
+    power: "Power",
+    energy: "Energy",
+    temp: "Temp",
+    on: "ON",
+    off: "OFF",
+    rename: "Rename",
+    lock: "Button lock",
+    lock_all: "All",
+    lock_pending: "Waiting for sync",
+    lock_bit: "Lock {name}",
+    fw_update: "Firmware update → {v}",
+    fw_downgrade: "Firmware downgrade → {v}",
+    fw_reflash: "Reinstall firmware {v}",
+    login_title: "Administrator login",
+    password: "Password",
+    cancel: "Cancel",
+    login_failed: "Login failed.",
+    login_demo_note: "Demo mode does not check the password.",
+    action_failed: "Request failed: {msg}",
+  },
+  ko: {
+    demo: "예시",
+    backend: "백엔드 {v}",
+    online_count: "온라인 {n}/{total}",
+    login: "로그인",
+    logout: "로그아웃",
+    settings: "설정",
+    logs: "로그",
+    theme: "테마",
+    theme_auto: "자동",
+    theme_dark: "다크",
+    theme_light: "라이트",
+    language: "언어",
+    sum_mqtt: "Home Assistant MQTT",
+    mqtt_connected: "켜짐·연결됨",
+    mqtt_disconnected: "끊김",
+    mqtt_off: "꺼짐",
+    mqtt_unknown: "알 수 없음",
+    login_required: "로그인 필요",
+    sum_fw: "펌웨어",
+    fw_target: "목표판 {v}",
+    fw_pending: "업데이트 대상 {n}대",
+    fw_none: "업데이트 대상 없음",
+    guest_note: "보기 전용입니다. 조작하려면 로그인하세요.",
+    empty: "MTTL-W01 기기를 기다리는 중입니다.",
+    online: "온라인",
+    offline: "오프라인",
+    offline_note: "오프라인입니다. 마지막으로 받은 값을 보여 줍니다.",
+    total_power: "전체 전력",
+    total_energy: "누적 사용량",
+    voltage: "전압",
+    rssi: "Wi-Fi 신호",
+    all_on: "전체 켜기",
+    all_off: "전체 끄기",
+    outlet: "콘센트 {n}",
+    power: "전력",
+    energy: "누적",
+    temp: "온도",
+    on: "ON",
+    off: "OFF",
+    rename: "이름 바꾸기",
+    lock: "버튼 잠금",
+    lock_all: "전체",
+    lock_pending: "동기화 대기",
+    lock_bit: "{name} 잠금",
+    fw_update: "펌웨어 업데이트 → {v}",
+    fw_downgrade: "펌웨어 다운그레이드 → {v}",
+    fw_reflash: "펌웨어 다시 설치 {v}",
+    login_title: "관리자 로그인",
+    password: "암호",
+    cancel: "취소",
+    login_failed: "로그인하지 못했습니다.",
+    login_demo_note: "예시 모드에서는 암호를 확인하지 않습니다.",
+    action_failed: "요청 실패: {msg}",
+  },
+};
+
+export function t(lang, key, vars = {}) {
+  const text = STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (whole, name) => (name in vars ? String(vars[name]) : whole));
+}
+
+export function pickLang(saved, navigatorLanguage) {
+  if (saved === "en" || saved === "ko") return saved;
+  return String(navigatorLanguage ?? "").toLowerCase().startsWith("ko") ? "ko" : "en";
+}
+
+export function resolveTheme(pref, haDark, osPrefersLight) {
+  if (pref === "dark" || pref === "light") return pref;
+  if (typeof haDark === "boolean") return haDark ? "dark" : "light";
+  return osPrefersLight ? "light" : "dark";
+}
+
+export function normalizeMac(s) {
+  if (typeof s !== "string") return null;
+  const hex = s.trim().replace(/[:-]/g, "").toLowerCase();
+  return /^[0-9a-f]{12}$/.test(hex) ? hex : null;
+}
+
+export function fmtMac(mac) {
+  return (normalizeMac(mac) ?? "").toUpperCase().replace(/(..)(?!$)/g, "$1:");
+}
+
+// Backend values are numbers or null; anything else is shown as missing.
+function num(v) {
+  if (typeof v === "number") return v;
+  if (typeof v === "string" && v.trim() !== "") return Number(v);
+  return NaN;
+}
+
+function fmtScaled(v, scale, digits, unit) {
+  const n = num(v) / scale;
+  return Number.isFinite(n) ? `${n.toFixed(digits)} ${unit}` : DASH;
+}
+
+export function fmtWatts(mw) {
+  return fmtScaled(mw, 1000, 1, "W");
+}
+
+export function fmtKwh(wh) {
+  return fmtScaled(wh, 1000, 2, "kWh");
+}
+
+export function fmtVolt(mv) {
+  return fmtScaled(mv, 1000, 1, "V");
+}
+
+export function fmtTemp(c) {
+  const n = num(c);
+  if (!Number.isFinite(n)) return DASH;
+  return `${Number.isInteger(n) ? n : n.toFixed(1)} °C`;
+}
+
+export function fmtRssi(dbm) {
+  return fmtScaled(dbm, 1, 0, "dBm");
+}
+
+function sum(values) {
+  let total = 0;
+  let any = false;
+  for (const v of values) {
+    const n = num(v);
+    if (Number.isFinite(n)) {
+      total += n;
+      any = true;
+    }
+  }
+  return any ? total : NaN;
+}
+
+function text(v) {
+  return typeof v === "string" && v.trim() !== "" ? v : null;
+}
+
+function onState(v) {
+  if (v === 1 || v === true) return true;
+  if (v === 0 || v === false) return false;
+  return null;
+}
+
+export const FW_ACTIONS = ["update", "downgrade", "reflash"];
+
+/** Selector 1..4 → channel. Other selectors (0 is the whole strip) are ignored. */
+function outletChannels(device) {
+  const bySel = new Map();
+  for (const ch of Array.isArray(device.channels) ? device.channels : []) {
+    const n = Number(ch?.selector);
+    if (Number.isInteger(n) && n >= 1 && n <= 4 && !bySel.has(n)) bySel.set(n, ch);
+  }
+  return bySel;
+}
+
+export function cardModel(device, { authenticated, lang }) {
+  const d = device ?? {};
+  const admin = authenticated === true;
+  const online = d.online === true;
+  const mac = String(d.mac ?? "");
+  const channels = outletChannels(d);
+  const outlets = [1, 2, 3, 4].map((n) => {
+    const ch = channels.get(n) ?? {};
+    return {
+      n,
+      name: text(ch.name) ?? t(lang, "outlet", { n }),
+      on: onState(ch.on_state),
+      // An offline strip's last power reading is stale; energy and temperature stay as last received.
+      w: online ? fmtWatts(ch.power_mw) : DASH,
+      kwh: fmtKwh(ch.energy_lifetime_wh),
+      temp: fmtTemp(ch.temperature_c),
+    };
+  });
+  const rows = [...channels.values()];
+  const diag = d.diagnostics ?? {};
+  const mask = d.childlock_mask;
+  const maskKnown = Number.isInteger(mask) && mask >= 0 && mask < 32;
+  return {
+    mac,
+    title: text(d.alias) ?? `MTTL ${mac.slice(-6).toUpperCase()}`,
+    firmware: d.firmware_version ?? null,
+    online,
+    ip: admin ? text(d.peer_ip) : null,
+    totalW: online ? fmtWatts(sum(rows.map((ch) => ch.power_mw))) : DASH,
+    totalKwh: fmtKwh(sum(rows.map((ch) => ch.energy_lifetime_wh))),
+    voltage: diag.voltage_enabled === true ? fmtVolt(diag.voltage_mv) : null,
+    rssi: diag.rssi_enabled === true ? fmtRssi(diag.rssi_dbm) : null,
+    outlets,
+    lock: admin
+      ? {
+          supported: d.childlock_supported === true,
+          synced: d.childlock_synced === true,
+          bits: [0, 1, 2, 3, 4].map((bit) => maskKnown && (mask & (1 << bit)) !== 0),
+        }
+      : null,
+    fwAction: admin && FW_ACTIONS.includes(d.firmware_action) ? d.firmware_action : null,
+    fwTarget: admin ? text(d.firmware_target?.version) : null,
+    editable: admin,
+    controls: admin && online,
+  };
+}
+
+/** Values for the top bar and the summary card row. */
+export function summaryModel(resp, ha) {
+  const devices = Array.isArray(resp?.devices) ? resp.devices : [];
+  const admin = resp?.authenticated === true;
+  let mqtt = "login";
+  if (admin) mqtt = !ha ? "unknown" : ha.enabled !== true ? "off" : ha.connected === true ? "connected" : "disconnected";
+  return {
+    version: text(resp?.backend_version),
+    online: devices.filter((d) => d?.online === true).length,
+    total: devices.length,
+    admin,
+    mqtt,
+    fwTarget: admin
+      ? (devices.map((d) => text(d?.firmware_target?.version)).find(Boolean) ?? text(resp?.firmware?.target_profile))
+      : null,
+    fwPending: admin ? devices.filter((d) => FW_ACTIONS.includes(d?.firmware_action)).length : null,
+  };
+}
+
+const GUEST_CHANNEL_KEYS = ["selector", "name", "on_state", "power_mw", "temperature_c", "energy_lifetime_wh", "last_seen"];
+const GUEST_DIAG_KEYS = ["voltage_mv", "voltage_updated_at", "rssi_dbm", "rssi_updated_at"];
+
+/** What a visitor who is not logged in receives: mirrors backend.py `public_device_view`. */
+export function guestView(resp) {
+  const devices = (resp?.devices ?? []).map((d) => {
+    const diag = d.diagnostics ?? {};
+    const diagnostics = { voltage_enabled: Boolean(diag.voltage_enabled), rssi_enabled: Boolean(diag.rssi_enabled) };
+    for (const k of GUEST_DIAG_KEYS) if (k in diag) diagnostics[k] = diag[k];
+    const channels = (d.channels ?? [])
+      .filter((ch) => Number(ch.selector) >= 1 && Number(ch.selector) <= 4)
+      .map((ch) => Object.fromEntries(GUEST_CHANNEL_KEYS.map((k) => [k, ch[k] ?? null])));
+    return {
+      mac: d.mac,
+      alias: d.alias ?? null,
+      online: Boolean(d.online),
+      last_seen: d.last_seen ?? null,
+      firmware_version: d.firmware_version ?? null,
+      channels,
+      diagnostics,
+    };
+  });
+  return { authenticated: false, backend_version: resp?.backend_version ?? null, devices, removed: [], firmware: null };
+}
+
+// ---- Demo data (`?demo`). Same keys as an administrator's `api/devices` response. ----
+
+const DEMO_NOW = 1790682546.5;
+
+function demoChannel(mac, selector, name, on, powerMw, tempC, lifetimeWh, seen = DEMO_NOW) {
+  return {
+    mac,
+    selector,
+    name,
+    on_state: on ? 1 : 0,
+    power_mw: powerMw,
+    temperature_c: tempC,
+    energy_raw_wh: lifetimeWh,
+    energy_lifetime_wh: lifetimeWh,
+    energy_highwater_wh: lifetimeWh,
+    energy_epoch: 0,
+    last_seen: seen,
+  };
+}
+
+function demoTarget() {
+  return { profile_id: "official-111", version: "1.0.111", label: "Official 1.0.111", kind: "official", ready: true };
+}
+
+function demoDevice(fields) {
+  const fw = fields.firmware_version;
+  const lockable = fw === "1.0.111";
+  return {
+    mac: fields.mac,
+    peer_ip: fields.peer_ip,
+    session_id: fields.online ? `demo-${fields.mac.slice(-4)}` : null,
+    soft_version: fw,
+    firmware_version: fw,
+    online: fields.online,
+    last_seen: fields.last_seen ?? DEMO_NOW,
+    first_seen: DEMO_NOW - 86400 * 30,
+    alias: fields.alias,
+    removed_at: null,
+    removed: false,
+    channels: fields.channels,
+    diagnostics: {
+      voltage_enabled: false,
+      rssi_enabled: false,
+      poll_interval: 60,
+      ...fields.diagnostics,
+    },
+    childlock_mask: lockable ? fields.childlock_mask : null,
+    childlock_supported: lockable,
+    childlock_verified: lockable && Number.isInteger(fields.childlock_mask),
+    childlock_synced: lockable && fields.online && Number.isInteger(fields.childlock_mask),
+    childlock_probe_safe: lockable,
+    firmware_target: demoTarget(),
+    firmware_current_normalized: fw,
+    firmware_build_current: fw === "1.0.111",
+    firmware_action: fw === "1.0.111" ? null : "update",
+    ota_job: null,
+    ota_applied: null,
+  };
+}
+
+export function demoResponse() {
+  const a = "0a1b2c3d4e5f";
+  const b = "0a1b2c3d4e60";
+  const c = "0a1b2c3d4e61";
+  const d = "0a1b2c3d4e62";
+  const away = DEMO_NOW - 3 * 3600;
+  return {
+    authenticated: true,
+    backend_version: "0.2.11",
+    devices: [
+      demoDevice({
+        mac: a, alias: "Living Room", firmware_version: "1.0.111", online: true, peer_ip: "192.0.2.21",
+        childlock_mask: 0b00100,
+        diagnostics: { voltage_enabled: true, rssi_enabled: true, voltage_mv: 221400, voltage_updated_at: DEMO_NOW - 20, rssi_dbm: -54, rssi_updated_at: DEMO_NOW - 20 },
+        channels: [
+          demoChannel(a, 1, "TV", true, 84300, 31, 48210),
+          demoChannel(a, 2, "Soundbar", true, 12800, 29, 9340),
+          demoChannel(a, 3, null, false, 0, 27, 1275),
+          demoChannel(a, 4, "Router", true, 7100, 30, 22480),
+        ],
+      }),
+      demoDevice({
+        mac: b, alias: "Office Desk", firmware_version: "1.0.66", online: true, peer_ip: "192.0.2.22",
+        channels: [
+          demoChannel(b, 1, "Monitor", true, 23600, 30, 15320),
+          demoChannel(b, 2, "PC", true, 118400, 33, 96150),
+          demoChannel(b, 3, "Desk lamp", false, 0, 28, 2040),
+          demoChannel(b, 4, "Charger", false, 0, 27, 610),
+        ],
+      }),
+      demoDevice({
+        mac: c, alias: null, firmware_version: "1.0.111", online: true, peer_ip: "192.0.2.23",
+        childlock_mask: 0,
+        channels: [
+          demoChannel(c, 1, "Kettle", false, 0, 26, 30120),
+          demoChannel(c, 2, "Toaster", false, 0, 26, 4410),
+          demoChannel(c, 3, null, false, 0, 25, 0),
+          demoChannel(c, 4, null, false, 0, 25, 0),
+        ],
+      }),
+      demoDevice({
+        mac: d, alias: "Garage", firmware_version: "1.0.111", online: false, peer_ip: "192.0.2.24",
+        last_seen: away, childlock_mask: 0b00001,
+        channels: [
+          demoChannel(d, 1, "Freezer", true, 61200, 24, 187650, away),
+          demoChannel(d, 2, "Heater", false, 0, 22, 35890, away),
+          demoChannel(d, 3, null, false, 0, 22, 0, away),
+          demoChannel(d, 4, null, false, 0, 22, 0, away),
+        ],
+      }),
+    ],
+    removed: [],
+    firmware: {
+      target_profile: "official-111",
+      profiles: [],
+      active: null,
+      jobs: [],
+      queue_depth: 0,
+      ota_host_ip: "192.0.2.10",
+      release: "1.0.111-canonical",
+      release_status: "HARDWARE_OTA_BOOT_VERIFIED",
+      ota_primary_port: 49217,
+      ota_fallback_port: 80,
+    },
+  };
+}
+
+/** Demo answer for `api/ha` (administrator only in the real backend). */
+export function demoHa() {
+  return { enabled: true, connected: true, last_error: null, connected_since: DEMO_NOW - 7200 };
+}
