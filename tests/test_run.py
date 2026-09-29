@@ -21,6 +21,11 @@ NET = {"interfaces": [
     {"interface": "wlan0", "primary": False, "connected": True, "ipv4": {"address": ["192.0.2.50/24"]}},
     {"interface": "eth0", "primary": True, "connected": True, "ipv4": {"address": ["192.0.2.31/24"]}}]}
 SECRET = "s3cret-mqtt-password"
+# 응답 본문에 비밀번호가 들어 있지만 해석할 수 없는 응답: 잘못된 UTF-8, JSON이 아닌 본문
+RAW_BODIES = {
+    "/badbytes": b'{"result":"ok","data":{"host":"core-mosquitto","password":"' + SECRET.encode() + b'\xff"}}',
+    "/notjson": b"not json " + SECRET.encode(),
+}
 
 
 def closed_port():
@@ -44,6 +49,9 @@ class FakeSupervisor(BaseHTTPRequestHandler):
             self.wfile.write(b"garbage\r\n\r\n")
             self.close_connection = True
             return
+        if self.path in RAW_BODIES:
+            self.send_raw(200, RAW_BODIES[self.path])
+            return
         if self.path == "/services/mqtt":
             status, payload = 200, {"result": "ok", "data": MQTT}
         elif self.path == "/services/mqtt-secret":
@@ -58,7 +66,9 @@ class FakeSupervisor(BaseHTTPRequestHandler):
             status, payload = 200, {"result": "ok", "data": [SECRET]}
         else:
             status, payload = 400, {"result": "error", "message": "bad request"}
-        data = json.dumps(payload).encode()
+        self.send_raw(status, json.dumps(payload).encode())
+
+    def send_raw(self, status, data):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
@@ -144,6 +154,16 @@ class RunTest(unittest.TestCase):
             self.assertIsNone(r.fetch_mqtt_service("tok", url=f"{self.base}/services/mqtt-nohost"))
         self.assertNotIn(SECRET, err.getvalue())
         self.assertIn("[run]", err.getvalue())
+
+    def test_supervisor_get_undecodable_body_never_logged(self):
+        for path in RAW_BODIES:
+            err = io.StringIO()
+            with self.subTest(path=path), contextlib.redirect_stderr(err):
+                self.assertIsNone(r.supervisor_get("tok", f"{self.base}{path}"))
+                self.assertIsNone(r.fetch_mqtt_service("tok", url=f"{self.base}{path}"))
+            self.assertNotIn(SECRET, err.getvalue())
+            self.assertIn("[run]", err.getvalue())
+        self.assertEqual(FakeSupervisor.authorizations, ["Bearer tok"] * (2 * len(RAW_BODIES)))
 
     def test_pick_primary_ipv4(self):
         self.assertEqual(r.pick_primary_ipv4(NET), "192.0.2.31")

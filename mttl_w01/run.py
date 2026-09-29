@@ -33,8 +33,12 @@ def supervisor_get(token: str | None, url: str, timeout: float = 10.0) -> dict |
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             payload = json.load(response)
-    except (OSError, ValueError, http.client.HTTPException) as e:
+    except (OSError, http.client.HTTPException) as e:
         log(f"warning: request to {url} failed: {e!r}")
+        return None
+    except ValueError as e:
+        # UnicodeDecodeError.__repr__ embeds the whole response bytes, so log only the type.
+        log(f"warning: response from {url} could not be decoded: {type(e).__name__}")
         return None
     if not isinstance(payload, dict) or payload.get("result") != "ok":
         detail = (f"{payload.get('result')} {payload.get('message', '')}".strip()
