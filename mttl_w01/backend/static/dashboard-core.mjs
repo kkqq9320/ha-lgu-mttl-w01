@@ -439,6 +439,14 @@ export function logLine(row, timeZone) {
   return `${fmtLogTime(row.ts, timeZone)} ${String(row.level ?? "").padEnd(7)} [${row.category || "other"}] ${row.message ?? ""}`;
 }
 
+/**
+ * Identity of a log row across reads. backend.py numbers rows from 1 again after every start,
+ * so `seq` alone would match a new row to a row of the previous run; the timestamp tells them apart.
+ */
+export function logRowKey(row) {
+  return `${row.seq}|${row.ts}`;
+}
+
 /** The text a view shows and "copy" puts on the clipboard. */
 export function logText(rows, view, timeZone) {
   if (view === "json") return JSON.stringify(rows, null, 2);

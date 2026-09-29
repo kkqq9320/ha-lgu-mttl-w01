@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const {
-  LOG_CATEGORIES, LOG_LEVELS, logQuery, filterLogs, fmtLogTime, logLine, logText, demoLogs,
+  LOG_CATEGORIES, LOG_LEVELS, logQuery, filterLogs, fmtLogTime, logLine, logText, demoLogs, logRowKey,
 } = await import(new URL("../../mttl_w01/backend/static/dashboard-core.mjs", import.meta.url));
 
 // Row keys produced by backend.py UILogHandler.emit.
@@ -58,4 +58,16 @@ test("demo logs look like backend rows", () => {
   const seqs = rows.map((r) => r.seq);
   assert.deepEqual(seqs, [...seqs].sort((a, b) => a - b));
   assert.equal(new Set(seqs).size, seqs.length);
+});
+
+test("logRowKey tells a restarted backend's rows apart", () => {
+  // backend.py numbers rows from 1 again after every start, so seq alone repeats.
+  const before = [row(1, "INFO", "other", "old run", 1000.25), row(2, "INFO", "ha", "old run", 1001.5)];
+  const after = [row(1, "INFO", "other", "new run", 5000.75), row(2, "INFO", "ha", "new run", 5002)];
+  const keys = (rows) => new Set(rows.map(logRowKey));
+  const shared = [...keys(after)].filter((k) => keys(before).has(k));
+  assert.deepEqual(shared, []);
+  // The same row read twice keeps its key, so it is not redrawn.
+  assert.equal(logRowKey(before[0]), logRowKey({ ...before[0] }));
+  assert.notEqual(logRowKey(before[0]), logRowKey({ ...before[0], ts: 1000.5 }));
 });

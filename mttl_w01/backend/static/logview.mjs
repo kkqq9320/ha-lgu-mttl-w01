@@ -1,6 +1,6 @@
 // Page wiring for logview.html, the backend log. Rows reach the page only through textContent;
 // filtering and formatting live in dashboard-core.mjs.
-import { t, logFilters, filterLogs, fmtLogTime, logText, demoLogs } from "./dashboard-core.mjs";
+import { t, logFilters, filterLogs, fmtLogTime, logText, logRowKey, demoLogs } from "./dashboard-core.mjs";
 import { page, applyTheme, initPage, useDemoLinks } from "./page.mjs";
 
 const AUTO_MS = 2000;
@@ -64,7 +64,7 @@ function setHidden(el, hidden) {
 
 // ---- Rendering ----
 
-const rowEls = new Map(); // seq -> row element; log rows never change once written
+const rowEls = new Map(); // logRowKey(row) -> row element; a row's content never changes under its key
 
 function createRow(r) {
   const el = $("#log-row-tpl").content.firstElementChild.cloneNode(true);
@@ -83,7 +83,7 @@ function renderRows() {
   const seen = new Set();
   let prev = null;
   for (const r of state.rows) {
-    const key = String(r.seq);
+    const key = logRowKey(r);
     if (seen.has(key)) continue;
     seen.add(key);
     let el = rowEls.get(key);
