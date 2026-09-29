@@ -5,8 +5,8 @@
  * 2x2 outlet cells with a full-width ON/OFF button.
  * Neutrals have no blue cast in either theme: black and charcoal (dark, the default) or light
  * grays and white ([data-theme="light"]). The slate accent (#536284 family) marks selected states;
- * an outlet that is on is filled with the online green; an active Child Lock padlock has the same
- * red as the hide button, and a set lock bit a desaturated version of it.
+ * an outlet that is on is filled with the online green; an active Child Lock (padlock, set bits)
+ * uses the warning amber, since it restricts the device's buttons.
  * Every color is a custom property.
  * Shared by dashboard.html and logview.html.
  */
@@ -44,12 +44,12 @@
   --action-bg: #eeeae0; /* summary card buttons: off-white on dark */
   --action-hover: #ffffff;
   --action-text: #161616;
-  --on-bg: #2b7d3d; /* ON outlet button: the online badge's green, deep enough for white text */
+  --on-bg: #2e853c; /* ON outlet button: the lightest online-badge green that keeps white text at 4.5:1 */
   --on-text: #ffffff;
   --off-line: #6a6a65; /* OFF outlet button: outlined */
-  --lock-on: var(--bad); /* Child Lock padlock while a lock is active: the hide button's red */
-  --lock-bit-bg: #9a524c; /* a set Child Lock bit: the padlock red, desaturated (both themes) */
-  --lock-bit-text: #ffffff;
+  --lock-on: var(--warn); /* Child Lock padlock while a lock is active */
+  --lock-bit-bg: var(--warn); /* a set Child Lock bit */
+  --lock-bit-text: #161616;
   --demo-bg: #b1b1a7;
   --demo-text: #161616;
   --ok: #72c77e;
@@ -111,6 +111,7 @@
   --card-highlight: transparent;
   --on-bg: #1f7a36; /* the online badge's green, a step deeper for white text */
   --on-text: #ffffff;
+  --lock-bit-text: #ffffff; /* on the light theme's deep amber */
   --off-line: #9f9c93;
   --ok: #1a6e2e;
   --ok-soft: #dcefdf;
