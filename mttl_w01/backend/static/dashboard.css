@@ -5,7 +5,8 @@
  * 2x2 outlet cells with a full-width ON/OFF button.
  * Neutrals have no blue cast in either theme: black and charcoal (dark, the default) or light
  * grays and white ([data-theme="light"]). The slate accent (#536284 family) marks selected states;
- * an outlet that is on is the inverse of the text color; an active Child Lock is amber.
+ * an outlet that is on is the inverse of the text color (dark) or the online green (light);
+ * an active Child Lock padlock has the same red as the hide button.
  * Every color is a custom property.
  * Shared by dashboard.html and logview.html.
  */
@@ -20,7 +21,7 @@
     "Apple SD Gothic Neo", "Malgun Gothic", monospace;
   --bg: #050505;
   --surface: #141414; /* cards: charcoal lifted off the black page by the border and top highlight */
-  --surface-2: #0c0c0c; /* outlet cells: recessed one step below the card */
+  --surface-2: #1d1d1d; /* outlet cells: one step lighter again (page, card, cell) */
   --card-border: #2a2a2a;
   --card-highlight: #ffffff0d;
   --line: #262626;
@@ -45,9 +46,8 @@
   --action-text: #161616;
   --on-bg: #eeeae0; /* ON outlet button: filled with the text color, the inverse of the card */
   --on-text: #161616;
-  --on-line: #eeeae066; /* border of an outlet cell that is on */
-  --off-line: #5c5c58; /* OFF outlet button: outlined */
-  --lock-on: #ffc233; /* Child Lock padlock while a lock is active */
+  --off-line: #6a6a65; /* OFF outlet button: outlined */
+  --lock-on: var(--bad); /* Child Lock padlock while a lock is active: the hide button's red */
   --demo-bg: #b1b1a7;
   --demo-text: #161616;
   --ok: #72c77e;
@@ -89,7 +89,7 @@
   color-scheme: light;
   --bg: #ededeb;
   --surface: #ffffff;
-  --surface-2: #f6f6f4;
+  --surface-2: #f1f1ee;
   --card-border: #dedcd7;
   --line: #e3e2de;
   --text: #1b1b1a;
@@ -107,11 +107,9 @@
   --action-hover: #34342f;
   --action-text: #eeeae0;
   --card-highlight: transparent;
-  --on-bg: #1b1b1a;
+  --on-bg: #1f7a36; /* the online badge's green, a step deeper for white text */
   --on-text: #ffffff;
-  --on-line: #1b1b1a59;
   --off-line: #9f9c93;
-  --lock-on: #b86e00;
   --ok: #1a6e2e;
   --ok-soft: #dcefdf;
   --warn: #8a5a00;
@@ -784,12 +782,6 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   filter: grayscale(1);
 }
 
-.card[data-online="off"] .outlet,
-.card[data-online="off"] .outlet[data-state="on"] {
-  border-style: dashed;
-  border-color: var(--line);
-}
-
 .card[data-online="off"] .toggle,
 .card[data-online="off"] .outlet[data-state="on"] .toggle {
   border-style: dashed;
@@ -816,19 +808,15 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   gap: 8px;
 }
 
+/* No border: the cell stands apart from the card by its background alone. */
 .outlet {
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-  padding: 8px;
-  border: 1px solid var(--line);
+  padding: 9px;
   border-radius: 3px;
   background: var(--surface-2);
-}
-
-.outlet[data-state="on"] {
-  border-color: var(--on-line);
 }
 
 .outlet-title {
