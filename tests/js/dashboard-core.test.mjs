@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 const core = await import(new URL("../../mttl_w01/backend/static/dashboard-core.mjs", import.meta.url));
 const {
   STRINGS, t, pickLang, resolveTheme, normalizeMac,
-  fmtWatts, fmtKwh, fmtTemp, fmtVolt, fmtRssi,
+  fmtWatts, fmtKwh, fmtTemp, fmtVolt, fmtRssi, fmtAge,
   cardModel, demoResponse, demoHa, summaryModel, fmtMac, apkUrl, apkUrlForHost, ENGLISH_ONLY,
   pressConfirm, scriptLang,
 } = core;
@@ -141,6 +141,14 @@ test("formatters show N/A for missing values", () => {
   assert.equal(fmtRssi(-54), "-54 dBm");
 });
 
+test("fmtAge shows whole seconds since last_seen", () => {
+  assert.equal(fmtAge(1000, 1012.4), "12 s ago");
+  assert.equal(fmtAge(1000, 1000), "0 s ago");
+  assert.equal(fmtAge(1000, 998), "0 s ago"); // clock skew never shows a negative age
+  assert.equal(fmtAge(1000.9, 1011.2), "10 s ago");
+  for (const missing of [null, undefined, NaN, "", "abc"]) assert.equal(fmtAge(missing, 1000), NA, String(missing));
+});
+
 test("cardModel fills four outlets", () => {
   const empty = cardModel({ mac: "0a1b2c3d4e5f", online: true, channels: [] }, { authenticated: true, lang: "en" });
   assert.equal(empty.outlets.length, 4);
@@ -180,6 +188,8 @@ test("cardModel fills four outlets", () => {
 test("cardModel guest view hides admin parts", () => {
   const m = cardModel(fixture.devices[0], { authenticated: fixture.authenticated, lang: "en" });
   assert.equal(m.mac, "0a1b2c3d4e5f");
+  assert.equal(m.lastSeen, 1790682546.5);
+  assert.equal(cardModel({ mac: "0a1b2c3d4e5f" }, { authenticated: true, lang: "en" }).lastSeen, null);
   assert.equal(m.title, "MTTL 3D4E5F");
   assert.equal(m.firmware, "1.0.66");
   assert.equal(m.online, true);
@@ -215,7 +225,6 @@ test("cardModel locked view disables controls", () => {
   // Rename and hide follow the screen lock, not the device being online.
   assert.equal(offlineOpen.editable, true);
   assert.equal(offlineOpen.controls, false);
-  assert.equal(offlineOpen.editable, true);
   // Missing option means locked.
   assert.equal(cardModel(device, { authenticated: true, lang: "en" }).controls, false);
 });

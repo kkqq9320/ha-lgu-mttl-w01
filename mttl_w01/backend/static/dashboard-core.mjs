@@ -54,6 +54,7 @@ export const STRINGS = {
     rssi: "Wi-Fi RSSI",
     all_on: "All ON",
     all_off: "All OFF",
+    refresh: "Refresh",
     outlet: "Outlet {n}",
     power: "Power",
     energy: "Energy",
@@ -139,6 +140,7 @@ export const STRINGS = {
     rssi: "Wi-Fi RSSI",
     all_on: "전체 켜기",
     all_off: "전체 끄기",
+    refresh: "새로고침",
     outlet: "콘센트 {n}",
     power: "전력",
     energy: "누적",
@@ -273,6 +275,13 @@ export function fmtTemp(c) {
   return `${Number.isInteger(n) ? n : n.toFixed(1)} °C`;
 }
 
+/** Whole seconds since `lastSeen` (epoch seconds), like Tuo's card; English in both languages. */
+export function fmtAge(lastSeen, now) {
+  const seen = num(lastSeen);
+  if (!Number.isFinite(seen) || !Number.isFinite(now)) return NA;
+  return `${Math.max(0, Math.floor(now - seen))} s ago`;
+}
+
 export function fmtRssi(dbm) {
   return fmtScaled(dbm, 1, 0, "dBm");
 }
@@ -340,6 +349,7 @@ export function cardModel(device, { authenticated, unlocked, lang }) {
     title: text(d.alias) ?? `MTTL ${mac.slice(-6).toUpperCase()}`,
     firmware: d.firmware_version ?? null,
     online,
+    lastSeen: Number.isFinite(num(d.last_seen)) ? num(d.last_seen) : null,
     ip: admin ? text(d.peer_ip) : null,
     totalW: online ? fmtWatts(sum(rows.map((ch) => ch.power_mw))) : NA,
     totalKwh: fmtKwh(sum(rows.map((ch) => ch.energy_lifetime_wh))),

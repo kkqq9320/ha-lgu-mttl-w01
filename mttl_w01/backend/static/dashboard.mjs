@@ -1,7 +1,7 @@
 // Page wiring for dashboard.html. Values reach the page only through textContent,
 // attributes and data-* states; see dashboard-core.mjs for the logic.
 import {
-  NA, t, normalizeMac, fmtMac, pressConfirm, scriptLang,
+  NA, t, normalizeMac, fmtMac, fmtAge, pressConfirm, scriptLang,
   cardModel, summaryModel, apkUrl, apkUrlForHost, demoResponse, demoHa,
 } from "./dashboard-core.mjs";
 import { page, applyTheme, applyStrings, initPage, setText, useDemoLinks } from "./page.mjs";
@@ -9,6 +9,7 @@ import { encodeQr } from "./qr.mjs";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const HIDE_CONFIRM_MS = 4000;
+const AGE_TICK_MS = 1000;
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -31,6 +32,12 @@ const state = {
 
 function createDemoSource() {
   const data = demoResponse();
+  // The sample data is fixed in time; move it to now so "N s ago" looks like a live backend.
+  const shift = Date.now() / 1000 - Math.max(...data.devices.map((d) => d.last_seen));
+  for (const d of data.devices) {
+    d.last_seen += shift;
+    for (const ch of d.channels) ch.last_seen += shift;
+  }
   const lastPower = new Map();
   const device = (mac) => {
     const d = data.devices.find((x) => x.mac === mac);
@@ -68,6 +75,12 @@ function createDemoSource() {
     },
     async lock(mac, mask) {
       device(mac).childlock_mask = mask;
+    },
+    async refresh(mac) {
+      const d = device(mac);
+      if (!d.online) throw new Error("device offline");
+      d.last_seen = Date.now() / 1000;
+      for (const ch of d.channels) ch.last_seen = d.last_seen;
     },
     async hide(mac) {
       const d = device(mac);
@@ -182,7 +195,8 @@ function updateCard(card, m, raw) {
   setText(f.statusText, t(lang, m.online ? "online" : "offline"));
   setText(f.mac, fmtMac(m.mac));
   setText(f.fw, m.firmware ?? NA);
-  setText(f.ip, m.ip ?? "");
+  card.seenOf = { ip: m.ip, lastSeen: m.lastSeen };
+  setText(f.seen, seenText(card.seenOf));
 
   // One reserved slot: offline notice first (an update cannot run offline), then the firmware link.
   setData(f.notice, "kind", !m.online ? "offline" : m.fwAction ? "fw" : "none");
@@ -196,6 +210,7 @@ function updateCard(card, m, raw) {
 
   setDisabled(f.allOn, !m.controls || cardBusy);
   setDisabled(f.allOff, !m.controls || cardBusy);
+  setDisabled(f.refreshBtn, !m.controls || cardBusy);
 
   // The lock area keeps its height on every card; devices without 1.0.111 leave it blank.
   const lock = m.lock?.supported ? m.lock : null;
@@ -236,6 +251,16 @@ function updateCard(card, m, raw) {
     setDisabled(of.toggle, !m.controls || o.on === null || busy);
   });
   card.raw = raw;
+}
+
+/** "IP · N s ago" (admin) or "N s ago"; the age counts up between loads. */
+function seenText({ ip, lastSeen }) {
+  const age = fmtAge(lastSeen, Date.now() / 1000);
+  return ip ? `${ip} · ${age}` : age;
+}
+
+function updateAges() {
+  for (const card of cards.values()) if (card.seenOf) setText(card.f.seen, seenText(card.seenOf));
 }
 
 function renderCards() {
@@ -292,7 +317,7 @@ function renderTopbar() {
 function setUrlText(el, url) {
   if (el.dataset.url === url) return;
   el.dataset.url = url;
-  const parts = url.split(/(?<=\/)/);
+  const parts = url.match(/[^\/]*\/|[^\/]+$/g) ?? [];
   el.replaceChildren();
   parts.forEach((part, i) => {
     if (i > 0) el.append(document.createElement("wbr"));
@@ -411,6 +436,8 @@ function onDeviceClick(event) {
     const bit = Number(btn.dataset.bit);
     const next = mask & (1 << bit) ? mask & ~(1 << bit) : mask | (1 << bit);
     run(`${mac}:lock`, () => state.source.lock(mac, next));
+  } else if (act === "refresh") {
+    run(mac, () => state.source.refresh(mac));
   } else if (act === "hide") {
     pressHide(mac);
   } else if (act === "rename") {
@@ -533,6 +560,7 @@ function init() {
 
   render();
   refresh();
+  setInterval(updateAges, AGE_TICK_MS);
 }
 
 init();
