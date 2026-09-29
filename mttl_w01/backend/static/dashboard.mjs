@@ -183,7 +183,7 @@ function updateCard(card, m, raw) {
 
   // One reserved slot: offline notice first (an update cannot run offline), then the firmware link.
   setData(f.notice, "kind", !m.online ? "offline" : m.fwAction ? "fw" : "none");
-  setText(f.fwUpdate, m.fwAction ? t(lang, `fw_${m.fwAction}`, { v: m.fwTarget ?? NA }) : "");
+  setText(f.fwText, m.fwAction ? t(lang, `fw_${m.fwAction}`, { v: m.fwTarget ?? NA }) : "");
   setAttr(f.fwUpdate, "href", `tuo.html#device=${m.mac}`);
 
   setValue(f.totalW, m.totalW);
@@ -275,7 +275,6 @@ function renderHeader() {
   setData(lockBtn, "state", state.unlocked ? "unlocked" : "locked");
   setAttr(lockBtn, "aria-pressed", String(state.unlocked));
   setAttr(lockBtn, "title", t(lang, state.unlocked ? "relock_hint" : "unlock_hint"));
-  setText($("[data-f=label]", lockBtn), t(lang, state.unlocked ? "relock" : "unlock"));
 
   const mqtt = fieldMap($("#sum-mqtt"));
   setData(mqtt.badge, "state", MQTT_BADGE[s.mqtt]);

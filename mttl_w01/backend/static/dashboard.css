@@ -24,22 +24,21 @@
   --topbar-line: #363634;
   --btn: #2a2a2a;
   --btn-hover: #353535;
-  --action: #b9b6aa;
-  --action-hover: #cac7bc;
-  --action-text: #161616;
-  --accent: #5a6b8c;
+  --accent: #536284; /* slate of the reference image: primary and selected states */
+  --accent-hover: #60719a;
   --accent-text: #f4f2ec;
-  --on-bg: #4e7449;
-  --on-line: #6f956966;
-  --ok: #9dbf97;
-  --ok-soft: #9dbf971f;
-  --warn: #d8b06a;
-  --warn-soft: #d8b06a1f;
-  --bad: #de8f83;
-  --bad-soft: #de8f8324;
+  --accent-line: #8594b8; /* the same slate, light enough for rings and icons on dark */
+  --greige: #b1b1a7;
+  --on-bg: #2f7a3c;
+  --on-line: #3f9a4f80;
+  --ok: #72c77e;
+  --ok-soft: #3aa14f2e;
+  --warn: #f2b01e;
+  --warn-soft: #f2b01e24;
+  --bad: #f06b5f;
+  --bad-soft: #f06b5f26;
   --idle: #9c988d;
   --idle-soft: #ffffff0f;
-  --focus: #eeeae0;
   --pad: 16px;
   --track: 0.06em;
   --label: 11px;
@@ -65,21 +64,18 @@
   --topbar: #161616;
   --btn: #e8e7e3;
   --btn-hover: #dcdbd6;
-  --action: #1f1f1e;
-  --action-hover: #34342f;
-  --action-text: #eeeae0;
-  --accent: #56688c;
-  --on-bg: #4e7449;
-  --on-line: #4e744966;
-  --ok: #3f6639;
-  --ok-soft: #e3ecdf;
-  --warn: #7d5516;
-  --warn-soft: #f3e9d4;
-  --bad: #9e4337;
-  --bad-soft: #f5e1dd;
+  --accent-hover: #45536f;
+  --accent-text: #ffffff;
+  --accent-line: #536284;
+  --on-line: #2f7a3c66;
+  --ok: #1f7a34;
+  --ok-soft: #dcefdf;
+  --warn: #8a5a00;
+  --warn-soft: #fcefc7;
+  --bad: #b3261e;
+  --bad-soft: #fbe3e0;
   --idle: #6b675e;
   --idle-soft: #ecebe7;
-  --focus: #1b1b1a;
 }
 
 @media (min-width: 680px) {
@@ -134,7 +130,7 @@ pre {
 }
 
 :focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 2px solid var(--accent-line);
   outline-offset: 2px;
 }
 
@@ -174,7 +170,7 @@ button:disabled {
 }
 
 input[type="checkbox"] {
-  accent-color: var(--action);
+  accent-color: var(--accent);
 }
 
 select {
@@ -235,6 +231,7 @@ select {
 /* ---- Top bar (near-black in both themes) ---- */
 
 .topbar {
+  --track: 0.06em; /* the top bar is English in both languages */
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -274,17 +271,17 @@ select {
 }
 
 .topbar .badge[data-state="ok"] {
-  background: #9dbf9724;
-  color: #a9c9a3;
+  background: #3aa14f33;
+  color: #86d692;
 }
 
 .topbar .badge[data-state="bad"] {
-  background: #de8f832e;
-  color: #e6a197;
+  background: #f06b5f33;
+  color: #f59a90;
 }
 
 .topbar .badge-demo {
-  background: #b9b6aa;
+  background: var(--greige);
   color: #161616;
 }
 
@@ -319,7 +316,22 @@ button.tool:hover:not(:disabled) {
   display: none;
 }
 
-/* The one muted slate-blue highlight: controls are live. */
+/* Fixed width: both labels share one grid cell, so "Lock" ends where "Unlock" ends. */
+.lock-labels {
+  display: inline-grid;
+  justify-items: end;
+}
+
+.lock-labels > span {
+  grid-area: 1 / 1;
+}
+
+.tool-lock[data-state="locked"] [data-label="unlocked"],
+.tool-lock[data-state="unlocked"] [data-label="locked"] {
+  visibility: hidden;
+}
+
+/* Controls are live. */
 .tool-lock[data-state="unlocked"],
 button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   border-color: var(--accent);
@@ -368,9 +380,10 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   background: #ffffff14;
 }
 
-.seg button[aria-pressed="true"] {
-  background: #ffffff24;
-  color: var(--topbar-text);
+.seg button[aria-pressed="true"],
+.seg button[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-text);
 }
 
 /* ---- Page blocks ---- */
@@ -519,8 +532,8 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   padding: 0 10px;
   overflow: hidden;
   border-radius: 3px;
-  background: var(--action);
-  color: var(--action-text);
+  background: var(--accent);
+  color: var(--accent-text);
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
@@ -529,7 +542,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 }
 
 .action:hover {
-  background: var(--action-hover);
+  background: var(--accent-hover);
 }
 
 .qr-body {
@@ -570,7 +583,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 }
 
 .card.is-target {
-  outline-color: var(--focus);
+  outline-color: var(--accent-line);
 }
 
 .card-head {
@@ -616,7 +629,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   width: 100%;
   min-width: 0;
   padding: 3px 8px;
-  border: 1px solid var(--focus);
+  border: 1px solid var(--accent-line);
   border-radius: 3px;
   background: var(--surface);
   color: var(--text);
@@ -658,21 +671,37 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
 }
 
 .notice[data-kind="fw"] {
+  padding: 0;
   background: var(--warn-soft);
 }
 
+/* The whole slot is the link: text on the left, a chevron at the right edge. */
 .notice[data-kind="fw"] .notice-fw {
-  display: block;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+  padding: 0 10px;
   color: var(--warn);
   font-weight: 600;
   text-decoration: none;
 }
 
-.notice[data-kind="fw"] .notice-fw::after {
-  content: " \203A";
+.notice-fw span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 
-.notice[data-kind="fw"] .notice-fw:hover {
+.notice[data-kind="fw"] .notice-fw::after {
+  content: "\203A";
+  margin-left: auto;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.notice[data-kind="fw"] .notice-fw:hover span {
   text-decoration: underline;
 }
 
@@ -791,7 +820,7 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   display: inline-flex;
   flex: none;
   margin-left: auto;
-  color: var(--warn);
+  color: var(--accent-line);
 }
 
 /* ---- Button lock (firmware 1.0.111): two lines of the same width, same height on every card ---- */
@@ -845,10 +874,10 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   font-weight: 600;
 }
 
-.lock-bits button[aria-pressed="true"] {
-  background: var(--warn-soft);
-  color: var(--warn);
-  box-shadow: inset 0 0 0 1px currentColor;
+.lock-bits button[aria-pressed="true"],
+.lock-bits button[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-text);
 }
 
 /* ---- Log page (logview.html) ---- */

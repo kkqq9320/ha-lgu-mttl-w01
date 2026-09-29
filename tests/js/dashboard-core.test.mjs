@@ -6,7 +6,7 @@ const core = await import(new URL("../../mttl_w01/backend/static/dashboard-core.
 const {
   STRINGS, t, pickLang, resolveTheme, normalizeMac,
   fmtWatts, fmtKwh, fmtTemp, fmtVolt, fmtRssi,
-  cardModel, demoResponse, demoHa, summaryModel, fmtMac, apkUrl, apkUrlForHost,
+  cardModel, demoResponse, demoHa, summaryModel, fmtMac, apkUrl, apkUrlForHost, ENGLISH_ONLY,
 } = core;
 
 const fixture = JSON.parse(
@@ -43,6 +43,24 @@ test("KR keeps awkward technical terms in English", () => {
   // Plain Korean words stay Korean.
   assert.equal(t("ko", "total_power"), "전체 전력");
   assert.equal(t("ko", "all_on"), "전체 켜기");
+});
+
+test("top bar and firmware banner read the same in EN and KR", () => {
+  const topBar = [
+    "demo", "server_online", "server_offline", "server_checking", "backend", "online_count",
+    "unlock", "relock", "settings", "logs", "theme", "theme_auto", "theme_dark", "theme_light",
+    "language", "log_back",
+  ];
+  const banner = ["fw_update", "fw_downgrade", "fw_reflash"];
+  for (const key of [...topBar, ...banner]) {
+    assert.ok(ENGLISH_ONLY.includes(key), key);
+    assert.ok(key in STRINGS.en, key);
+    assert.equal(STRINGS.ko[key], STRINGS.en[key], key);
+  }
+  assert.equal(t("ko", "fw_update", { v: "1.0.111" }), "Firmware update → 1.0.111");
+  assert.equal(t("ko", "online_count", { n: 3, total: 4 }), "3/4 devices online");
+  // Card text outside the top bar stays Korean.
+  assert.equal(t("ko", "open_settings"), "설정 열기");
 });
 
 test("pickLang prefers saved, then browser", () => {

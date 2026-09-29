@@ -104,23 +104,8 @@ export const STRINGS = {
     log_empty: "No log rows for this filter.",
   },
   ko: {
-    demo: "예시",
-    backend: "Backend {v}",
-    online_count: "기기 {n}/{total} Online",
-    server_online: "Server online",
-    server_offline: "Server offline",
-    server_checking: "Checking server",
-    unlock: "해제",
-    relock: "잠금",
     unlock_hint: "조작 버튼이 잠겨 있습니다. 해제하면 켜고 끄기와 이름 바꾸기를 할 수 있습니다.",
     relock_hint: "조작할 수 있습니다. 잠그면 실수로 누르는 것을 막습니다.",
-    settings: "설정",
-    logs: "로그",
-    theme: "테마",
-    theme_auto: "자동",
-    theme_dark: "다크",
-    theme_light: "라이트",
-    language: "언어",
     sum_mqtt: "Home Assistant MQTT",
     mqtt_connected: "Connected",
     mqtt_disconnected: "Disconnected",
@@ -163,13 +148,9 @@ export const STRINGS = {
     lock_all: "전체",
     lock_pending: "동기화 대기",
     lock_bit: "{name} 잠금",
-    fw_update: "펌웨어 업데이트 → {v}",
-    fw_downgrade: "펌웨어 다운그레이드 → {v}",
-    fw_reflash: "펌웨어 다시 설치 {v}",
     action_failed: "요청 실패: {msg}",
     log_title: "Backend log",
     log_note: "메모리에 최근 5,000줄을 둡니다. DEBUG 이상은 backend.log 파일(5MB, 3개)에도 남습니다.",
-    log_back: "대시보드",
     log_level: "Level",
     log_level_DEBUG: "DEBUG+ 상세",
     log_level_INFO: "INFO+ 간략",
@@ -202,6 +183,14 @@ export const STRINGS = {
     log_empty: "이 조건에 맞는 로그가 없습니다.",
   },
 };
+
+/** Shown in English in both languages: the top bar and the firmware update banner. */
+export const ENGLISH_ONLY = [
+  "demo", "server_online", "server_offline", "server_checking", "backend", "online_count",
+  "unlock", "relock", "settings", "logs", "theme", "theme_auto", "theme_dark", "theme_light",
+  "language", "log_back", "fw_update", "fw_downgrade", "fw_reflash",
+];
+for (const key of ENGLISH_ONLY) STRINGS.ko[key] = STRINGS.en[key];
 
 export function t(lang, key, vars = {}) {
   const text = STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key;

@@ -20,7 +20,10 @@
     <button class="tool tool-lock" id="lock-btn" type="button" data-state="locked">
       <svg class="icon icon-locked" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="1.5" fill="currentColor"></rect></svg>
       <svg class="icon icon-unlocked" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V7a4 4 0 0 1 7.7-1.5" fill="none" stroke="currentColor" stroke-width="2.2"></path><rect x="5" y="10" width="14" height="11" rx="1.5" fill="currentColor"></rect></svg>
-      <span data-f="label"></span>
+      <span class="lock-labels">
+        <span data-label="locked" data-i18n="unlock"></span>
+        <span data-label="unlocked" data-i18n="relock"></span>
+      </span>
     </button>
     <a class="tool" href="tuo.html" data-i18n="settings"></a>
     <a class="tool" href="logs.html" data-demo-href="logview.html?demo" data-i18n="logs"></a>
@@ -97,7 +100,7 @@
     <p class="meta num"><span data-f="mac"></span> · FW <span data-f="fw"></span></p>
     <p class="meta num" data-f="ip"></p>
     <div class="notice" data-f="notice" data-kind="none">
-      <a class="notice-fw" data-f="fwUpdate" href="tuo.html"></a>
+      <a class="notice-fw" data-f="fwUpdate" href="tuo.html"><span data-f="fwText"></span></a>
       <span class="notice-offline" data-i18n="offline_note"></span>
     </div>
     <dl class="kv stats">
