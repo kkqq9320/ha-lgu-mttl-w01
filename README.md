@@ -25,7 +25,7 @@ This is an unofficial project, not affiliated with LG U+ or Tuo.
 
 Then install the firmware on each power strip and connect it, as described in [Prepare the power strips](docs/install.md#prepare-the-power-strips).
 
-There is no login. Anyone on your network who can reach port 18282 can switch the outlets, and the dashboard's screen lock only prevents accidental presses. See [Access and screen lock](docs/install.md#access-and-screen-lock).
+There is no login. Changes work only in the Home Assistant sidebar, which Home Assistant's login protects, and port 18282 is for viewing and downloading. See [Access and screen lock](docs/install.md#access-and-screen-lock).
 
 ## Credits
 

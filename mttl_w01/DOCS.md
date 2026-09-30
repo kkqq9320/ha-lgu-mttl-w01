@@ -24,18 +24,14 @@ How much the backend logs: `DEBUG`, `INFO` (default), `WARNING` or `ERROR`. Use 
 | Container port | Host port | Use |
 |---|---|---|
 | 10086/tcp | 10086 | Power strip connection. The firmware always connects to port 10086. |
-| 8080/tcp | 18282 | Web UI and API for direct access from your network. The PC tool's connection check, the device page link and the QR code for the Android setup app use port 18282. |
+| 8080/tcp | 18282 | Web UI and API for viewing and downloading from your network. The PC tool's connection check, the device page link and the QR code for the Android setup app use port 18282. |
 | 10080/tcp | 49217 | Firmware download (OTA) for firmware 1.0.111, which tries port 49217 first and then port 80. |
 
 Keep the default host ports. The Home Assistant sidebar reaches the web UI through Ingress and does not use port 18282.
 
 ## Access
 
-There is no login. The dashboard opens with its controls locked; **Unlock** in the top bar enables them. This screen lock prevents accidental presses and is not a security measure.
-
-On port 18282, controls work only when the page is opened by an IP address, `localhost` or a name ending in `.local`. Opened by any other name, such as `homeassistant`, `ha.lan` or a domain behind a reverse proxy, the page is view-only and controls fail with 403. The sidebar always works.
-
-Anyone on your network who can reach port 18282 can switch the outlets, install firmware on the power strips and change the MQTT settings. Reading (GET) is not name-checked. Details are in [Access and screen lock](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.md#access-and-screen-lock).
+There is no login. Changes work only in the Home Assistant sidebar, which Home Assistant's login protects. Port 18282 is for viewing and downloading: the dashboard there shows **VIEW ONLY**, and anyone on your network who can reach the port can read the device list, the power values and the logs. Details, including the screen lock, are in [Access and screen lock](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.md#access-and-screen-lock).
 
 # LG U+ 멀티탭 (MTTL-W01)
 
@@ -61,15 +57,11 @@ Anyone on your network who can reach port 18282 can switch the outlets, install 
 | 컨테이너 포트 | 호스트 포트 | 용도 |
 |---|---|---|
 | 10086/tcp | 10086 | 멀티탭 접속. 펌웨어는 언제나 10086 포트로 접속한다. |
-| 8080/tcp | 18282 | 같은 네트워크에서 직접 여는 웹 화면과 API. PC 도구의 접속 확인, 기기 페이지 링크, 안드로이드 설정 앱 QR 코드가 18282 포트를 쓴다. |
+| 8080/tcp | 18282 | 같은 네트워크에서 보기와 내려받기에 쓰는 웹 화면과 API. PC 도구의 접속 확인, 기기 페이지 링크, 안드로이드 설정 앱 QR 코드가 18282 포트를 쓴다. |
 | 10080/tcp | 49217 | 펌웨어 1.0.111의 펌웨어 내려받기(OTA). 이 펌웨어는 49217 포트를 먼저 시도하고 다음에 80 포트를 시도한다. |
 
 호스트 포트는 기본값으로 둔다. Home Assistant 사이드바는 Ingress로 웹 화면에 닿으므로 18282 포트를 쓰지 않는다.
 
 ## 접근
 
-로그인은 없다. 대시보드는 조작이 잠긴 상태로 열리고, 위쪽 막대의 **Unlock**을 눌러야 조작할 수 있다. 이 화면 잠금은 실수로 누르는 것을 막는 장치이고 보안 장치가 아니다.
-
-18282 포트에서는 화면을 IP 주소, `localhost`, `.local`로 끝나는 이름으로 열었을 때만 조작이 된다. `homeassistant`, `ha.lan`, 리버스 프록시 뒤의 도메인처럼 다른 이름으로 열면 보기만 되고 조작은 403으로 실패한다. 사이드바 화면은 언제나 조작할 수 있다.
-
-같은 네트워크에서 18282 포트에 닿는 사람은 누구나 콘센트를 켜고 끄고, 멀티탭에 펌웨어를 설치하고, MQTT 설정을 바꿀 수 있다. 조회(GET)는 주소 이름을 검사하지 않는다. 자세한 내용은 [접근과 화면 잠금](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.ko.md#접근과-화면-잠금)에 있다.
+로그인은 없다. 변경은 Home Assistant 로그인이 보호하는 사이드바에서만 된다. 18282 포트는 보기와 내려받기용이다. 이 포트의 대시보드는 **VIEW ONLY**를 보이고, 같은 네트워크에서 이 포트에 닿는 사람은 누구나 기기 목록, 전력 값, 로그를 읽을 수 있다. 화면 잠금을 비롯한 자세한 내용은 [접근과 화면 잠금](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.ko.md#접근과-화면-잠금)에 있다.

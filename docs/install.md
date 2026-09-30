@@ -12,7 +12,7 @@ Addresses in this guide are examples. Use the address of your own Home Assistant
 4. Select **Start**. The app's **Log** tab shows the address the power strips will connect to, for example `[run] host_ip 192.0.2.10 (auto-detected from Supervisor)`. If the power strips cannot reach that address, set `host_ip` on the **Configuration** tab ([options](../mttl_w01/DOCS.md#options)) and restart the app.
 5. Open **MTTL-W01** in the sidebar. Home Assistant shows this sidebar entry to administrators. **Open web UI** on the app page opens the same page.
 
-The same page is also served on port 18282 of the Home Assistant machine, for example `http://192.0.2.10:18282`, for phones and other computers on your network.
+The same page is also served on port 18282 of the Home Assistant machine, for example `http://192.0.2.10:18282`, for phones and other computers on your network. There it is for viewing and downloading only; see [Access and screen lock](#access-and-screen-lock).
 
 ### MQTT
 
@@ -20,13 +20,16 @@ If the Mosquitto broker app is installed, the app passes its connection details 
 
 ## Access and screen lock
 
-The app has no login. These measures take its place:
+The app has no login. Changes are accepted only through the Home Assistant sidebar:
 
-- **Screen lock.** The dashboard opens locked every time. While locked it only shows values. Select **Unlock** in the top bar to switch outlets, rename, set the child lock, refresh or hide a device, and **Lock** to lock it again. The screen lock prevents accidental presses. It is not a security measure: anyone who opens the page can unlock it, and Tuo's settings page (**Settings**) has no screen lock.
-- **Request header.** Requests that change something (POST and PUT) must carry the header `X-MTTL-Request: 1`, or the backend refuses them with 403. A web page on another site cannot send this header to the app. The dashboard, the log page and Tuo's settings page add it; scripts that call the API must add it too.
-- **Address name check.** On port 18282, POST and PUT work only when the page was opened by an IP address, by `localhost` or by a name ending in `.local`, for example `http://192.0.2.10:18282` or `http://homeassistant.local:18282`. Opened by any other name, the page shows data but every control fails with 403 (`host not allowed`). This covers single-label names such as `homeassistant`, router DNS names such as `ha.lan` or `ha.home.arpa`, and your own domain, for example behind a reverse proxy. The check stops DNS rebinding, where a malicious web page points its own domain at your Home Assistant. The sidebar always works, because Home Assistant's own login protects it.
+- **Sidebar.** Switching outlets, renaming, the child lock, firmware updates and the MQTT settings work only in **MTTL-W01** in the sidebar, or through **Open web UI** on the app page. Home Assistant's own login protects this page. Any change (POST or PUT) that does not come through the Home Assistant Supervisor gets 403 (`changes are only accepted through the Home Assistant sidebar`).
+- **Port 18282.** `http://192.0.2.10:18282` is for viewing and downloading. The dashboard there shows **VIEW ONLY** in place of **Unlock**, and the log page has no **Clear buffer**. Tuo's settings page opens there as well, but saving fails with the same 403. The APK download from the QR code, the PC tool's connection check and the link on each power strip's device page in Home Assistant only read, so they work on this port.
+- **Screen lock.** In the sidebar the dashboard opens locked every time. Select **Unlock** in the top bar to switch outlets, rename, set the child lock, refresh or hide a device, and **Lock** to lock it again. The screen lock prevents accidental presses and is not a security measure. Tuo's settings page (**Settings**) has no screen lock.
+- **Request header.** A change must also carry the header `X-MTTL-Request: 1`, which a web page on another site cannot send. The dashboard, the log page and Tuo's settings page add it.
 
-What remains open: anyone on the same network who can reach port 18282 can switch the outlets, install firmware on the power strips and change the MQTT settings. Reading (GET) is not name-checked, so a DNS-rebinding page can still read the device list and the log. Neither contains passwords. Keep ports 10086, 18282 and 49217 within your own network.
+What remains open: anyone on the same network who can reach port 18282 can read the device list, the power values and the logs, and download the APK, the PC tool and the firmware files. None of these responses contains a password. Keep ports 10086, 18282 and 49217 within your own network.
+
+Tuo's own documents ([docs/tuo](tuo/README.md) and [mttl_w01/backend/README.md](../mttl_w01/backend/README.md)) describe Tuo's standalone deployment, which has an admin login. This app removes that login and follows the rules above.
 
 ## Prepare the power strips
 
@@ -83,7 +86,7 @@ python mttl_setup.py install --version 66
 
 ## Troubleshooting
 
-Tuo's settings page (**Settings** on the dashboard, then **⚙ 설정**) is in Korean. The steps below quote its labels as they appear.
+Tuo's settings page (**Settings** on the dashboard, then **⚙ 설정**) is in Korean. Open it from the sidebar, the only place where it can save. The steps below quote its labels as they appear.
 
 ### The Home Assistant address changed
 
