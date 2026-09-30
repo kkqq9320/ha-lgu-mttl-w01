@@ -67,6 +67,8 @@ class WebPathsTest(unittest.TestCase):
             ("/dashboard-core.mjs", "dashboard-core.mjs", js),
             ("/qr.mjs", "qr.mjs", js),
             ("/logs.html", "logview.html", html),
+            # The demo dashboard links to logview.html?demo, which a plain static preview serves too.
+            ("/logview.html", "logview.html", html),
             ("/logview.mjs", "logview.mjs", js),
             ("/page.mjs", "page.mjs", js),
         ):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse,asyncio,base64,concurrent.futures,hashlib,hmac,json,logging,logging.handlers,os,re,secrets,socket,sqlite3,struct,threading,time,uuid
+import argparse,asyncio,base64,concurrent.futures,hashlib,hmac,ipaddress,json,logging,logging.handlers,os,re,secrets,socket,sqlite3,struct,threading,time,uuid
 from collections import deque
 from dataclasses import dataclass,field
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
@@ -1175,6 +1175,18 @@ class Web(BaseHTTPRequestHandler):
   # A cross-site page cannot add this header without a CORS preflight, and there is no do_OPTIONS.
   if self.headers.get('X-MTTL-Request')=='1':return True
   self.send_json({'error':'missing X-MTTL-Request header'},403);return False
+ def require_local_host(self):
+  # HA Ingress comes from the Supervisor, which passes the browser's Host through after HA's own login.
+  if self.client_address[0]=='172.30.32.2':return True
+  # A DNS-rebinding page is same-origin and can add X-MTTL-Request, but its Host is still its own DNS name.
+  h=(self.headers.get('Host') or '').strip().lower()
+  if h.startswith('['):name,_,port=h[1:].partition(']');name=name if not port or port.startswith(':') else ''
+  else:name=h.rsplit(':',1)[0] if h.count(':')==1 else h
+  name=name[:-1] if name.endswith('.') else name
+  try:ipaddress.ip_address(name);return True
+  except ValueError:pass
+  if name=='localhost' or (name.endswith('.local') and len(name)>6):return True
+  self.send_json({'error':'host not allowed'},403);return False
  @classmethod
  def cookie_header(cls,token,max_age=None):
   if max_age is None:max_age=AuthManager.SESSION_TTL
@@ -1202,6 +1214,7 @@ class Web(BaseHTTPRequestHandler):
   if p=='/':return self.send_file(self.root/'static/dashboard.html','text/html; charset=utf-8',cache='no-cache')
   if p=='/tuo.html':return self.send_file(self.root/'static/index.html','text/html; charset=utf-8',cache='no-cache')
   if p=='/logs.html':return self.send_file(self.root/'static/logview.html','text/html; charset=utf-8',cache='no-cache')
+  if p=='/logview.html':return self.send_file(self.root/'static/logview.html','text/html; charset=utf-8',cache='no-cache')
   if p=='/dashboard.css':return self.send_file(self.root/'static/dashboard.css','text/css; charset=utf-8',cache='no-cache')
   if p=='/dashboard.mjs':return self.send_file(self.root/'static/dashboard.mjs','application/javascript; charset=utf-8',cache='no-cache')
   if p=='/dashboard-core.mjs':return self.send_file(self.root/'static/dashboard-core.mjs','application/javascript; charset=utf-8',cache='no-cache')
@@ -1242,7 +1255,7 @@ class Web(BaseHTTPRequestHandler):
    d=self.manager.decorate_device(self.store.device(m.group(1).lower()));return self.send_json(d if d else {'error':'not found'},200 if d else 404)
   self.send_error(404)
  def do_PUT(self):
-  if not self.require_request_header():return
+  if not self.require_request_header() or not self.require_local_host():return
   p=urlparse(self.path).path
   if not self.require_auth():return
   try:
@@ -1288,7 +1301,7 @@ class Web(BaseHTTPRequestHandler):
    self.send_error(404)
   except Exception as e:self.send_json({'error':str(e)},400)
  def do_POST(self):
-  if not self.require_request_header():return
+  if not self.require_request_header() or not self.require_local_host():return
   p=urlparse(self.path).path
   try:
    if p=='/api/auth/login':

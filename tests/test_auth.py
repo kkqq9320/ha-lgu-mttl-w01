@@ -90,10 +90,12 @@ class AuthTest(unittest.TestCase):
         # A subclass keeps the class attributes of backend.Web as they were.
         cls.Web = type("TestWeb", (backend.Web,), {"auth": cls.auth})
 
-    def exchange(self, method, path, headers=(), body=b""):
-        lines = [f"{method} {path} HTTP/1.1", "Host: 192.0.2.10:18282", f"Content-Length: {len(body)}", *headers]
+    def exchange(self, method, path, headers=(), body=b"", host="192.0.2.10:18282", client="192.0.2.50"):
+        """One request from `client`; `host=None` sends no Host header."""
+        lines = [f"{method} {path} HTTP/1.1", *([f"Host: {host}"] if host is not None else []),
+                 f"Content-Length: {len(body)}", *headers]
         sock = FakeSocket(("\r\n".join(lines) + "\r\n\r\n").encode("ascii") + body)
-        self.Web(sock, ("192.0.2.50", 50000), None)
+        self.Web(sock, (client, 50000), None)
         head, _, payload = bytes(sock.sent).partition(b"\r\n\r\n")
         status = int(head.split(b" ", 2)[1])
         try:
@@ -136,6 +138,50 @@ class AuthTest(unittest.TestCase):
         # With the header the request reaches the handler: {} is not a valid config change (400, not 403).
         status, answer = self.exchange("PUT", "/api/config", ("X-MTTL-Request: 1",), body)
         self.assertEqual((status, answer), (400, {"error": "no supported config field"}))
+
+    def test_state_changing_requests_check_host(self):
+        # A DNS-rebinding page is same-origin and can send the header; its Host is still its own name.
+        refused = {"error": "host not allowed"}
+        header = ("X-MTTL-Request: 1",)
+        body = b"{}"
+        allowed = {"POST": (200, {"ok": True}), "PUT": (400, {"error": "no supported config field"})}
+        cases = (("POST", "/api/logs/clear"), ("PUT", "/api/config"))
+        with mock.patch.object(backend.UI_LOG, "clear") as clear:
+            for host in (
+                "evil.example", "evil.example:18282", "EVIL.example.", "localhost.evil.example",
+                "homeassistant.local.evil.example", "192.0.2.10.example.com", "[evil.example]:18282",
+                "local", ".local", "", None,
+            ):
+                for method, path in cases:
+                    with self.subTest(method=method, host=host):
+                        self.assertEqual(self.exchange(method, path, header, body, host=host), (403, refused))
+            # A refused request does nothing.
+            clear.assert_not_called()
+
+            for host in (
+                "192.0.2.10:18282", "192.0.2.10", "[2001:db8::1]:18282", "[2001:db8::1]", "localhost",
+                "localhost:8766", "127.0.0.1:8766", "homeassistant.local:18282", "HomeAssistant.LOCAL.",
+            ):
+                for method, path in cases:
+                    with self.subTest(method=method, host=host):
+                        self.assertEqual(self.exchange(method, path, header, body, host=host), allowed[method])
+            self.assertEqual(clear.call_count, 9)
+
+            # HA Ingress: the Supervisor passes the browser's Host through after HA's own login.
+            for method, path in cases:
+                with self.subTest(method=method, client="172.30.32.2"):
+                    self.assertEqual(
+                        self.exchange(method, path, header, body, host="ha.example.com", client="172.30.32.2"), allowed[method]
+                    )
+                    self.assertEqual(self.exchange(method, path, header, body, host=None, client="172.30.32.2"), allowed[method])
+                    # The header check still comes first there.
+                    self.assertEqual(
+                        self.exchange(method, path, (), body, host="ha.example.com", client="172.30.32.2"),
+                        (403, {"error": "missing X-MTTL-Request header"}),
+                    )
+
+        # GET is not checked.
+        self.assertEqual(self.exchange("GET", "/api/auth/status", host="evil.example")[0], 200)
 
     def test_no_cors_preflight(self):
         # A page on another site must send OPTIONS before a request with this header; nothing allows it.
