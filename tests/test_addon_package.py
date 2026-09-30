@@ -90,9 +90,22 @@ class AddonPackageTest(unittest.TestCase):
                      "  - amd64", "  - aarch64", "  - mqtt:want", "hassio_api: true",
                      "ingress: true", "ingress_port: 8080",
                      "panel_title: MTTL-W01", "panel_icon: mdi:power-socket-de",
-                     "watchdog: http://[HOST]:[PORT:8080]/api/health", "  log_level: INFO"):
+                     "  log_level: INFO"):
             self.assertIn(line, lines)
-        self.assertFalse(any(line.startswith("webui:") for line in lines))
+        # The add-on linter rejects `webui` with ingress, `watchdog` (health is checked by the Dockerfile
+        # HEALTHCHECK) and keys that repeat a default (`startup: application`, `boot: auto`).
+        for key in ("webui", "watchdog", "startup", "boot"):
+            with self.subTest(key=key):
+                self.assertFalse(any(line.startswith(f"{key}:") for line in lines))
+
+    def test_dockerfile_healthcheck(self):
+        checks = [line for line in read_lines(DOCKERFILE) if line.startswith("HEALTHCHECK")]
+        self.assertEqual(len(checks), 1)
+        check = checks[0]
+        for part in ("--interval=", "--timeout=", "--start-period=", "--retries=",
+                     " CMD wget ", "http://127.0.0.1:8080/api/health", "|| exit 1"):
+            with self.subTest(part=part):
+                self.assertIn(part, check)
 
     def test_version_matches_backend(self):
         versions = [line for line in read_lines(CONFIG) if line.startswith("version: ")]
