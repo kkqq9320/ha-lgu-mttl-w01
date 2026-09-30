@@ -61,6 +61,8 @@ class WebPathsTest(unittest.TestCase):
         self.assertIn("if p=='/':return self.send_file(self.root/'static/dashboard.html'", src)
         for route, file, ctype in (
             ("/", "dashboard.html", html),
+            # The demo log page links back to dashboard.html?demo, which a plain static preview serves too.
+            ("/dashboard.html", "dashboard.html", html),
             ("/tuo.html", "index.html", html),
             ("/dashboard.css", "dashboard.css", "text/css; charset=utf-8"),
             ("/dashboard.mjs", "dashboard.mjs", js),

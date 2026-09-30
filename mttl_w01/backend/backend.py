@@ -1212,6 +1212,7 @@ class Web(BaseHTTPRequestHandler):
  def do_GET(self):
   p=urlparse(self.path).path
   if p=='/':return self.send_file(self.root/'static/dashboard.html','text/html; charset=utf-8',cache='no-cache')
+  if p=='/dashboard.html':return self.send_file(self.root/'static/dashboard.html','text/html; charset=utf-8',cache='no-cache')
   if p=='/tuo.html':return self.send_file(self.root/'static/index.html','text/html; charset=utf-8',cache='no-cache')
   if p=='/logs.html':return self.send_file(self.root/'static/logview.html','text/html; charset=utf-8',cache='no-cache')
   if p=='/logview.html':return self.send_file(self.root/'static/logview.html','text/html; charset=utf-8',cache='no-cache')
