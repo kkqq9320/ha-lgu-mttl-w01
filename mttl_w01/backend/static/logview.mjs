@@ -1,7 +1,7 @@
 // Page wiring for logview.html, the backend log. Rows reach the page only through textContent;
 // filtering and formatting live in dashboard-core.mjs.
 import {
-  t, logFilters, logQuery, filterLogs, fmtLogTime, logText, logRowKey, pressConfirm, demoLogs, apiGet, apiSend,
+  t, logFilters, logQuery, filterLogs, fmtLogTime, logText, logRowKey, pressConfirm, demoLogs, apiGet, apiSend, isViewOnly,
 } from "./dashboard-core.mjs";
 import { page, applyTheme, initPage, setText, useDemoLinks } from "./page.mjs";
 
@@ -23,6 +23,7 @@ const state = {
   clearArmedAt: null, // time of the first "Clear buffer" press, see pressConfirm
   clearTimer: null,
   copyTimer: null,
+  viewOnly: false, // opened outside the HA sidebar: the backend refuses "Clear buffer", so it is not shown
 };
 
 // ---- Data sources ----
@@ -261,7 +262,7 @@ function disarmClear() {
 // Clearing needs a second press within CLEAR_CONFIRM_MS instead of a browser confirm() dialog.
 async function onClear() {
   const btn = $("#log-clear");
-  if (!state.source) return;
+  if (!state.source || state.viewOnly) return;
   const next = pressConfirm(state.clearArmedAt, Date.now(), CLEAR_CONFIRM_MS);
   if (!next.confirmed) {
     clearTimeout(state.clearTimer);
@@ -287,7 +288,9 @@ async function onClear() {
 function init() {
   const demo = new URLSearchParams(location.search).has("demo");
   state.source = demo ? createDemoLogSource() : createApiLogSource();
+  state.viewOnly = isViewOnly({ pathname: location.pathname, demo });
   $("#demo-badge").hidden = !demo;
+  $("#log-clear").hidden = state.viewOnly;
   if (demo) useDemoLinks();
 
   initPage({

@@ -7,6 +7,7 @@ const {
   STRINGS, t, pickLang, resolveTheme, normalizeMac,
   fmtWatts, fmtKwh, fmtTemp, fmtVolt, fmtRssi, fmtAge,
   cardModel, demoResponse, demoHa, summaryModel, fmtMac, apkUrl, apkUrlForHost, ENGLISH_ONLY,
+  isIngressPath, isViewOnly,
   pressConfirm, scriptLang,
   reducePoll, diffMacs, canToggleLock, toggleMask, withDevice, applyPending, nameEditOutcome,
   apiGet, apiSend,
@@ -60,10 +61,15 @@ test("top bar text is English in both languages (keys read from the pages)", () 
     const body = staticFile(mod).match(/\nfunction renderTopbar\(\) \{[\s\S]*?\n\}\n/)[0];
     for (const m of body.matchAll(/"([a-z_]+)"/g)) if (m[1] in STRINGS.en) keys.add(m[1]);
   }
-  for (const must of ["settings", "logs", "log_back", "server_online", "online_count", "unlock_hint", "relock_hint"]) {
+  // The VIEW ONLY tooltip tells where changes are made, so it is translated like the card hints.
+  const translated = new Set(["view_only_hint"]);
+  for (const must of [
+    "settings", "logs", "log_back", "server_online", "online_count", "unlock_hint", "relock_hint", "view_only", "view_only_hint",
+  ]) {
     assert.ok(keys.has(must), `scan found ${must}`);
   }
   for (const key of keys) {
+    if (translated.has(key)) continue;
     assert.ok(ENGLISH_ONLY.includes(key), key);
     assert.equal(STRINGS.ko[key], STRINGS.en[key], key);
   }
@@ -254,6 +260,41 @@ test("apkUrl prefers ota_host_ip", () => {
   const directQuery = { ...direct, pathname: "/dashboard.html", href: "http://192.0.2.31:18282/dashboard.html?demo#x" };
   assert.equal(apkUrl(null, directQuery), "http://192.0.2.31:18282/provision-android.apk");
   assert.equal(apkUrlForHost({ ota_host_ip: "192.0.2.10" }, "localhost"), "http://192.0.2.10:18282/provision-android.apk");
+});
+
+test("isIngressPath finds the Home Assistant sidebar address", () => {
+  for (const path of [
+    "/api/hassio_ingress/AbCd123/", "/api/hassio_ingress/AbCd123/logs.html", "/api/hassio_ingress/Ab-C_d/tuo.html",
+  ]) {
+    assert.equal(isIngressPath(path), true, path);
+  }
+  for (const path of ["/", "/dashboard.html", "/logs.html", "/logview.html", "/api/devices", "/api/hassio_ingress", "", null, undefined]) {
+    assert.equal(isIngressPath(path), false, String(path));
+  }
+});
+
+test("isViewOnly: changes only in the sidebar, and in the demo on screen", () => {
+  assert.equal(isViewOnly({ pathname: "/", demo: false }), true);
+  assert.equal(isViewOnly({ pathname: "/dashboard.html", demo: false }), true);
+  assert.equal(isViewOnly({ pathname: "/logs.html", demo: false }), true);
+  assert.equal(isViewOnly({ pathname: "/api/hassio_ingress/AbCd123/", demo: false }), false);
+  assert.equal(isViewOnly({ pathname: "/api/hassio_ingress/AbCd123/logs.html", demo: false }), false);
+  // Demo controls change only the screen, so the demo stays unlockable everywhere.
+  assert.equal(isViewOnly({ pathname: "/dashboard.html", demo: true }), false);
+  assert.equal(isViewOnly({ pathname: "/logview.html", demo: true }), false);
+});
+
+test("VIEW ONLY reads the same in EN and KR; its tooltip is translated", () => {
+  assert.equal(STRINGS.en.view_only, "View only");
+  assert.equal(STRINGS.ko.view_only, "View only");
+  assert.ok(ENGLISH_ONLY.includes("view_only"));
+  assert.match(STRINGS.en.view_only_hint, /Home Assistant sidebar/);
+  assert.match(STRINGS.ko.view_only_hint, /Home Assistant 사이드바/);
+  assert.ok(!ENGLISH_ONLY.includes("view_only_hint"));
+});
+
+test("both pages take the view-only decision from isViewOnly", () => {
+  for (const mod of ["dashboard.mjs", "logview.mjs"]) assert.match(staticFile(mod), /\bisViewOnly\(\{/, mod);
 });
 
 test("cardModel admin lock bits", () => {

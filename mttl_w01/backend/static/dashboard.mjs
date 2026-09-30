@@ -2,7 +2,7 @@
 // attributes and data-* states; see dashboard-core.mjs for the logic.
 import {
   NA, t, normalizeMac, fmtMac, fmtAge, pressConfirm, scriptLang,
-  cardModel, summaryModel, apkUrl, apkUrlForHost, demoResponse, demoHa,
+  cardModel, summaryModel, apkUrl, apkUrlForHost, demoResponse, demoHa, isViewOnly,
   apiGet, apiSend, reducePoll, withDevice, diffMacs, canToggleLock, toggleMask, applyPending, nameEditOutcome,
 } from "./dashboard-core.mjs";
 import { page, applyTheme, applyStrings, initPage, setText, useDemoLinks } from "./page.mjs";
@@ -22,6 +22,7 @@ const state = {
   polling: false,
   answers: 0, // device answers taken in after controls; a poll read out at the same time is dropped
   unlocked: false, // every page load starts locked; never stored
+  viewOnly: false, // opened outside the HA sidebar: the backend refuses changes, so the screen never unlocks
   // Requests out: "<mac>" for the whole card, "<mac>:<n>" for one outlet (switch and name),
   // "<mac>:alias" for the device name, "<mac>:lock" for Child Lock.
   busy: new Set(),
@@ -363,9 +364,12 @@ function renderTopbar() {
   setText($("#online-count"), resp === null ? "" : t(lang, "online_count", { n: s.online, total: s.total }));
 
   const lockBtn = $("#lock-btn");
-  setData(lockBtn, "state", state.unlocked ? "unlocked" : "locked");
-  setAttr(lockBtn, "aria-pressed", String(state.unlocked));
-  setAttr(lockBtn, "title", t(lang, state.unlocked ? "relock_hint" : "unlock_hint"));
+  const lockState = state.viewOnly ? "view" : state.unlocked ? "unlocked" : "locked";
+  setData(lockBtn, "state", lockState);
+  setAttr(lockBtn, "aria-disabled", String(state.viewOnly));
+  if (state.viewOnly) lockBtn.removeAttribute("aria-pressed");
+  else setAttr(lockBtn, "aria-pressed", String(state.unlocked));
+  setAttr(lockBtn, "title", t(lang, { view: "view_only_hint", unlocked: "relock_hint", locked: "unlock_hint" }[lockState]));
 }
 
 /** Text with a line-break opportunity after every slash, so a long address wraps between its parts. */
@@ -601,6 +605,7 @@ function pressHide(mac) {
 
 // Locking and unlocking change only the screen; no request goes to the backend.
 function toggleScreenLock() {
+  if (state.viewOnly) return;
   state.unlocked = !state.unlocked;
   if (!state.unlocked) {
     state.cancelEdit?.("relock");
@@ -641,6 +646,7 @@ function focusHashDevice() {
 function init() {
   const demo = new URLSearchParams(location.search).has("demo");
   state.source = demo ? createDemoSource() : createApiSource();
+  state.viewOnly = isViewOnly({ pathname: location.pathname, demo });
   $("#demo-badge").hidden = !demo;
   if (demo) useDemoLinks();
 

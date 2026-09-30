@@ -16,6 +16,8 @@ export const STRINGS = {
     relock: "Lock",
     unlock_hint: "Controls are locked. Unlock to switch outlets and rename.",
     relock_hint: "Controls are live. Lock to prevent accidental presses.",
+    view_only: "View only",
+    view_only_hint: "Changes are made only from the Home Assistant sidebar.",
     settings: "Settings",
     logs: "Logs",
     theme: "Theme",
@@ -109,6 +111,7 @@ export const STRINGS = {
     log_empty: "No log rows for this filter.",
   },
   ko: {
+    view_only_hint: "변경은 Home Assistant 사이드바에서만 할 수 있습니다.",
     sum_mqtt: "Home Assistant MQTT",
     mqtt_connected: "Connected",
     mqtt_disconnected: "Disconnected",
@@ -191,7 +194,7 @@ export const STRINGS = {
 /** Shown in English in both languages: the top bar, the firmware update banner and some card labels. */
 export const ENGLISH_ONLY = [
   "demo", "server_online", "server_offline", "server_checking", "backend", "online_count",
-  "unlock", "relock", "settings", "logs", "theme", "theme_auto", "theme_dark", "theme_light",
+  "unlock", "relock", "view_only", "settings", "logs", "theme", "theme_auto", "theme_dark", "theme_light",
   "language", "log_back", "unlock_hint", "relock_hint", "fw_update", "fw_downgrade", "fw_reflash",
   "rssi", "lock", "hide_device", "hide_confirm",
 ];
@@ -392,11 +395,26 @@ export function summaryModel(resp, ha) {
   };
 }
 
+// The Supervisor serves the Home Assistant sidebar page under /api/hassio_ingress/<token>/.
+const INGRESS_PATH = /\/api\/hassio_ingress\//;
+
+/** True for a page opened in the Home Assistant sidebar (Ingress). */
+export function isIngressPath(pathname) {
+  return INGRESS_PATH.test(String(pathname ?? ""));
+}
+
+/**
+ * The backend accepts changes only through the sidebar, so a page opened on port 18282 is view only.
+ * Demo controls change only the screen and stay available everywhere.
+ */
+export function isViewOnly({ pathname, demo }) {
+  return demo !== true && !isIngressPath(pathname);
+}
+
 // The multi-outlet strip's Android app is served on the backend's own port (host 18282 -> app 8080),
 // which a phone can reach directly; the Ingress address needs a Home Assistant login.
 const APK_PORT = 18282;
 const APK_FILE = "provision-android.apk";
-const INGRESS_PATH = /^\/api\/hassio_ingress\//;
 
 /** APK address on a given host: the OTA host address from the backend, else `hostname`. */
 export function apkUrlForHost(firmware, hostname) {
@@ -406,7 +424,7 @@ export function apkUrlForHost(firmware, hostname) {
 
 /** Address to put in the QR code. `loc` is window.location or an object with the same fields. */
 export function apkUrl(firmware, loc) {
-  if (!INGRESS_PATH.test(loc.pathname)) return new URL(APK_FILE, loc.href).href;
+  if (!isIngressPath(loc.pathname)) return new URL(APK_FILE, loc.href).href;
   return apkUrlForHost(firmware, loc.hostname);
 }
 

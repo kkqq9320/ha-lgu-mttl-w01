@@ -1,4 +1,5 @@
-"""The app has no admin login; state-changing requests need the X-MTTL-Request header instead.
+"""The app has no admin login. State-changing requests need the X-MTTL-Request header and must come
+through the Home Assistant sidebar (Ingress), whose requests reach the app from the Supervisor.
 
 backend.py is imported without starting it. Its modules import paho-mqtt and cryptography, which
 the tests do not install, so stand-ins take their place in sys.modules during the import.
@@ -83,6 +84,10 @@ class FakeSocket:
         self.sent += data
 
 
+SUPERVISOR = "172.30.32.2"  # HA Ingress connects to the app from this address
+SIDEBAR_ONLY = {"error": "changes are only accepted through the Home Assistant sidebar"}
+
+
 class AuthTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -116,72 +121,86 @@ class AuthTest(unittest.TestCase):
     def test_state_changing_requests_need_header(self):
         missing = {"error": "missing X-MTTL-Request header"}
         body = b"{}"
-        for method, path in (
-            ("POST", "/api/logs/clear"),
-            ("POST", "/api/auth/login"),
-            ("POST", "/api/devices/0a1b2c3d4e5f/outlets/0/power"),
-            ("PUT", "/api/config"),
-            ("PUT", "/api/devices/0a1b2c3d4e5f"),
-        ):
-            for headers in ((), ("X-MTTL-Request: 0",), ("X-MTTL-Request: yes",)):
-                with self.subTest(method=method, path=path, headers=headers):
-                    self.assertEqual(self.exchange(method, path, headers, body), (403, missing))
+        for client in ("192.0.2.50", SUPERVISOR):
+            for method, path in (
+                ("POST", "/api/logs/clear"),
+                ("POST", "/api/auth/login"),
+                ("POST", "/api/devices/0a1b2c3d4e5f/outlets/0/power"),
+                ("PUT", "/api/config"),
+                ("PUT", "/api/devices/0a1b2c3d4e5f"),
+            ):
+                for headers in ((), ("X-MTTL-Request: 0",), ("X-MTTL-Request: yes",)):
+                    with self.subTest(client=client, method=method, path=path, headers=headers):
+                        self.assertEqual(self.exchange(method, path, headers, body, client=client), (403, missing))
 
         with mock.patch.object(backend.UI_LOG, "clear") as clear:
-            self.assertEqual(self.exchange("POST", "/api/logs/clear", ("X-MTTL-Request: 1",), body), (200, {"ok": True}))
+            self.assertEqual(
+                self.exchange("POST", "/api/logs/clear", ("X-MTTL-Request: 1",), body, client=SUPERVISOR), (200, {"ok": True})
+            )
             clear.assert_called_once()
             # Header names are case-insensitive.
-            self.assertEqual(self.exchange("POST", "/api/logs/clear", ("x-mttl-request: 1",), body)[0], 200)
+            self.assertEqual(self.exchange("POST", "/api/logs/clear", ("x-mttl-request: 1",), body, client=SUPERVISOR)[0], 200)
             # A refused request does nothing.
-            self.exchange("POST", "/api/logs/clear", (), body)
+            self.exchange("POST", "/api/logs/clear", (), body, client=SUPERVISOR)
             self.assertEqual(clear.call_count, 2)
         # With the header the request reaches the handler: {} is not a valid config change (400, not 403).
-        status, answer = self.exchange("PUT", "/api/config", ("X-MTTL-Request: 1",), body)
+        status, answer = self.exchange("PUT", "/api/config", ("X-MTTL-Request: 1",), body, client=SUPERVISOR)
         self.assertEqual((status, answer), (400, {"error": "no supported config field"}))
 
-    def test_state_changing_requests_check_host(self):
-        # A DNS-rebinding page is same-origin and can send the header; its Host is still its own name.
-        refused = {"error": "host not allowed"}
+    def test_changes_only_through_the_sidebar(self):
+        # Without a login, another device on the network could otherwise point the MQTT connection test or
+        # the MQTT settings at its own address and receive the stored Mosquitto user name and password.
         header = ("X-MTTL-Request: 1",)
-        body = b"{}"
-        allowed = {"POST": (200, {"ok": True}), "PUT": (400, {"error": "no supported config field"})}
-        cases = (("POST", "/api/logs/clear"), ("PUT", "/api/config"))
-        with mock.patch.object(backend.UI_LOG, "clear") as clear:
-            for host in (
-                "evil.example", "evil.example:18282", "EVIL.example.", "localhost.evil.example",
-                "homeassistant.local.evil.example", "192.0.2.10.example.com", "[evil.example]:18282",
-                "local", ".local", "", None,
-            ):
-                for method, path in cases:
-                    with self.subTest(method=method, host=host):
-                        self.assertEqual(self.exchange(method, path, header, body, host=host), (403, refused))
-            # A refused request does nothing.
+        attacker = json.dumps({"host": "198.51.100.9"}).encode()
+        cases = (
+            ("POST", "/api/logs/clear", b"{}"),
+            ("POST", "/api/ha/test", attacker),
+            ("PUT", "/api/config", b"{}"),
+            ("PUT", "/api/ha", attacker),
+        )
+        ha = mock.Mock()
+        ha.save.return_value = {"ok": True}
+        ha.test_connection.return_value = {"ok": True}
+        with mock.patch.object(backend.UI_LOG, "clear") as clear, mock.patch.object(self.Web, "ha", ha):
+            # Port 18282 from the network, a process in the container, other hosts on the hassio network.
+            for client in ("192.0.2.50", "127.0.0.1", "172.30.32.1", "172.30.33.9"):
+                for method, path, body in cases:
+                    with self.subTest(client=client, method=method, path=path):
+                        self.assertEqual(self.exchange(method, path, header, body, client=client), (403, SIDEBAR_ONLY))
+            # The Host name no longer matters: an IP address or localhost is refused as well.
+            for host in ("192.0.2.10:18282", "localhost:8766", "homeassistant.local:18282", None):
+                with self.subTest(host=host):
+                    self.assertEqual(self.exchange("PUT", "/api/ha", header, attacker, host=host), (403, SIDEBAR_ONLY))
+            # A refused request does nothing: no log clear, no MQTT connection to the given host.
             clear.assert_not_called()
+            ha.save.assert_not_called()
+            ha.test_connection.assert_not_called()
 
-            for host in (
-                "192.0.2.10:18282", "192.0.2.10", "[2001:db8::1]:18282", "[2001:db8::1]", "localhost",
-                "localhost:8766", "127.0.0.1:8766", "homeassistant.local:18282", "HomeAssistant.LOCAL.",
-            ):
-                for method, path in cases:
-                    with self.subTest(method=method, host=host):
-                        self.assertEqual(self.exchange(method, path, header, body, host=host), allowed[method])
-            self.assertEqual(clear.call_count, 9)
+            # Reading and downloading stay open on port 18282.
+            self.assertEqual(self.exchange("GET", "/api/auth/status")[0], 200)
 
-            # HA Ingress: the Supervisor passes the browser's Host through after HA's own login.
-            for method, path in cases:
-                with self.subTest(method=method, client="172.30.32.2"):
+            # Through the sidebar the request reaches the handler, whatever Host the browser used.
+            answers = {
+                "/api/logs/clear": (200, {"ok": True}),
+                "/api/ha/test": (200, {"ok": True}),
+                "/api/config": (400, {"error": "no supported config field"}),
+                "/api/ha": (200, {"ok": True}),
+            }
+            for host in ("ha.example.com", None):
+                for method, path, body in cases:
+                    with self.subTest(client=SUPERVISOR, host=host, method=method, path=path):
+                        self.assertEqual(self.exchange(method, path, header, body, host=host, client=SUPERVISOR), answers[path])
+            self.assertEqual(clear.call_count, 2)
+            ha.save.assert_called_with({"host": "198.51.100.9"})
+            self.assertEqual(ha.test_connection.call_args.args[0], {"host": "198.51.100.9"})
+            # The header check comes first there too.
+            for method, path, body in cases:
+                with self.subTest(client=SUPERVISOR, method=method, path=path, header=False):
                     self.assertEqual(
-                        self.exchange(method, path, header, body, host="ha.example.com", client="172.30.32.2"), allowed[method]
-                    )
-                    self.assertEqual(self.exchange(method, path, header, body, host=None, client="172.30.32.2"), allowed[method])
-                    # The header check still comes first there.
-                    self.assertEqual(
-                        self.exchange(method, path, (), body, host="ha.example.com", client="172.30.32.2"),
+                        self.exchange(method, path, (), body, client=SUPERVISOR),
                         (403, {"error": "missing X-MTTL-Request header"}),
                     )
-
-        # GET is not checked.
-        self.assertEqual(self.exchange("GET", "/api/auth/status", host="evil.example")[0], 200)
+            self.assertEqual(ha.save.call_count, 2)
 
     def test_no_cors_preflight(self):
         # A page on another site must send OPTIONS before a request with this header; nothing allows it.

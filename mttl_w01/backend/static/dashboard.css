@@ -358,7 +358,11 @@ button.tool:hover:not(:disabled) {
   background: var(--hover-tint);
 }
 
-.tool-lock[data-state="locked"] .icon-unlocked,
+.tool-lock {
+  position: relative;
+}
+
+.tool-lock:not([data-state="unlocked"]) .icon-unlocked,
 .tool-lock[data-state="unlocked"] .icon-locked {
   display: none;
 }
@@ -384,6 +388,34 @@ button.tool-lock[data-state="unlocked"]:hover:not(:disabled) {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-text);
+}
+
+/* Outside the Home Assistant sidebar the backend takes no changes: the same box reads VIEW ONLY,
+   and the icon and labels stay in place, invisible, so the box keeps its width. */
+.lock-view {
+  display: none;
+}
+
+.tool-lock[data-state="view"] > :not(.lock-view) {
+  visibility: hidden;
+}
+
+.tool-lock[data-state="view"] .lock-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tool-lock[data-state="view"],
+button.tool-lock[data-state="view"]:hover:not(:disabled) {
+  background: transparent;
+  color: var(--topbar-muted);
+  cursor: default;
 }
 
 .tool-select {
