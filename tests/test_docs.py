@@ -5,8 +5,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PAIRS = [("README.md", "README.ko.md"), ("docs/install.md", "docs/install.ko.md")]
 BILINGUAL = ["mttl_w01/DOCS.md", "NOTICE.md", "mttl_w01/CHANGELOG.md"]
-LINKED_DOCS = [*(p for pair in PAIRS for p in pair), "mttl_w01/DOCS.md", "NOTICE.md"]
-# DOCS.md is shown in Home Assistant, where relative links do not work, so it links to the repository.
+LINKED_DOCS = [*(p for pair in PAIRS for p in pair), *BILINGUAL]
+# DOCS.md and CHANGELOG.md are shown in Home Assistant, where relative links do not work,
+# so they link to the repository.
 REPO_URL = "https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/"
 HANGUL = re.compile("[가-힣]")
 LATIN = re.compile("[A-Za-z]")
