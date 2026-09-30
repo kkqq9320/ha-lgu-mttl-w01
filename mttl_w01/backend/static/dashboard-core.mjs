@@ -1,5 +1,5 @@
-// Dashboard logic without DOM access. dashboard.mjs wires it to the page;
-// tests/js/dashboard-core.test.mjs runs it under Node.
+// Dashboard and log page logic without DOM access, including the backend requests.
+// dashboard.mjs and logview.mjs wire it to the pages; tests/js/*.test.mjs run it under Node.
 
 /** Shown for any missing or unmeasured value, in both languages. */
 export const NA = "N/A";
@@ -408,6 +408,129 @@ export function apkUrlForHost(firmware, hostname) {
 export function apkUrl(firmware, loc) {
   if (!INGRESS_PATH.test(loc.pathname)) return new URL(APK_FILE, loc.href).href;
   return apkUrlForHost(firmware, loc.hostname);
+}
+
+// ---- Requests, polling and controls ----
+
+/**
+ * Headers of every POST and PUT. backend.py refuses a state-changing request without X-MTTL-Request:
+ * a page on another site cannot add the header without a CORS preflight, which the backend never allows.
+ */
+export const SEND_HEADERS = Object.freeze({ "X-MTTL-Request": "1", "Content-Type": "application/json" });
+
+async function jsonOf(res) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/** GET a JSON answer: `{status, body}` (body null when it is not JSON), or `{error}` when the request fails. */
+export async function apiGet(url) {
+  try {
+    const res = await fetch(url, { credentials: "same-origin" });
+    return { status: res.status, body: await jsonOf(res) };
+  } catch (err) {
+    return { error: err?.message ?? String(err) };
+  }
+}
+
+/** POST or PUT `body` as JSON. Resolves with the answer; rejects with the backend's error text. */
+export async function apiSend(method, url, body = {}) {
+  const res = await fetch(url, { method, headers: { ...SEND_HEADERS }, body: JSON.stringify(body), credentials: "same-origin" });
+  const answer = (await jsonOf(res)) ?? {};
+  if (!res.ok) throw new Error(String(answer.error || answer.reason || answer.state || `HTTP ${res.status}`));
+  return answer;
+}
+
+/**
+ * Next poll state after reading `api/devices`. `state` is `{devices, authenticated, stale, resp}`;
+ * `result` is `{status, body}` or `{error}`. A 200 answer replaces everything; anything else keeps
+ * the last devices on screen and marks them stale.
+ */
+export function reducePoll(state, result) {
+  const body = result?.status === 200 ? result.body : null;
+  if (!body || typeof body !== "object") return { ...state, stale: true };
+  return {
+    devices: Array.isArray(body.devices) ? body.devices : [],
+    authenticated: body.authenticated === true,
+    stale: false,
+    resp: body,
+  };
+}
+
+/**
+ * Poll state with one device replaced by a fresh `api/devices/<mac>` answer, or dropped when
+ * `device` is null or hidden. A device that is not in the list is not added; the next poll adds it.
+ */
+export function withDevice(state, mac, device) {
+  const gone = !device || device.removed === true;
+  const devices = [];
+  for (const d of state.devices) {
+    if (normalizeMac(d?.mac) !== mac) devices.push(d);
+    else if (!gone) devices.push(device);
+  }
+  return { ...state, devices, resp: state.resp ? { ...state.resp, devices } : state.resp };
+}
+
+/** Cards to add and to remove when the device list changes from `prev` to `next` (MAC lists). */
+export function diffMacs(prev, next) {
+  const before = new Set(prev);
+  const after = new Set(next);
+  return {
+    added: [...after].filter((mac) => !before.has(mac)),
+    removed: [...before].filter((mac) => !after.has(mac)),
+  };
+}
+
+/** Child Lock can change only from a mask read over the current connection (Tuo does the same). */
+export function canToggleLock(device) {
+  const mask = device?.childlock_mask;
+  return device?.childlock_synced === true && Number.isInteger(mask) && mask >= 0 && mask < 32;
+}
+
+export function toggleMask(mask, bit, on) {
+  return on ? mask | (1 << bit) : mask & ~(1 << bit);
+}
+
+/**
+ * The device as the screen shows it while requests are out: each pending control
+ * (`{kind: "power", n, on}` with n 0 for all, `{kind: "alias", value}`, `{kind: "outletName", n, value}`,
+ * `{kind: "lock", mask}`) overrides the last answer. The answer itself is not changed.
+ */
+export function applyPending(device, ops) {
+  if (!ops?.length) return device;
+  const d = { ...device, channels: (Array.isArray(device.channels) ? device.channels : []).map((ch) => ({ ...ch })) };
+  const channel = (n) => d.channels.find((ch) => Number(ch.selector) === n);
+  for (const op of ops) {
+    if (op.kind === "power") {
+      for (const ch of d.channels) if (op.n === 0 || Number(ch.selector) === op.n) ch.on_state = op.on ? 1 : 0;
+    } else if (op.kind === "alias") {
+      d.alias = op.value;
+    } else if (op.kind === "outletName") {
+      const ch = channel(op.n);
+      if (ch) ch.name = op.value;
+    } else if (op.kind === "lock") {
+      d.childlock_mask = op.mask;
+    }
+  }
+  return d;
+}
+
+/**
+ * What closing a name field does: "save" sends the name, "cancel" closes it without a request,
+ * "keep" leaves it open. `how` is "enter", "blur", "escape" or "relock". Enter that ends a Korean
+ * IME composition keeps the field open, and nothing is saved once the screen is locked again.
+ */
+export function nameEditOutcome({ how, composing = false, unlocked, value, current }) {
+  if (how === "enter" && composing) return "keep";
+  if (how === "enter" || how === "blur") {
+    if (unlocked !== true) return "cancel";
+    return String(value ?? "").trim() === String(current ?? "").trim() ? "cancel" : "save";
+  }
+  if (how === "escape" || how === "relock") return "cancel";
+  return "keep";
 }
 
 // ---- Log page (logview.html) ----

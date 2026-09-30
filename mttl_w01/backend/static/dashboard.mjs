@@ -3,11 +3,13 @@
 import {
   NA, t, normalizeMac, fmtMac, fmtAge, pressConfirm, scriptLang,
   cardModel, summaryModel, apkUrl, apkUrlForHost, demoResponse, demoHa,
+  apiGet, apiSend, reducePoll, withDevice, diffMacs, canToggleLock, toggleMask, applyPending, nameEditOutcome,
 } from "./dashboard-core.mjs";
 import { page, applyTheme, applyStrings, initPage, setText, useDemoLinks } from "./page.mjs";
 import { encodeQr } from "./qr.mjs";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const POLL_MS = 5000;
 const HIDE_CONFIRM_MS = 4000;
 const AGE_TICK_MS = 1000;
 
@@ -15,21 +17,47 @@ const $ = (sel, root = document) => root.querySelector(sel);
 
 const state = {
   source: null,
-  resp: null,
+  poll: { devices: [], authenticated: false, stale: false, resp: null }, // see reducePoll
   ha: null,
-  stale: false, // the last load failed; the real API source sets this
+  polling: false,
+  answers: 0, // device answers taken in after controls; a poll read out at the same time is dropped
   unlocked: false, // every page load starts locked; never stored
-  busy: new Set(), // "<mac>" for the whole card, "<mac>:<n>" for one outlet, "<mac>:lock"
-  editing: null, // "<mac>" or "<mac>:<n>" while a name field is open
+  // Requests out: "<mac>" for the whole card, "<mac>:<n>" for one outlet (switch and name),
+  // "<mac>:alias" for the device name, "<mac>:lock" for Child Lock.
+  busy: new Set(),
+  pending: new Map(), // mac -> controls sent but not answered yet, shown over the last answer (applyPending)
+  editing: null, // "<mac>:alias" or "<mac>:<n>" while a name field is open
   cancelEdit: null,
   qrUrl: null,
   hideArmed: new Map(), // mac -> {at, timer} after the first press of "Hide device"
 };
 
 // ---- Data sources ----
-// A source answers load() with {status, body} (the `api/devices` response), ha() with the
-// `api/ha` answer, and performs controls. Demo mode keeps its data in memory.
+// A source reads load() -> {status, body} (`api/devices`), device(mac) -> {status, body}
+// (`api/devices/<mac>`) and ha() -> the `api/ha` answer or null. Controls resolve once the backend
+// has answered and reject with its message: power(mac, n, on) with n 0 for all outlets, rename(mac, alias),
+// renameOutlet(mac, n, name), lock(mac, mask), refresh(mac), hide(mac).
 
+function createApiSource() {
+  const dev = (mac) => `api/devices/${mac}`;
+  return {
+    demo: false,
+    load: () => apiGet("api/devices"),
+    device: (mac) => apiGet(dev(mac)),
+    async ha() {
+      const result = await apiGet("api/ha");
+      return result.status === 200 ? result.body : null;
+    },
+    power: (mac, n, on) => apiSend("POST", `${dev(mac)}/outlets/${n}/power`, { on }),
+    rename: (mac, alias) => apiSend("PUT", dev(mac), { alias }),
+    renameOutlet: (mac, n, name) => apiSend("PUT", `${dev(mac)}/outlets/${n}`, { name }),
+    lock: (mac, mask) => apiSend("PUT", `${dev(mac)}/childlock`, { mask }),
+    refresh: (mac) => apiSend("POST", `${dev(mac)}/refresh`),
+    hide: (mac) => apiSend("POST", `${dev(mac)}/remove`),
+  };
+}
+
+// Demo mode keeps its data in memory; controls change only that copy.
 function createDemoSource() {
   const data = demoResponse();
   // The sample data is fixed in time; move it to now so "N s ago" looks like a live backend.
@@ -49,6 +77,10 @@ function createDemoSource() {
     demo: true,
     async load() {
       return { status: 200, body: structuredClone(data) };
+    },
+    async device(mac) {
+      const d = data.devices.find((x) => x.mac === mac);
+      return d ? { status: 200, body: structuredClone(d) } : { status: 404, body: { error: "not found" } };
     },
     async ha() {
       return demoHa();
@@ -163,7 +195,8 @@ function drawQr(container, text) {
 
 // ---- Cards ----
 
-const cards = new Map(); // mac -> {root, f, outlets: [{root, f}], lockBits: HTMLButtonElement[], raw}
+// mac -> {mac, root, f, outlets: [{root, f}], lockBits: HTMLButtonElement[], raw (the device as shown), seenOf}
+const cards = new Map();
 
 function createCard(mac) {
   const root = $("#card-tpl").content.firstElementChild.cloneNode(true);
@@ -177,20 +210,31 @@ function createCard(mac) {
     return { root: el, f: fieldMap(el) };
   });
   applyStrings(root);
-  return { root, f, outlets, lockBits: [...root.querySelectorAll("[data-act=lock]")] };
+  return { mac, root, f, outlets, lockBits: [...root.querySelectorAll("[data-act=lock]")] };
 }
 
-function updateCard(card, m, raw) {
-  const { f, root } = card;
+/** True while any request for this device is out. */
+function deviceBusy(mac) {
+  for (const key of state.busy) if (key === mac || key.startsWith(`${mac}:`)) return true;
+  return false;
+}
+
+function updateCard(card, raw) {
+  const { f, root, mac } = card;
   const lang = page.lang;
-  const cardBusy = state.busy.has(m.mac);
+  // Controls still out show what was asked for; the next answer for the device replaces them.
+  const shown = applyPending(raw, state.pending.get(mac));
+  const m = cardModel(shown, { authenticated: state.poll.authenticated, unlocked: state.unlocked, lang });
+  const cardBusy = state.busy.has(mac);
+  const anyBusy = deviceBusy(mac);
 
   setData(root, "online", m.online ? "on" : "off");
   // "locked": only the screen lock holds the buttons back; "off": the device cannot be controlled.
   setData(root, "controls", m.controls ? "live" : m.online && !state.unlocked ? "locked" : "off");
-  if (state.editing !== m.mac) setText(f.title, m.title);
-  setAttr(f.titleInput, "placeholder", `MTTL ${m.mac.slice(-6).toUpperCase()}`);
+  if (state.editing !== `${mac}:alias`) setText(f.title, m.title);
+  setAttr(f.titleInput, "placeholder", `MTTL ${mac.slice(-6).toUpperCase()}`);
   setHidden(f.renameBtn, !m.editable);
+  setDisabled(f.renameBtn, cardBusy || state.busy.has(`${mac}:alias`));
   setData(f.status, "state", m.online ? "ok" : "idle");
   setText(f.statusText, t(lang, m.online ? "online" : "offline"));
   setText(f.mac, fmtMac(m.mac));
@@ -201,21 +245,21 @@ function updateCard(card, m, raw) {
   // One reserved slot: offline notice first (an update cannot run offline), then the firmware link.
   setData(f.notice, "kind", !m.online ? "offline" : m.fwAction ? "fw" : "none");
   setText(f.fwText, m.fwAction ? t(lang, `fw_${m.fwAction}`, { v: m.fwTarget ?? NA }) : "");
-  setAttr(f.fwUpdate, "href", `tuo.html#device=${m.mac}`);
+  setAttr(f.fwUpdate, "href", `tuo.html#device=${mac}`);
 
   setValue(f.totalW, m.totalW);
   setValue(f.totalKwh, m.totalKwh);
   setValue(f.voltage, m.voltage);
   setValue(f.rssi, m.rssi);
 
-  setDisabled(f.allOn, !m.controls || cardBusy);
-  setDisabled(f.allOff, !m.controls || cardBusy);
-  setDisabled(f.refreshBtn, !m.controls || cardBusy);
+  setDisabled(f.allOn, !m.controls || anyBusy);
+  setDisabled(f.allOff, !m.controls || anyBusy);
+  setDisabled(f.refreshBtn, !m.controls || anyBusy);
 
   // The lock area keeps its height on every card; devices without 1.0.111 leave it blank.
   const lock = m.lock?.supported ? m.lock : null;
   const synced = lock?.synced === true;
-  const lockBusy = state.busy.has(`${m.mac}:lock`);
+  const lockBusy = cardBusy || state.busy.has(`${mac}:lock`);
   setData(f.lock, "supported", lock ? "yes" : "no");
   setData(f.lock, "synced", synced ? "yes" : "no");
   setData(f.lock, "active", synced && lock.bits.some(Boolean) ? "yes" : "no");
@@ -223,35 +267,36 @@ function updateCard(card, m, raw) {
   card.lockBits.forEach((b, bit) => {
     // Bits from an unverified mask are not shown as active (Tuo keeps the last value but does not trust it).
     setAttr(b, "aria-pressed", String(synced && lock.bits[bit]));
-    setDisabled(b, !m.controls || !synced || lockBusy);
+    setDisabled(b, !m.controls || !lock || !canToggleLock(shown) || lockBusy);
     const name = bit === 0 ? t(lang, "lock_all") : m.outlets[bit - 1].name;
     setAttr(b, "title", t(lang, "lock_bit", { name }));
   });
 
-  const hideArmed = state.hideArmed.has(m.mac);
+  const hideArmed = state.hideArmed.has(mac);
   setData(f.hideBtn, "state", hideArmed ? "armed" : "idle");
   setText(f.hideBtn, t(lang, hideArmed ? "hide_confirm" : "hide_device"));
   setAttr(f.hideBtn, "title", t(lang, "hide_hint"));
-  setDisabled(f.hideBtn, !m.editable || cardBusy);
+  setDisabled(f.hideBtn, !m.editable || anyBusy);
   setText(f.hideNote, hideArmed ? t(lang, "hide_note") : "");
 
   m.outlets.forEach((o, i) => {
-    const key = `${m.mac}:${o.n}`;
+    const key = `${mac}:${o.n}`;
     const { root: el, f: of } = card.outlets[i];
     const busy = cardBusy || state.busy.has(key);
-    if (!busy) setData(el, "state", o.on === null ? "unknown" : o.on ? "on" : "off");
+    setData(el, "state", o.on === null ? "unknown" : o.on ? "on" : "off");
     setData(el, "busy", busy ? "yes" : "no");
     if (state.editing !== key) setText(of.name, o.name);
     setAttr(of.nameInput, "placeholder", t(lang, "outlet", { n: o.n }));
     setHidden(of.renameBtn, !m.editable);
+    setDisabled(of.renameBtn, busy);
     setText(of.w, o.w);
     setText(of.kwh, o.kwh);
     setText(of.temp, o.temp);
     setHidden(of.lockMark, !(synced && lock.bits[o.n]));
-    if (!busy) setText(of.toggle, o.on === null ? NA : t(lang, o.on ? "on" : "off"));
+    setText(of.toggle, o.on === null ? NA : t(lang, o.on ? "on" : "off"));
     setDisabled(of.toggle, !m.controls || o.on === null || busy);
   });
-  card.raw = raw;
+  card.raw = shown;
 }
 
 /** "IP · N s ago" (admin) or "N s ago"; the age counts up between loads. */
@@ -266,47 +311,56 @@ function updateAges() {
 
 function renderCards() {
   const list = $("#devices");
-  const resp = state.resp;
-  const devices = Array.isArray(resp?.devices) ? resp.devices : [];
-  const opts = { authenticated: resp?.authenticated === true, unlocked: state.unlocked, lang: page.lang };
-  const seen = new Set();
+  const rows = new Map(); // mac -> device, in the backend's order
+  for (const raw of state.poll.devices) {
+    const mac = normalizeMac(raw?.mac);
+    if (mac && !rows.has(mac)) rows.set(mac, raw);
+  }
+  const { added, removed } = diffMacs([...cards.keys()], [...rows.keys()]);
+  for (const mac of removed) dropCard(mac);
+  for (const mac of added) cards.set(mac, createCard(mac));
   let prev = null;
-  for (const raw of devices) {
-    const m = cardModel(raw, opts);
-    if (!m.mac || seen.has(m.mac)) continue;
-    seen.add(m.mac);
-    let card = cards.get(m.mac);
-    if (!card) {
-      card = createCard(m.mac);
-      cards.set(m.mac, card);
-    }
-    updateCard(card, m, raw);
+  for (const [mac, raw] of rows) {
+    const card = cards.get(mac);
+    updateCard(card, raw);
     const want = prev ? prev.nextElementSibling : list.firstElementChild;
     if (want !== card.root) list.insertBefore(card.root, want);
     prev = card.root;
   }
-  for (const [mac, card] of cards) {
-    if (!seen.has(mac)) {
-      card.root.remove();
-      cards.delete(mac);
-      disarmHide(mac);
-    }
-  }
-  setHidden($("#empty"), resp === null || seen.size > 0);
+  setHidden($("#empty"), state.poll.resp === null || rows.size > 0);
+}
+
+function dropCard(mac) {
+  // A removed input fires no blur, so close its name field here; the card is gone, so no redraw.
+  if (state.editing?.startsWith(`${mac}:`)) state.cancelEdit?.("escape", false);
+  cards.get(mac).root.remove();
+  cards.delete(mac);
+  disarmHide(mac);
+}
+
+/** Redraws one card after its control was answered, and the counts in the top bar and summary. */
+function renderDevice(mac) {
+  const raw = state.poll.devices.find((d) => normalizeMac(d?.mac) === mac);
+  const card = cards.get(mac);
+  if (raw && card) updateCard(card, raw);
+  else renderCards();
+  renderTopbar();
+  renderSummary();
 }
 
 const MQTT_BADGE = { connected: "ok", disconnected: "bad", off: "idle", unknown: "idle" };
 
 function renderTopbar() {
-  const s = summaryModel(state.resp, state.ha);
+  const { resp, stale } = state.poll;
+  const s = summaryModel(resp, state.ha);
   const lang = page.lang;
 
   const server = $("#server-badge");
-  const serverState = state.stale ? "bad" : state.resp === null ? "idle" : "ok";
+  const serverState = stale ? "bad" : resp === null ? "idle" : "ok";
   setData(server, "state", serverState);
   setText($("[data-f=text]", server), t(lang, { ok: "server_online", bad: "server_offline", idle: "server_checking" }[serverState]));
   setText($("#backend-version"), s.version ? t(lang, "backend", { v: s.version }) : "");
-  setText($("#online-count"), state.resp === null ? "" : t(lang, "online_count", { n: s.online, total: s.total }));
+  setText($("#online-count"), resp === null ? "" : t(lang, "online_count", { n: s.online, total: s.total }));
 
   const lockBtn = $("#lock-btn");
   setData(lockBtn, "state", state.unlocked ? "unlocked" : "locked");
@@ -330,7 +384,8 @@ function setUrlText(el, url) {
 }
 
 function renderSummary() {
-  const s = summaryModel(state.resp, state.ha);
+  const { resp } = state.poll;
+  const s = summaryModel(resp, state.ha);
   const lang = page.lang;
 
   const mqtt = fieldMap($("#sum-mqtt"));
@@ -351,11 +406,11 @@ function renderSummary() {
   const app = fieldMap($("#sum-app"));
   // Demo mode is usually served from a plain local web server; it shows the address a phone
   // would get under Home Assistant Ingress (the OTA host address) so the mockup stays the same.
-  const url = state.resp === null
+  const url = resp === null
     ? ""
     : state.source?.demo
-      ? apkUrlForHost(state.resp.firmware, location.hostname)
-      : apkUrl(state.resp.firmware, location);
+      ? apkUrlForHost(resp.firmware, location.hostname)
+      : apkUrl(resp.firmware, location);
   setUrlText(app.url, url);
   setAttr(app.qr, "aria-label", url ? t(lang, "qr_label", { url }) : "");
   if (url !== state.qrUrl) {
@@ -373,14 +428,41 @@ function render() {
 
 // ---- Loading and controls ----
 
-async function refresh() {
-  if (!state.source) return;
-  const result = await state.source.load();
-  if (result.status === 200) state.resp = result.body;
-  state.ha = await state.source.ha();
+async function poll() {
+  if (!state.source || state.polling) return;
+  state.polling = true;
+  const answers = state.answers;
+  let result;
+  let ha = null;
+  try {
+    [result, ha] = await Promise.all([state.source.load(), state.source.ha()]);
+  } catch (err) {
+    result = { error: err?.message ?? String(err) };
+  } finally {
+    state.polling = false;
+  }
+  // A control's answer for one device came in while this read was out; it is newer, so keep it
+  // and let the next poll read everything again.
+  if (answers !== state.answers) return;
+  state.poll = reducePoll(state.poll, result);
+  if (ha) state.ha = ha;
   applyTheme(); // HA's dark mode may have changed since the last load.
   render();
   focusHashDevice();
+}
+
+/** Reads one device again after a control; a 404 means it is gone. */
+async function reloadDevice(mac) {
+  let result = null;
+  try {
+    result = await state.source.device(mac);
+  } catch {
+    result = null;
+  }
+  if (result?.status === 200 && result.body) state.poll = withDevice(state.poll, mac, result.body);
+  else if (result?.status === 404) state.poll = withDevice(state.poll, mac, null);
+  else return; // no answer: the next poll shows what happened
+  state.answers++;
 }
 
 function showError(err) {
@@ -393,66 +475,74 @@ function showError(err) {
   }, 5000);
 }
 
-async function run(key, action) {
+/**
+ * Sends one control. `key` is its slot in state.busy; `op` is what the card shows until the answer
+ * (see applyPending), or null. Then the device is read again and only its card is redrawn, which
+ * also takes back a change that failed; the error bar says why.
+ */
+async function run(key, mac, op, action) {
   // A locked screen never sends a control request.
   if (!state.unlocked || state.busy.has(key)) return;
   state.busy.add(key);
-  render();
+  if (op) state.pending.set(mac, [...(state.pending.get(mac) ?? []), op]);
+  renderDevice(mac);
+  let error = null;
   try {
     await action();
   } catch (err) {
-    showError(err);
-  } finally {
-    state.busy.delete(key);
-    await refresh();
+    error = err;
   }
-}
-
-function currentMask(raw) {
-  return raw?.childlock_synced === true && Number.isInteger(raw.childlock_mask) ? raw.childlock_mask : null;
+  await reloadDevice(mac);
+  if (op) {
+    const rest = (state.pending.get(mac) ?? []).filter((x) => x !== op);
+    if (rest.length) state.pending.set(mac, rest);
+    else state.pending.delete(mac);
+  }
+  state.busy.delete(key);
+  if (error) showError(error);
+  renderDevice(mac);
 }
 
 function onDeviceClick(event) {
   const btn = event.target.closest("[data-act]");
   if (!btn || btn.disabled || !state.unlocked) return;
-  const cardEl = btn.closest(".card");
-  const mac = cardEl?.dataset.mac;
+  const mac = btn.closest(".card")?.dataset.mac;
   const card = cards.get(mac);
-  if (!card || !state.source) return;
+  const source = state.source;
+  if (!card || !source) return;
   const act = btn.dataset.act;
   if (act === "all") {
     const on = btn.dataset.on === "1";
-    run(mac, () => state.source.power(mac, 0, on));
+    run(mac, mac, { kind: "power", n: 0, on }, () => source.power(mac, 0, on));
   } else if (act === "power") {
-    const outletEl = btn.closest(".outlet");
-    const n = Number(outletEl.dataset.n);
-    const on = outletEl.dataset.state !== "on";
-    // Show the requested state at once; the next load confirms or corrects it.
-    setData(outletEl, "state", on ? "on" : "off");
-    setText(btn, t(page.lang, on ? "on" : "off"));
-    run(`${mac}:${n}`, () => state.source.power(mac, n, on));
+    const n = Number(btn.closest(".outlet").dataset.n);
+    const on = card.outlets[n - 1].root.dataset.state !== "on";
+    run(`${mac}:${n}`, mac, { kind: "power", n, on }, () => source.power(mac, n, on));
   } else if (act === "lock") {
-    const mask = currentMask(card.raw);
-    if (mask === null) return;
+    const shown = card.raw;
+    if (!canToggleLock(shown)) return;
     const bit = Number(btn.dataset.bit);
-    const next = mask & (1 << bit) ? mask & ~(1 << bit) : mask | (1 << bit);
-    run(`${mac}:lock`, () => state.source.lock(mac, next));
+    const mask = toggleMask(shown.childlock_mask, bit, (shown.childlock_mask & (1 << bit)) === 0);
+    run(`${mac}:lock`, mac, { kind: "lock", mask }, () => source.lock(mac, mask));
   } else if (act === "refresh") {
-    run(mac, () => state.source.refresh(mac));
+    run(mac, mac, null, () => source.refresh(mac));
   } else if (act === "hide") {
     pressHide(mac);
   } else if (act === "rename") {
-    startEdit(mac, card.f.title, card.f.titleInput, card.raw?.alias ?? "", (v) => state.source.rename(mac, v));
+    startEdit(`${mac}:alias`, mac, card.f.title, card.f.titleInput, card.raw?.alias ?? "",
+      (value) => ({ kind: "alias", value }), (value) => source.rename(mac, value));
   } else if (act === "rename-outlet") {
     const n = Number(btn.closest(".outlet").dataset.n);
     const o = card.outlets[n - 1];
     const ch = (card.raw?.channels ?? []).find((c) => Number(c.selector) === n);
-    startEdit(`${mac}:${n}`, o.f.name, o.f.nameInput, ch?.name ?? "", (v) => state.source.renameOutlet(mac, n, v));
+    startEdit(`${mac}:${n}`, mac, o.f.name, o.f.nameInput, ch?.name ?? "",
+      (value) => ({ kind: "outletName", n, value }), (value) => source.renameOutlet(mac, n, value));
   }
 }
 
-function startEdit(key, label, input, current, save) {
-  if (state.editing || !state.unlocked) return;
+/** Opens a name field. `makeOp(name)` is what the card shows while `save(name)` is out. */
+function startEdit(key, mac, label, input, current, makeOp, save) {
+  if (state.editing || !state.unlocked || state.busy.has(key)) return;
   state.editing = key;
   input.value = current;
   label.hidden = true;
@@ -460,8 +550,11 @@ function startEdit(key, label, input, current, save) {
   input.focus();
   input.select();
   let done = false;
-  const finish = (commit) => {
+  // `how`: "enter", "blur", "escape" or "relock"; nameEditOutcome decides whether it saves.
+  const finish = (how, { composing = false, redraw = true } = {}) => {
     if (done) return;
+    const outcome = nameEditOutcome({ how, composing, unlocked: state.unlocked, value: input.value, current });
+    if (outcome === "keep") return;
     done = true;
     input.removeEventListener("keydown", onKey);
     input.removeEventListener("blur", onBlur);
@@ -469,19 +562,19 @@ function startEdit(key, label, input, current, save) {
     label.hidden = false;
     state.editing = null;
     state.cancelEdit = null;
-    const value = input.value;
-    if (commit && value.trim() !== String(current).trim()) run(key, () => save(value));
-    else render();
+    const value = input.value.trim();
+    if (outcome === "save") run(key, mac, makeOp(value), () => save(value));
+    else if (redraw) renderDevice(mac);
   };
   const onKey = (e) => {
-    // Enter that confirms a Korean IME composition must not save the name yet.
-    if (e.key === "Enter" && !e.isComposing) finish(true);
-    else if (e.key === "Escape") finish(false);
+    // keyCode 229: Safari reports the Enter that ends an IME composition this way.
+    if (e.key === "Enter") finish("enter", { composing: e.isComposing || e.keyCode === 229 });
+    else if (e.key === "Escape") finish("escape");
   };
-  const onBlur = () => finish(true);
+  const onBlur = () => finish("blur");
   input.addEventListener("keydown", onKey);
   input.addEventListener("blur", onBlur);
-  state.cancelEdit = () => finish(false);
+  state.cancelEdit = (how = "relock", redraw = true) => finish(how, { redraw });
 }
 
 function disarmHide(mac) {
@@ -495,7 +588,7 @@ function pressHide(mac) {
   const next = pressConfirm(armed?.at ?? null, Date.now(), HIDE_CONFIRM_MS);
   disarmHide(mac);
   if (next.confirmed) {
-    run(mac, () => state.source.hide(mac));
+    run(mac, mac, null, () => state.source.hide(mac));
     return;
   }
   const timer = setTimeout(() => {
@@ -506,10 +599,11 @@ function pressHide(mac) {
   render();
 }
 
+// Locking and unlocking change only the screen; no request goes to the backend.
 function toggleScreenLock() {
   state.unlocked = !state.unlocked;
   if (!state.unlocked) {
-    state.cancelEdit?.();
+    state.cancelEdit?.("relock");
     for (const mac of [...state.hideArmed.keys()]) disarmHide(mac);
   }
   render();
@@ -518,7 +612,7 @@ function toggleScreenLock() {
 // Pressing the lock button moves focus away from an open name field, and that blur would save it.
 // Cancel the edit first, on pointerdown, which comes before the blur.
 function cancelEditBeforeLock() {
-  if (state.unlocked) state.cancelEdit?.();
+  if (state.unlocked) state.cancelEdit?.("relock");
 }
 
 // ---- #device=<mac> ----
@@ -545,10 +639,10 @@ function focusHashDevice() {
 // ---- Start ----
 
 function init() {
-  const params = new URLSearchParams(location.search);
-  state.source = params.has("demo") ? createDemoSource() : null;
-  $("#demo-badge").hidden = !state.source?.demo;
-  if (state.source?.demo) useDemoLinks();
+  const demo = new URLSearchParams(location.search).has("demo");
+  state.source = demo ? createDemoSource() : createApiSource();
+  $("#demo-badge").hidden = !demo;
+  if (demo) useDemoLinks();
 
   initPage({ onLangChange: render });
   $("#lock-btn").addEventListener("pointerdown", cancelEditBeforeLock);
@@ -560,7 +654,9 @@ function init() {
   });
 
   render();
-  refresh();
+  poll();
+  // Demo data changes only through the demo controls; the backend is read again every 5 s.
+  if (!demo) setInterval(poll, POLL_MS);
   setInterval(updateAges, AGE_TICK_MS);
 }
 

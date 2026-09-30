@@ -6,7 +6,7 @@ function setTheme(v){if(!['system','light','dark'].includes(v))v='system';docume
 function initTheme(){const v=cookieGet('mttl_theme')||'system';document.documentElement.dataset.theme=['system','light','dark'].includes(v)?v:'system';$('#themeSelect').value=document.documentElement.dataset.theme}
 function toast(msg,bad=false){let t=$('#toast');t.textContent=msg;t.className='toast'+(bad?' bad':'');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.add('hidden'),4200)}
 function updateAuthUI(){let a=isAdmin();$('#adminLoginBtn').classList.toggle('hidden',a);$('#settingsBtn').classList.toggle('hidden',!a);$('#logsBtn').classList.toggle('hidden',!a);$('#logoutBtn').classList.toggle('hidden',!a);$('#guestBanner').classList.toggle('hidden',a);$('#defaultPwBanner').classList.toggle('hidden',!(a&&authState.must_change_password));$('#hiddenPanel').classList.toggle('hidden',!a);$('#otaQueueBtn').classList.toggle('hidden',!a);renderOtaStatus()}
-async function api(u,o={}){let r=await fetch(u,{...o,credentials:'same-origin'}),j={};try{j=await r.json()}catch{}if(r.status===401){authState={authenticated:false,must_change_password:false};updateAuthUI()}if(!r.ok)throw Error(j.error||j.reason||j.state||r.status);return j}
+async function api(u,o={}){let r=await fetch(u,{...o,headers:{...o.headers,'X-MTTL-Request':'1'},credentials:'same-origin'}),j={};try{j=await r.json()}catch{}if(r.status===401){authState={authenticated:false,must_change_password:false};updateAuthUI()}if(!r.ok)throw Error(j.error||j.reason||j.state||r.status);return j}
 function age(t){return t?Math.max(0,Math.round(Date.now()/1000-t))+'s 전':'—'}
 function fmtW(v){return v==null?'—':(Number(v)/1000).toFixed(2)+' W'}
 function fmtKwh(v){return ((Number(v)||0)/1000).toFixed(3)+' kWh'}

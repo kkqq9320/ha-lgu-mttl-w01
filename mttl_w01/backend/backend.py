@@ -153,14 +153,12 @@ class AuthManager:
  def new_session(self):
   with self.lock:
    self._prune();token=secrets.token_urlsafe(32);t=now();self.store.auth_session_create(self._token_hash(token),t+self.SESSION_TTL,t);return token
- def valid(self,token):
-  if not token:return False
-  with self.lock:return self.store.auth_session_valid(self._token_hash(token),now())
+ # HA app: no admin login. POST/PUT need the X-MTTL-Request header instead (Web.require_request_header).
+ def valid(self,token):return True
  def logout(self,token):
   if token:
    with self.lock:self.store.auth_session_delete(self._token_hash(token))
- def status(self,token=None):
-  ok=self.valid(token);return {'authenticated':ok,'must_change_password':bool(ok and self.store.setting_get('auth.must_change')=='1')}
+ def status(self,token=None):return {'authenticated':True,'must_change_password':False}
  def login(self,password):
   if not self.verify(password):return None
   return self.new_session()
@@ -1173,6 +1171,10 @@ class Web(BaseHTTPRequestHandler):
  def require_auth(self):
   if self.auth.valid(self.session_token()):return True
   self.send_json({'error':'authentication required'},401);return False
+ def require_request_header(self):
+  # A cross-site page cannot add this header without a CORS preflight, and there is no do_OPTIONS.
+  if self.headers.get('X-MTTL-Request')=='1':return True
+  self.send_json({'error':'missing X-MTTL-Request header'},403);return False
  @classmethod
  def cookie_header(cls,token,max_age=None):
   if max_age is None:max_age=AuthManager.SESSION_TTL
@@ -1197,9 +1199,15 @@ class Web(BaseHTTPRequestHandler):
    cls._backup_timer=threading.Thread(target=run,name='backup-debounce',daemon=True);cls._backup_timer.start()
  def do_GET(self):
   p=urlparse(self.path).path
-  if p=='/':return self.send_file(self.root/'static/index.html','text/html; charset=utf-8')
-  if p=='/logs.html':return self.send_file(self.root/'static/logs.html','text/html; charset=utf-8',cache='no-cache')
-  if p=='/logs.js':return self.send_file(self.root/'static/logs.js','application/javascript; charset=utf-8',cache='no-cache')
+  if p=='/':return self.send_file(self.root/'static/dashboard.html','text/html; charset=utf-8',cache='no-cache')
+  if p=='/tuo.html':return self.send_file(self.root/'static/index.html','text/html; charset=utf-8',cache='no-cache')
+  if p=='/logs.html':return self.send_file(self.root/'static/logview.html','text/html; charset=utf-8',cache='no-cache')
+  if p=='/dashboard.css':return self.send_file(self.root/'static/dashboard.css','text/css; charset=utf-8',cache='no-cache')
+  if p=='/dashboard.mjs':return self.send_file(self.root/'static/dashboard.mjs','application/javascript; charset=utf-8',cache='no-cache')
+  if p=='/dashboard-core.mjs':return self.send_file(self.root/'static/dashboard-core.mjs','application/javascript; charset=utf-8',cache='no-cache')
+  if p=='/qr.mjs':return self.send_file(self.root/'static/qr.mjs','application/javascript; charset=utf-8',cache='no-cache')
+  if p=='/logview.mjs':return self.send_file(self.root/'static/logview.mjs','application/javascript; charset=utf-8',cache='no-cache')
+  if p=='/page.mjs':return self.send_file(self.root/'static/page.mjs','application/javascript; charset=utf-8',cache='no-cache')
   if p=='/app.js':return self.send_file(self.root/'static/app.js','application/javascript; charset=utf-8',cache='no-cache')
   if p=='/mttl-up-card.js':return self.send_file(self.root/'static/mttl-up-card.js','application/javascript; charset=utf-8',cache='no-cache')
   if p=='/api/health':return self.send_json({'ok':True,'version':BACKEND_VERSION,'devices_online':sum(1 for d in self.store.devices() if d.get('online'))})
@@ -1234,6 +1242,7 @@ class Web(BaseHTTPRequestHandler):
    d=self.manager.decorate_device(self.store.device(m.group(1).lower()));return self.send_json(d if d else {'error':'not found'},200 if d else 404)
   self.send_error(404)
  def do_PUT(self):
+  if not self.require_request_header():return
   p=urlparse(self.path).path
   if not self.require_auth():return
   try:
@@ -1279,6 +1288,7 @@ class Web(BaseHTTPRequestHandler):
    self.send_error(404)
   except Exception as e:self.send_json({'error':str(e)},400)
  def do_POST(self):
+  if not self.require_request_header():return
   p=urlparse(self.path).path
   try:
    if p=='/api/auth/login':

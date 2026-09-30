@@ -1,6 +1,8 @@
 // Page wiring for logview.html, the backend log. Rows reach the page only through textContent;
 // filtering and formatting live in dashboard-core.mjs.
-import { t, logFilters, filterLogs, fmtLogTime, logText, logRowKey, pressConfirm, demoLogs } from "./dashboard-core.mjs";
+import {
+  t, logFilters, logQuery, filterLogs, fmtLogTime, logText, logRowKey, pressConfirm, demoLogs, apiGet, apiSend,
+} from "./dashboard-core.mjs";
 import { page, applyTheme, initPage, setText, useDemoLinks } from "./page.mjs";
 
 const AUTO_MS = 2000;
@@ -25,7 +27,15 @@ const state = {
 
 // ---- Data sources ----
 // A source answers load(filters) with {status, body} shaped like `api/logs`
-// ({version, level, category, rows}) and empties the buffer with clear().
+// ({version, level, category, rows}) or {error}, and empties the buffer with clear().
+
+function createApiLogSource() {
+  return {
+    demo: false,
+    load: (filters) => apiGet(`api/logs?${logQuery(filters)}`),
+    clear: () => apiSend("POST", "api/logs/clear"),
+  };
+}
 
 function createDemoLogSource() {
   let rows = demoLogs();
@@ -178,7 +188,7 @@ async function load() {
       state.status = { key: "log_status", vars: { n: state.rows.length, time: nowText() } };
     } else {
       state.stale = true;
-      state.status = { key: "log_error", vars: { msg: result.error ?? `HTTP ${result.status}` } };
+      state.status = { key: "log_error", vars: { msg: result.error ?? result.body?.error ?? `HTTP ${result.status}` } };
     }
   } catch (err) {
     state.stale = true;
@@ -275,10 +285,10 @@ async function onClear() {
 // ---- Start ----
 
 function init() {
-  const params = new URLSearchParams(location.search);
-  state.source = params.has("demo") ? createDemoLogSource() : null;
-  $("#demo-badge").hidden = !state.source?.demo;
-  if (state.source?.demo) useDemoLinks();
+  const demo = new URLSearchParams(location.search).has("demo");
+  state.source = demo ? createDemoLogSource() : createApiLogSource();
+  $("#demo-badge").hidden = !demo;
+  if (demo) useDemoLinks();
 
   initPage({
     onLangChange: () => {
