@@ -5,7 +5,9 @@ import {
   cardModel, summaryModel, apkUrl, apkUrlForHost, demoResponse, demoHa, isViewOnly,
   apiGet, apiSend, reducePoll, withDevice, diffMacs, canToggleLock, toggleMask, applyPending, nameEditOutcome,
 } from "./dashboard-core.mjs";
-import { page, applyTheme, applyStrings, initPage, setText, useDemoLinks } from "./page.mjs";
+import {
+  page, applyTheme, applyStrings, initPage, setText, useDemoLinks, setData, setHidden, setDisabled, setAttr, fieldMap,
+} from "./page.mjs";
 import { encodeQr } from "./qr.mjs";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -123,34 +125,12 @@ function createDemoSource() {
   };
 }
 
-// ---- Small DOM helpers that only write when the value changed ----
-
-function setData(el, name, value) {
-  if (el.dataset[name] !== value) el.dataset[name] = value;
-}
-
-function setHidden(el, hidden) {
-  if (el.hidden !== hidden) el.hidden = hidden;
-}
-
-function setDisabled(el, disabled) {
-  if (el.disabled !== disabled) el.disabled = disabled;
-}
-
-function setAttr(el, name, value) {
-  if (el.getAttribute(name) !== value) el.setAttribute(name, value);
-}
+// ---- Value cell ----
 
 /** Value cell that shows a muted placeholder when there is no value. */
 function setValue(el, value, placeholder = NA) {
   setText(el, value ?? placeholder);
   setData(el, "empty", value === null || value === undefined ? "yes" : "no");
-}
-
-function fieldMap(root) {
-  const f = {};
-  for (const el of root.querySelectorAll("[data-f]")) f[el.dataset.f] = el;
-  return f;
 }
 
 // ---- QR code ----

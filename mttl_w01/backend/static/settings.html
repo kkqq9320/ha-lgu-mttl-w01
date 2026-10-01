@@ -49,23 +49,23 @@
           <h2 data-i18n="card_fw"></h2>
           <span class="badge" data-f="badge"><span class="badge-dot"></span><span data-f="badgeText"></span></span>
         </div>
-        <div class="set-form">
+        <div class="form">
           <label class="field">
             <span data-i18n="fw_target"></span>
             <select data-f="profile"></select>
           </label>
-          <p class="set-hint" data-f="hint"></p>
+          <p class="note set-hint" data-f="hint"></p>
           <label class="field">
             <span data-i18n="fw_ota_host_label"></span>
             <input type="text" data-f="host" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="45" placeholder="192.0.2.10">
             <small class="field-err" data-f="hostErr" role="alert" hidden></small>
           </label>
-          <p class="set-note" data-i18n="fw_ota_host_note"></p>
+          <p class="note" data-i18n="fw_ota_host_note"></p>
         </div>
-        <div class="set-actions">
-          <button class="set-btn primary" type="button" data-act="fw-save" data-f="save"></button>
-          <button class="set-btn" type="button" data-act="fw-prepare" data-f="prepare"></button>
-          <button class="set-btn" type="button" data-act="fw-all" data-f="all"></button>
+        <div class="btn-row">
+          <button class="action" type="button" data-act="fw-save" data-f="save"></button>
+          <button type="button" data-act="fw-prepare" data-f="prepare"></button>
+          <button type="button" data-act="fw-all" data-f="all"></button>
         </div>
         <div class="alert-line" data-f="alert" data-kind="none" role="status">
           <p data-f="alertText"></p>
@@ -77,14 +77,14 @@
         <div class="sum-head"><h2 data-i18n="card_files"></h2></div>
         <div class="file-list" data-f="files"></div>
         <div class="upload">
-          <h3 class="set-sub" data-i18n="fw_upload_title"></h3>
+          <h3 class="form-sub" data-i18n="fw_upload_title"></h3>
           <div class="upload-row">
-            <button class="set-btn" type="button" data-act="fw-choose" data-f="choose" data-i18n="fw_choose"></button>
+            <button type="button" data-act="fw-choose" data-f="choose" data-i18n="fw_choose"></button>
             <input type="file" accept=".fwr" data-f="file" hidden>
             <span class="file-name num" data-f="fileName"></span>
-            <button class="set-btn primary" type="button" data-act="fw-upload" data-f="upload"></button>
+            <button class="action" type="button" data-act="fw-upload" data-f="upload"></button>
           </div>
-          <p class="set-note" data-i18n="fw_upload_note"></p>
+          <p class="note" data-i18n="fw_upload_note"></p>
         </div>
         <div class="alert-line" data-f="alert" data-kind="none" role="status">
           <p data-f="alertText"></p>
@@ -98,15 +98,15 @@
 
       <section class="panel set-card" id="polling">
         <div class="sum-head"><h2 data-i18n="card_poll"></h2></div>
-        <div class="set-form">
+        <div class="form">
           <label class="field">
             <span data-i18n="poll_label"></span>
             <select data-f="poll"></select>
           </label>
-          <p class="set-note" data-i18n="poll_note"></p>
+          <p class="note" data-i18n="poll_note"></p>
         </div>
-        <div class="set-actions">
-          <button class="set-btn primary" type="button" data-act="poll-save" data-f="save"></button>
+        <div class="btn-row">
+          <button class="action" type="button" data-act="poll-save" data-f="save"></button>
         </div>
         <div class="alert-line" data-f="alert" data-kind="none" role="status">
           <p data-f="alertText"></p>
@@ -121,11 +121,11 @@
         </div>
         <dl class="kv set-status">
           <div><dt data-i18n="mqtt_pw"></dt><dd data-f="pwState"></dd></div>
-          <div><dt data-i18n="mqtt_last_error"></dt><dd class="wrap" data-f="lastError"></dd></div>
+          <div><dt data-i18n="mqtt_last_error"></dt><dd data-f="lastError"></dd></div>
         </dl>
-        <div class="set-form">
+        <div class="form">
           <label class="check"><input type="checkbox" data-f="enabled"><span data-i18n="mqtt_enable"></span></label>
-          <div class="form-row broker">
+          <div class="form-row broker-row">
             <label class="field">
               <span data-i18n="mqtt_broker"></span>
               <input type="text" data-f="host" autocomplete="off" spellcheck="false" maxlength="253" placeholder="core-mosquitto">
@@ -148,7 +148,7 @@
             </label>
           </div>
           <label class="check"><input type="checkbox" data-f="tls"><span data-i18n="mqtt_tls"></span></label>
-          <h3 class="set-sub" data-i18n="mqtt_report"></h3>
+          <h3 class="form-sub" data-i18n="mqtt_report"></h3>
           <div class="form-row">
             <label class="field">
               <span data-i18n="mqtt_power_threshold"></span>
@@ -167,10 +167,10 @@
               <select data-f="energy_interval_s" class="num"></select>
             </label>
           </div>
-          <p class="set-note" data-i18n="mqtt_report_note"></p>
+          <p class="note" data-i18n="mqtt_report_note"></p>
           <details class="set-details" data-f="advanced">
             <summary data-i18n="mqtt_advanced"></summary>
-            <div class="set-form">
+            <div class="form">
               <label class="field">
                 <span data-i18n="mqtt_topic"></span>
                 <input type="text" data-f="topic_prefix" autocomplete="off" spellcheck="false" maxlength="128" placeholder="mttl">
@@ -189,10 +189,10 @@
             </div>
           </details>
         </div>
-        <div class="set-actions">
-          <button class="set-btn primary" type="button" data-act="mqtt-save" data-f="save"></button>
-          <button class="set-btn" type="button" data-act="mqtt-test" data-f="test"></button>
-          <button class="set-btn" type="button" data-act="mqtt-sync" data-f="sync"></button>
+        <div class="btn-row">
+          <button class="action" type="button" data-act="mqtt-save" data-f="save"></button>
+          <button type="button" data-act="mqtt-test" data-f="test"></button>
+          <button type="button" data-act="mqtt-sync" data-f="sync"></button>
         </div>
         <div class="alert-line" data-f="alert" data-kind="none" role="status">
           <p data-f="alertText"></p>
@@ -200,12 +200,12 @@
         </div>
         <details class="set-details">
           <summary data-i18n="lovelace"></summary>
-          <div class="set-form">
-            <p><a class="set-btn" href="mttl-up-card.js" download data-i18n="lovelace_download"></a></p>
+          <div class="form">
+            <p><a class="btn" href="mttl-up-card.js" download data-i18n="lovelace_download"></a></p>
             <pre class="yaml"><code>type: custom:mttl-up-card
 mac: 0a1b2c3d4e5f
 all_control: true</code></pre>
-            <p class="set-note" data-i18n="lovelace_install"></p>
+            <p class="note" data-i18n="lovelace_install"></p>
           </div>
         </details>
       </section>
@@ -214,9 +214,9 @@ all_control: true</code></pre>
 
     <section class="panel set-card set-wide" id="firmware-jobs">
       <div class="sum-head"><h2 data-i18n="card_jobs"></h2></div>
-      <p class="set-note" data-i18n="jobs_note"></p>
+      <p class="note" data-i18n="jobs_note"></p>
       <div class="job-list" data-f="jobs"></div>
-      <p class="empty-note" data-f="empty" data-i18n="jobs_empty" hidden></p>
+      <p class="note" data-f="empty" data-i18n="jobs_empty" hidden></p>
     </section>
   </div>
 </main>
@@ -231,8 +231,8 @@ all_control: true</code></pre>
     <div class="file-foot">
       <p class="file-meta num"><span data-f="sha"></span> · <span data-f="size"></span><span data-f="origWrap"> · <span data-f="orig"></span></span></p>
       <div class="file-actions" data-f="actions">
-        <a class="set-btn sm" data-f="download" download data-i18n="fw_download" hidden></a>
-        <button class="set-btn sm danger" type="button" data-act="fw-delete" data-f="delete" hidden></button>
+        <a class="btn" data-f="download" download data-i18n="fw_download" hidden></a>
+        <button class="hide-btn" type="button" data-act="fw-delete" data-f="delete" hidden></button>
       </div>
     </div>
   </div>
@@ -242,7 +242,7 @@ all_control: true</code></pre>
   <div class="job-row" data-tone="warn" data-active="no">
     <div class="job-head">
       <b class="job-name" data-f="name"></b>
-      <span class="badge" data-f="badge"><span class="badge-dot"></span><span data-f="badgeText"></span></span>
+      <span class="badge job-state" data-f="badge"><span class="badge-dot"></span><span data-f="badgeText"></span></span>
     </div>
     <p class="job-meta num"><span data-f="versions"></span> · <span data-f="age"></span></p>
     <p class="job-detail" data-f="detail" hidden></p>

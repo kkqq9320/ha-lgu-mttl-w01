@@ -1,4 +1,4 @@
-// Theme, language and demo-link wiring shared by dashboard.html and logview.html.
+// Theme, language, demo-link wiring and DOM helpers shared by dashboard.html, logview.html and settings.html.
 // The decisions (pickLang, resolveTheme, t) live in dashboard-core.mjs; this module only
 // reads and writes the browser state and the page's top-bar controls.
 import { t, pickLang, resolveTheme, scriptLang } from "./dashboard-core.mjs";
@@ -59,6 +59,31 @@ export function setText(el, value) {
   if (el.textContent !== text) el.textContent = text;
   const lang = scriptLang(text);
   if (el.lang !== lang) el.lang = lang;
+}
+
+// The helpers below write only when the value changed, so a redraw does not touch the page for nothing.
+
+export function setData(el, name, value) {
+  if (el.dataset[name] !== value) el.dataset[name] = value;
+}
+
+export function setHidden(el, hidden) {
+  if (el.hidden !== hidden) el.hidden = hidden;
+}
+
+export function setDisabled(el, disabled) {
+  if (el.disabled !== disabled) el.disabled = disabled;
+}
+
+export function setAttr(el, name, value) {
+  if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+}
+
+/** The elements marked `data-f` under `root`, by their name. */
+export function fieldMap(root) {
+  const f = {};
+  for (const el of root.querySelectorAll("[data-f]")) f[el.dataset.f] = el;
+  return f;
 }
 
 /** Static labels: `data-i18n` sets the text, `data-i18n-title` the tooltip and accessible name. */

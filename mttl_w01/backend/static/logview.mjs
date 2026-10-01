@@ -3,7 +3,7 @@
 import {
   t, logFilters, logQuery, filterLogs, fmtLogTime, logText, logRowKey, pressConfirm, demoLogs, apiGet, apiSend, isViewOnly,
 } from "./dashboard-core.mjs";
-import { page, applyTheme, initPage, setText, useDemoLinks } from "./page.mjs";
+import { page, applyTheme, initPage, setText, useDemoLinks, setHidden } from "./page.mjs";
 
 const AUTO_MS = 2000;
 const DEMO_BUFFER = 5000;
@@ -65,10 +65,6 @@ function createDemoLogSource() {
       add("INFO", "other", "web log buffer cleared by administrator");
     },
   };
-}
-
-function setHidden(el, hidden) {
-  if (el.hidden !== hidden) el.hidden = hidden;
 }
 
 // ---- Rendering ----

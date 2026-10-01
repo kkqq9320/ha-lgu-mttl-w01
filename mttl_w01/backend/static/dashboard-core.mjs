@@ -849,7 +849,7 @@ function demoTarget() {
 }
 
 /** Fixed-looking hex digits for sample hashes and ids, so the demo does not need a real file. */
-function demoHex(seed, length) {
+export function demoHex(seed, length) {
   let x = 2166136261;
   for (let i = 0; i < seed.length; i++) x = Math.imul(x ^ seed.charCodeAt(i), 16777619) >>> 0; // every character of the seed counts
   let out = "";
@@ -1081,6 +1081,131 @@ export function demoConfig() {
     allowed: [10, 15, 30, 60, 120, 300],
     diagnostic_allowed: [30, 60, 120, 300, 600, 1800],
   };
+}
+
+// ---- Demo firmware: what the backend does when a target is chosen and an update runs ----
+// These functions change the demo data they are given (an `api/devices` body) in place. They never read the
+// clock or draw random numbers: the caller passes the time, so the same calls give the same demo.
+
+/**
+ * The states a demo job passes through, in order. They are firmware-core's JOB_STATES up to SUCCESS; a test
+ * keeps the two in step (firmware-core imports this module, so it cannot be imported here).
+ */
+export const DEMO_JOB_STEPS = Object.freeze([
+  "QUEUED", "PREPARING", "COMMAND_SENT", "ACKED", "DOWNLOADING", "TRANSFERRED", "RECONNECTING", "VERIFYING", "SUCCESS",
+]);
+
+function versionParts(v) {
+  return String(v ?? "").split(".").map((x) => Number.parseInt(x, 10) || 0);
+}
+
+/** -1, 0 or 1 when dotted version `a` is older than, the same as or newer than `b` ("1.0.66" is older than "1.0.111"). */
+export function compareVersions(a, b) {
+  const [x, y] = [versionParts(a), versionParts(b)];
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] ?? 0) - (y[i] ?? 0);
+    if (d !== 0) return Math.sign(d);
+  }
+  return 0;
+}
+
+/** The firmware profile of the demo data with this id; throws like the backend when there is none. */
+export function demoProfileOf(data, id) {
+  const profile = data.firmware.profiles.find((p) => p.id === id);
+  if (!profile) throw new Error("firmware profile not found");
+  return profile;
+}
+
+/**
+ * Makes `profileId` the target: marks that profile as selected and gives every device, hidden ones too, the
+ * target and the update, downgrade or none that goes with its version. Call it again with the current target
+ * after a profile became ready or a device changed version.
+ */
+export function demoSetTarget(data, profileId) {
+  const target = demoProfileOf(data, profileId);
+  data.firmware.target_profile = target.id;
+  for (const p of data.firmware.profiles) p.selected = p.id === target.id;
+  for (const d of [...data.devices, ...data.removed]) {
+    const order = compareVersions(d.firmware_version, target.version);
+    d.firmware_target = { profile_id: target.id, version: target.version, label: target.label, kind: target.kind, ready: target.ready };
+    d.firmware_action = order === 0 ? null : order > 0 ? "downgrade" : "update";
+    d.firmware_build_current = order === 0;
+  }
+}
+
+function demoJobRunning(job) {
+  return DEMO_JOB_STEPS.includes(job.state) && job.state !== "SUCCESS";
+}
+
+/** The job of the device with this MAC that has not finished yet, or null. */
+export function demoRunningJob(data, mac) {
+  return data.firmware.jobs.find((j) => j.mac === mac && demoJobRunning(j)) ?? null;
+}
+
+/**
+ * Queues an update of an online device to `profileId` at time `now`, like `POST api/devices/<mac>/ota`: the new
+ * job is first in the list, and a device with a running job gets that job back. The job is marked `demo_live`,
+ * which makes demoAdvanceJob move it on; the jobs that came with the demo data stay as they are.
+ */
+export function demoQueueJob(data, mac, profileId, now) {
+  const device = data.devices.find((d) => d.mac === mac);
+  if (!device) throw new Error("device not found");
+  if (device.online !== true) throw new Error("device offline");
+  const target = demoProfileOf(data, profileId);
+  const running = demoRunningJob(data, mac);
+  if (running) return running;
+  const job = {
+    id: demoHex(`${mac}-${now}`, 32),
+    mac,
+    from_version: device.firmware_version,
+    profile_id: target.id,
+    target_version: target.version,
+    firmware_sha256: target.sha256,
+    state: "QUEUED",
+    detail: null,
+    queued_at: now,
+    started_at: null,
+    updated_at: now,
+    completed_at: null,
+    demo_live: true,
+  };
+  data.firmware.jobs.unshift(job);
+  return job;
+}
+
+/**
+ * Moves the oldest running `demo_live` job one state on at time `now`, like the backend's one-at-a-time worker.
+ * At SUCCESS the device reports the new version. Returns the job, or null when none is running.
+ */
+export function demoAdvanceJob(data, now) {
+  const live = data.firmware.jobs.filter((j) => j.demo_live === true && demoJobRunning(j));
+  live.sort((a, b) => a.queued_at - b.queued_at);
+  const job = live[0];
+  if (!job) return null;
+  job.state = DEMO_JOB_STEPS[DEMO_JOB_STEPS.indexOf(job.state) + 1];
+  job.updated_at = now;
+  job.started_at ??= now;
+  if (job.state === "SUCCESS") {
+    job.completed_at = now;
+    job.detail = `목표 버전 ${job.target_version} 확인`;
+    const device = data.devices.find((d) => d.mac === job.mac);
+    if (device) {
+      device.firmware_version = job.target_version;
+      demoSetTarget(data, data.firmware.target_profile);
+    }
+  }
+  return job;
+}
+
+/** Moves the times of the demo jobs and firmware files by `seconds`, so "N s ago" looks like a live backend. */
+export function demoShiftFirmwareTimes(data, seconds) {
+  for (const job of data.firmware.jobs) {
+    for (const key of ["queued_at", "started_at", "updated_at", "completed_at"]) if (typeof job[key] === "number") job[key] += seconds;
+  }
+  for (const p of data.firmware.profiles) {
+    p.created_at += seconds;
+    p.updated_at += seconds;
+  }
 }
 
 const DEMO_LOG_ROWS = [

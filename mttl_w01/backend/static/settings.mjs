@@ -1,15 +1,18 @@
 // Page wiring for settings.html. Values reach the page only through textContent, attributes and
 // data-* states; the logic is in settings-core.mjs and firmware-core.mjs.
 import {
-  NA, FW_ACTIONS, t, pressConfirm, isViewOnly, demoResponse, demoHa, demoConfig,
+  NA, FW_ACTIONS, t, pressConfirm, isViewOnly, demoResponse, demoHa, demoConfig, demoHex, demoProfileOf, demoSetTarget,
+  demoQueueJob, demoAdvanceJob, demoShiftFirmwareTimes,
 } from "./dashboard-core.mjs";
-import { FWR_SIZE, JOB_STATES, isJobActive, checkFwrFile, profileHintKey } from "./firmware-core.mjs";
+import { FWR_SIZE, checkFwrFile, profileHintKey } from "./firmware-core.mjs";
 import {
   POLL_CHOICES, POWER_THRESHOLDS, REPORT_INTERVALS, ENERGY_THRESHOLDS, MQTT_FIELDS,
   isIPv4, dirtyKeys, mergeDraft, mqttPayload, mqttTestPayload, mqttDraft, firmwareDraft,
   firmwareControls, mqttControls, pollCanSave, intervalUnit, fmtBytes, profileTitle, profileRows, jobRows,
 } from "./settings-core.mjs";
-import { page, applyTheme, applyStrings, initPage, setText, useDemoLinks } from "./page.mjs";
+import {
+  page, applyTheme, applyStrings, initPage, setText, useDemoLinks, setData, setHidden, setDisabled, setAttr, fieldMap,
+} from "./page.mjs";
 
 const POLL_MS = 5000;
 const CONFIRM_MS = 4000;
@@ -27,90 +30,18 @@ const $ = (sel, root = document) => root.querySelector(sel);
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function versionParts(v) {
-  return String(v ?? "").split(".").map((x) => Number.parseInt(x, 10) || 0);
-}
-
-function compareVersions(a, b) {
-  const [x, y] = [versionParts(a), versionParts(b)];
-  for (let i = 0; i < Math.max(x.length, y.length); i++) {
-    const d = (x[i] ?? 0) - (y[i] ?? 0);
-    if (d !== 0) return Math.sign(d);
-  }
-  return 0;
-}
-
-function randomHex(length) {
-  let out = "";
-  while (out.length < length) out += Math.floor(Math.random() * 16 ** 8).toString(16).padStart(8, "0");
-  return out.slice(0, length);
-}
-
 function createDemoSource() {
   const data = demoResponse();
   const config = demoConfig();
   const ha = demoHa();
   const now = () => Date.now() / 1000;
   // The sample data is fixed in time; move it to now so "N s ago" looks like a live backend.
-  const shift = now() - Math.max(...data.devices.map((d) => d.last_seen));
-  for (const job of data.firmware.jobs) {
-    for (const key of ["queued_at", "started_at", "updated_at", "completed_at"]) if (job[key] !== null) job[key] += shift;
-  }
-  for (const p of data.firmware.profiles) {
-    p.created_at += shift;
-    p.updated_at += shift;
-  }
-  const steps = JOB_STATES.slice(0, JOB_STATES.indexOf("SUCCESS") + 1);
-  const moving = new Set(); // jobs started in this page move on with each read; the sample jobs stay as they are
-
-  const profile = (id) => {
-    const p = data.firmware.profiles.find((x) => x.id === id);
-    if (!p) throw new Error("firmware profile not found");
-    return p;
-  };
-  // What the backend shows for each device once the target changes.
-  const retarget = () => {
-    const target = profile(data.firmware.target_profile);
-    for (const p of data.firmware.profiles) p.selected = p.id === target.id;
-    for (const d of [...data.devices, ...data.removed]) {
-      const order = compareVersions(d.firmware_version, target.version);
-      d.firmware_target = { profile_id: target.id, version: target.version, label: target.label, kind: target.kind, ready: target.ready };
-      d.firmware_action = order === 0 ? null : order > 0 ? "downgrade" : "update";
-      d.firmware_build_current = order === 0;
-    }
-  };
-  const activeJob = (mac) => data.firmware.jobs.some((j) => j.mac === mac && isJobActive(j));
-  const queue = (device, target) => {
-    const job = {
-      id: randomHex(32), mac: device.mac, from_version: device.firmware_version, profile_id: target.id,
-      target_version: target.version, firmware_sha256: target.sha256, state: "QUEUED", detail: null,
-      queued_at: now(), started_at: null, updated_at: now(), completed_at: null,
-    };
-    data.firmware.jobs.unshift(job);
-    moving.add(job.id);
-    return job;
-  };
-  // One step for the oldest running job of this page, so the list and the update count have something to show.
-  const advance = () => {
-    const job = data.firmware.jobs.filter((j) => moving.has(j.id) && isJobActive(j)).at(-1);
-    if (!job) return;
-    job.state = steps[steps.indexOf(job.state) + 1];
-    job.updated_at = now();
-    job.started_at ??= job.updated_at;
-    if (job.state !== "SUCCESS") return;
-    job.completed_at = job.updated_at;
-    job.detail = `목표 버전 ${job.target_version} 확인`;
-    const device = data.devices.find((d) => d.mac === job.mac);
-    if (device) {
-      device.firmware_version = job.target_version;
-      retarget();
-    }
-  };
+  demoShiftFirmwareTimes(data, now() - Math.max(...data.devices.map((d) => d.last_seen)));
 
   return {
     demo: true,
     async load() {
-      advance();
+      demoAdvanceJob(data, now()); // an update started in this page moves on with every read
       return { status: 200, body: structuredClone(data) };
     },
     async config() {
@@ -126,9 +57,7 @@ function createDemoSource() {
     },
     async saveTarget(profileId, host) {
       await wait(300);
-      profile(profileId);
-      data.firmware.target_profile = profileId;
-      retarget();
+      demoSetTarget(data, profileId);
       if (host.trim() !== "") {
         if (!isIPv4(host.trim())) throw new Error("OTA server IP must be a valid IPv4 address");
         data.firmware.ota_host_ip = host.trim();
@@ -136,27 +65,25 @@ function createDemoSource() {
     },
     async prepare(profileId) {
       await wait(1600);
-      const p = profile(profileId);
+      const p = demoProfileOf(data, profileId);
       if (p.kind !== "official") throw new Error("only official firmware can be prepared");
       p.ready = true;
       p.filename = `official_${p.version}.fwr`;
       p.updated_at = now();
-      retarget();
+      demoSetTarget(data, data.firmware.target_profile);
     },
     async otaAll(profileId) {
       await wait(300);
-      const target = profile(profileId);
-      const jobs = [];
-      for (const d of data.devices) {
-        if (d.online !== true || !FW_ACTIONS.includes(d.firmware_action)) continue;
-        jobs.push(activeJob(d.mac) ? data.firmware.jobs.find((j) => j.mac === d.mac && isJobActive(j)) : queue(d, target));
-      }
+      demoProfileOf(data, profileId);
+      const jobs = data.devices
+        .filter((d) => d.online === true && FW_ACTIONS.includes(d.firmware_action))
+        .map((d) => demoQueueJob(data, d.mac, profileId, now()));
       return { ok: true, jobs };
     },
     async uploadFwr(bytes, name) {
       await wait(700);
       if (bytes.byteLength !== FWR_SIZE) throw new Error(`FWR validation failed: the size is ${bytes.byteLength}`);
-      const sha = randomHex(64);
+      const sha = demoHex(`${name}-${now()}`, 64);
       const id = `custom-${sha.slice(0, 16)}`;
       data.firmware.profiles.push({
         id, kind: "custom", version: "1.0.113", label: "사용자 지정 1.0.113", sha256: sha, size: FWR_SIZE, model: "LGU+-TAP-HW002",
@@ -166,10 +93,10 @@ function createDemoSource() {
     },
     async deleteFwr(profileId) {
       await wait(300);
-      if (profile(profileId).kind !== "custom") throw new Error("official firmware cannot be deleted");
+      if (demoProfileOf(data, profileId).kind !== "custom") throw new Error("official firmware cannot be deleted");
+      const wasTarget = data.firmware.target_profile === profileId;
       data.firmware.profiles = data.firmware.profiles.filter((p) => p.id !== profileId);
-      if (data.firmware.target_profile === profileId) data.firmware.target_profile = "official-111";
-      retarget();
+      demoSetTarget(data, wasTarget ? "official-111" : data.firmware.target_profile);
     },
     async saveMqtt(body) {
       await wait(450);
@@ -226,33 +153,11 @@ const state = {
 
 const cards = {}; // name -> {root, f}
 
-// ---- Small DOM helpers that only write when the value changed ----
-
-function setData(el, name, value) {
-  if (el.dataset[name] !== value) el.dataset[name] = value;
-}
-
-function setHidden(el, hidden) {
-  if (el.hidden !== hidden) el.hidden = hidden;
-}
-
-function setDisabled(el, disabled) {
-  if (el.disabled !== disabled) el.disabled = disabled;
-}
-
-function setAttr(el, name, value) {
-  if (el.getAttribute(name) !== value) el.setAttribute(name, value);
-}
+// ---- Small DOM helpers ----
 
 function setInput(el, value) {
   const text = String(value ?? "");
   if (el.value !== text) el.value = text;
-}
-
-function fieldMap(root) {
-  const f = {};
-  for (const el of root.querySelectorAll("[data-f]")) f[el.dataset.f] = el;
-  return f;
 }
 
 /** Fills a <select> with `options` ({value, text}) and picks `current`; rebuilds only when the list changed. */
@@ -482,6 +387,7 @@ function updateJobRow(el, r) {
   setData(el, "active", r.active ? "yes" : "no");
   setText(f.name, r.name);
   setData(f.badge, "state", r.tone);
+  setData(f.badge, "live", r.active ? "yes" : "no");
   setText(f.badgeText, r.stateKey ? t(page.lang, r.stateKey) : (r.state || NA)); // a state this page does not know is shown as sent
   setText(f.versions, `${r.from ?? NA} → ${r.to ?? NA}`);
   setText(f.age, r.age);
