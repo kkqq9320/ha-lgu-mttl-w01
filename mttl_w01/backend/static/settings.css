@@ -193,30 +193,11 @@
   overflow-wrap: anywhere;
 }
 
-/* ---- Firmware jobs ---- */
+/* ---- Firmware jobs: the rows themselves are in dashboard.css ---- */
 
 .job-list {
   display: grid;
   gap: 8px;
-}
-
-.job-row {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 3px;
-  background: var(--surface-2);
-}
-
-.job-row[data-tone="bad"] {
-  background: var(--bad-soft);
-}
-
-.job-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
 }
 
 .job-name {
@@ -227,21 +208,6 @@
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.job-meta {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.job-detail {
-  color: var(--muted);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-
-.job-row[data-tone="bad"] .job-detail {
-  color: var(--bad);
 }
 
 /* The jobs card spans the page on a wide screen: one line per job. */

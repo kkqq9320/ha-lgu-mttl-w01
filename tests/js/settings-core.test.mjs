@@ -13,7 +13,7 @@ const {
   POLL_CHOICES, POWER_THRESHOLDS, REPORT_INTERVALS, ENERGY_THRESHOLDS, MQTT_FIELDS, JOB_ROW_LIMIT,
   isIPv4, validateFirmware, validateMqtt, dirtyKeys, mergeDraft, mqttPayload, mqttTestPayload, mqttNeedsConfirm, targetDirty,
   mqttDraft, firmwareDraft, firmwareChangedKeys, firmwareControls, mqttControls, pollCanSave,
-  intervalUnit, fmtAgo, fmtBytes, shortSha, deviceLabel, profileTitle, profileRows, jobRows,
+  fmtBytes, shortSha, deviceLabel, profileTitle, profileRows, jobRows,
 } = settings;
 
 test("isIPv4 rejects leading zeros, IPv6 and garbage", () => {
@@ -309,31 +309,10 @@ test("pollCanSave", () => {
   assert.equal(pollCanSave({ ...base, draft: { poll_interval: 30 }, busy: true }), false);
 });
 
-test("intervalUnit picks seconds or minutes", () => {
-  assert.deepEqual(intervalUnit(10), { key: "unit_s", n: 10 });
-  assert.deepEqual(intervalUnit(15), { key: "unit_s", n: 15 });
-  assert.deepEqual(intervalUnit(60), { key: "unit_min", n: 1 });
-  assert.deepEqual(intervalUnit(120), { key: "unit_min", n: 2 });
-  assert.deepEqual(intervalUnit(1800), { key: "unit_min", n: 30 });
-  assert.deepEqual(intervalUnit(90), { key: "unit_s", n: 90 });
+test("every polling and report interval has a unit text in both languages", () => {
   for (const n of [...POLL_CHOICES, ...REPORT_INTERVALS]) {
-    for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][intervalUnit(n).key], `${lang} ${n}`);
+    for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][core.intervalUnit(n).key], `${lang} ${n}`);
   }
-});
-
-test("fmtAgo counts up in English in both languages", () => {
-  const now = 10_000;
-  assert.equal(fmtAgo(now - 12.9, now), "12 s ago");
-  assert.equal(fmtAgo(now, now), "0 s ago");
-  assert.equal(fmtAgo(now + 5, now), "0 s ago");
-  assert.equal(fmtAgo(now - 59, now), "59 s ago");
-  assert.equal(fmtAgo(now - 60, now), "1 min ago");
-  assert.equal(fmtAgo(now - 3599, now), "59 min ago");
-  assert.equal(fmtAgo(now - 3600, now), "1 h ago");
-  assert.equal(fmtAgo(now - 86399, now), "23 h ago");
-  assert.equal(fmtAgo(now - 86400 * 3, now), "3 d ago");
-  for (const bad of [null, undefined, "", "x", NaN]) assert.equal(fmtAgo(bad, now), NA, String(bad));
-  assert.equal(fmtAgo("9990", now), "10 s ago");
 });
 
 test("fmtBytes and shortSha", () => {
@@ -520,7 +499,9 @@ test("every text the settings page uses exists in EN and KR", () => {
   for (const m of settingsHtml().matchAll(/data-i18n(?:-title|-ph)?="([^"]+)"/g)) keys.add(m[1]);
   for (const m of settingsMjs().matchAll(/\bt\(\s*(?:page\.lang|lang),\s*"([a-z0-9_]+)"/g)) keys.add(m[1]);
   for (const m of settingsMjs().matchAll(/\bkey: "([a-z0-9_]+)"/g)) keys.add(m[1]);
-  for (const m of SETTINGS_CORE().matchAll(/"(err_[a-z0-9_]+|unit_[a-z]+|fw_custom)"/g)) keys.add(m[1]);
+  for (const m of SETTINGS_CORE().matchAll(/"(err_[a-z0-9_]+|fw_custom)"/g)) keys.add(m[1]);
+  // intervalUnit, which the page shares with the device window, is in dashboard-core.mjs.
+  for (const m of staticFile("dashboard-core.mjs").matchAll(/"(unit_[a-z]+)"/g)) keys.add(m[1]);
   assert.ok(keys.size > 40, `scan found ${keys.size} keys`);
   for (const must of ["card_fw", "card_mqtt", "err_ipv4", "err_required", "err_port", "err_topic", "unit_s", "unit_min", "fw_custom"]) {
     assert.ok(keys.has(must), `scan found ${must}`);

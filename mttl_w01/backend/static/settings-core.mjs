@@ -2,7 +2,7 @@
 // Texts live in dashboard-core.mjs STRINGS; the functions here return their keys.
 // settings.mjs wires it to the page; tests/js/settings-core.test.mjs runs it under Node.
 
-import { NA, normalizeMac } from "./dashboard-core.mjs";
+import { NA, normalizeMac, fmtAgo } from "./dashboard-core.mjs";
 import { isJobActive, jobTone, jobStateKey, updateAllTargets } from "./firmware-core.mjs";
 
 /** Polling choices in seconds: backend.py ALLOWED_POLL. */
@@ -262,22 +262,6 @@ export function pollCanSave({ saved, draft, allowed, viewOnly, busy }) {
 }
 
 // ---- Values for display ----
-
-/** Unit of an interval: whole minutes from 60 s up, else seconds. `key` is a STRINGS entry that takes {n}. */
-export function intervalUnit(seconds) {
-  return seconds >= 60 && seconds % 60 === 0 ? { key: "unit_min", n: seconds / 60 } : { key: "unit_s", n: seconds };
-}
-
-/** Time since `ts` (epoch seconds) in the largest whole unit; English in both languages, like the device cards. */
-export function fmtAgo(ts, now) {
-  const then = num(ts);
-  if (!Number.isFinite(then) || !Number.isFinite(now)) return NA;
-  const s = Math.max(0, Math.floor(now - then));
-  if (s < 60) return `${s} s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
-  return `${Math.floor(s / 86400)} d ago`;
-}
 
 /** Size with a thousands separator, e.g. "327,944 B". */
 export function fmtBytes(n) {

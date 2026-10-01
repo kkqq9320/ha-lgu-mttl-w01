@@ -26,7 +26,7 @@
       </span>
       <span class="lock-view" data-i18n="view_only"></span>
     </button>
-    <a class="tool" href="tuo.html" data-i18n="settings"></a>
+    <a class="tool" href="settings.html" data-demo-href="settings.html?demo" data-i18n="settings"></a>
     <a class="tool" href="logs.html" data-demo-href="logview.html?demo" data-i18n="logs"></a>
     <label class="tool tool-select">
       <span class="sr-only" data-i18n="theme"></span>
@@ -52,7 +52,7 @@
       <div><dt data-i18n="mqtt_discovery"></dt><dd data-f="discovery"></dd></div>
     </dl>
     <div class="sum-actions">
-      <a class="action" href="tuo.html" data-i18n="open_settings"></a>
+      <a class="action" href="settings.html#mqtt" data-demo-href="settings.html?demo#mqtt" data-i18n="open_settings"></a>
       <a class="action" href="logs.html" data-demo-href="logview.html?demo" data-i18n="open_logs"></a>
     </div>
   </article>
@@ -64,7 +64,7 @@
       <div><dt data-i18n="fw_ota_host"></dt><dd class="num" data-f="otaHost"></dd></div>
     </dl>
     <div class="sum-actions">
-      <a class="action" href="tuo.html" data-i18n="open_settings"></a>
+      <a class="action" href="settings.html#firmware" data-demo-href="settings.html?demo#firmware" data-i18n="open_settings"></a>
       <a class="action" href="logs.html" data-demo-href="logview.html?demo" data-i18n="open_logs"></a>
     </div>
   </article>
@@ -86,6 +86,90 @@
 <main class="devices" id="devices"></main>
 <p class="empty" id="empty" data-i18n="empty" hidden></p>
 
+<details class="panel hidden-section" id="hidden-section" data-controls="locked" hidden>
+  <summary><span data-f="title"></span></summary>
+  <div class="hidden-body">
+    <p class="note" data-i18n="hidden_note"></p>
+    <div class="alert-line" data-f="alert" data-kind="none" role="status">
+      <p data-f="alertText"></p>
+    </div>
+    <div class="hidden-list" data-f="list"></div>
+  </div>
+</details>
+
+<dialog class="dev-dialog" id="device-dialog" aria-labelledby="dw-title">
+  <div class="dw">
+    <header class="dw-head">
+      <div class="dw-id">
+        <h2 id="dw-title" data-i18n="device_settings"></h2>
+        <p class="dw-sub num"><b data-f="name"></b> · <span data-f="mac"></span></p>
+      </div>
+      <span class="badge" data-f="status"><span class="badge-dot"></span><span data-f="statusText"></span></span>
+      <button class="icon-btn dw-close" type="button" data-act="dw-close" data-i18n-title="close">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2"></path></svg>
+      </button>
+    </header>
+    <p class="note dw-state" data-f="state" hidden></p>
+
+    <section class="dw-section">
+      <h3 class="form-sub" data-i18n="card_fw"></h3>
+      <dl class="kv">
+        <div><dt data-i18n="dw_fw_current"></dt><dd class="num" data-f="fwCurrent"></dd></div>
+        <div><dt data-i18n="fw_target_label"></dt><dd class="num" data-f="fwTarget"></dd></div>
+      </dl>
+      <p class="note" data-f="fwNote" hidden></p>
+      <div class="job-row" data-f="job" data-tone="warn" data-active="no" hidden>
+        <div class="job-head">
+          <span class="job-label" data-i18n="dw_job"></span>
+          <span class="badge job-state" data-f="jobBadge"><span class="badge-dot"></span><span data-f="jobText"></span></span>
+        </div>
+        <p class="job-meta num" data-f="jobMeta"></p>
+        <p class="job-detail" data-f="jobDetail" hidden></p>
+      </div>
+      <div class="btn-row" data-f="otaRow">
+        <button class="action" type="button" data-act="dw-ota" data-f="ota"></button>
+      </div>
+      <div class="alert-line" data-f="fwAlert" data-kind="none" role="status">
+        <p data-f="fwAlertText"></p>
+      </div>
+    </section>
+
+    <section class="dw-section">
+      <h3 class="form-sub" data-i18n="dw_measure"></h3>
+      <div class="form">
+        <label class="check"><input type="checkbox" data-f="voltage"><span data-i18n="dw_voltage"></span></label>
+        <label class="check"><input type="checkbox" data-f="rssi"><span data-i18n="dw_rssi"></span></label>
+        <label class="field">
+          <span data-i18n="dw_interval"></span>
+          <select class="num" data-f="interval"></select>
+        </label>
+        <p class="note" data-i18n="dw_measure_note"></p>
+      </div>
+      <div class="btn-row">
+        <button class="action" type="button" data-act="dw-apply" data-f="apply"></button>
+      </div>
+      <div class="alert-line" data-f="measureAlert" data-kind="none" role="status">
+        <p data-f="measureAlertText"></p>
+      </div>
+    </section>
+
+    <section class="dw-section" data-f="lockSection" hidden>
+      <h3 class="form-sub" data-i18n="lock"></h3>
+      <dl class="kv">
+        <div><dt data-i18n="lock_status"></dt><dd class="num" data-f="lockState"></dd></div>
+      </dl>
+      <p class="note" data-f="lockStale" hidden></p>
+      <p class="note" data-i18n="lock_note"></p>
+      <div class="btn-row">
+        <button type="button" data-act="dw-reread" data-f="reread"></button>
+      </div>
+      <div class="alert-line" data-f="lockAlert" data-kind="none" role="status">
+        <p data-f="lockAlertText"></p>
+      </div>
+    </section>
+  </div>
+</dialog>
+
 <template id="card-tpl">
   <article class="panel card" data-online="on">
     <div class="card-head">
@@ -100,8 +184,8 @@
     </div>
     <p class="meta num"><span data-f="mac"></span> · FW <span data-f="fw"></span></p>
     <p class="meta num" data-f="seen"></p>
-    <div class="notice" data-f="notice" data-kind="none">
-      <a class="notice-fw" data-f="fwUpdate" href="tuo.html"><span data-f="fwText"></span></a>
+    <div class="notice" data-f="notice" data-kind="none" data-live="no">
+      <button class="notice-fw" type="button" data-act="open-window"><span class="notice-dot" aria-hidden="true"></span><span data-f="fwText"></span></button>
       <span class="notice-offline" data-i18n="offline_note"></span>
     </div>
     <dl class="kv stats">
@@ -133,10 +217,34 @@
       </div>
     </div>
     <div class="card-tools">
-      <span class="tools-note" data-f="hideNote"></span>
+      <button type="button" data-act="open-window" data-f="settingsBtn" data-i18n="device_settings"></button>
       <button class="hide-btn" type="button" data-act="hide" data-f="hideBtn"></button>
+      <span class="tools-note" data-f="hideNote"></span>
     </div>
   </article>
+</template>
+
+<template id="hidden-row-tpl">
+  <div class="hidden-row">
+    <div class="hidden-main">
+      <b class="hidden-name" data-f="name"></b>
+      <p class="hidden-meta num" data-f="meta"></p>
+    </div>
+    <div class="hidden-actions">
+      <button type="button" data-act="restore" data-f="restore"></button>
+      <button class="hide-btn" type="button" data-act="purge" data-f="purge"></button>
+    </div>
+    <div class="form purge-box" data-f="box" hidden>
+      <label class="field">
+        <span data-i18n="purge_type"></span>
+        <input type="text" data-f="word" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="DELETE">
+      </label>
+      <div class="btn-row">
+        <button class="hide-btn" type="button" data-act="purge-do" data-f="purgeDo"></button>
+        <button type="button" data-act="purge-cancel" data-i18n="purge_cancel"></button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <template id="outlet-tpl">

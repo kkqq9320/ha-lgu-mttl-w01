@@ -1,17 +1,18 @@
 // Page wiring for settings.html. Values reach the page only through textContent, attributes and
 // data-* states; the logic is in settings-core.mjs and firmware-core.mjs.
 import {
-  NA, FW_ACTIONS, t, pressConfirm, isViewOnly, demoResponse, demoHa, demoConfig, demoHex, demoProfileOf, demoSetTarget,
-  demoQueueJob, demoAdvanceJob, demoShiftFirmwareTimes,
+  NA, FW_ACTIONS, t, pressConfirm, isViewOnly, intervalUnit, demoResponse, demoHa, demoConfig, demoHex, demoProfileOf,
+  demoSetTarget, demoQueueJob, demoAdvanceJob, demoShiftFirmwareTimes,
 } from "./dashboard-core.mjs";
 import { FWR_SIZE, checkFwrFile, profileHintKey } from "./firmware-core.mjs";
 import {
   POLL_CHOICES, POWER_THRESHOLDS, REPORT_INTERVALS, ENERGY_THRESHOLDS, MQTT_FIELDS,
   isIPv4, dirtyKeys, mergeDraft, mqttPayload, mqttTestPayload, mqttDraft, firmwareDraft,
-  firmwareControls, mqttControls, pollCanSave, intervalUnit, fmtBytes, profileTitle, profileRows, jobRows,
+  firmwareControls, mqttControls, pollCanSave, fmtBytes, profileTitle, profileRows, jobRows,
 } from "./settings-core.mjs";
 import {
   page, applyTheme, applyStrings, initPage, setText, useDemoLinks, setData, setHidden, setDisabled, setAttr, fieldMap,
+  setInput, syncOptions, syncList, paintButton,
 } from "./page.mjs";
 
 const POLL_MS = 5000;
@@ -155,56 +156,6 @@ const cards = {}; // name -> {root, f}
 
 // ---- Small DOM helpers ----
 
-function setInput(el, value) {
-  const text = String(value ?? "");
-  if (el.value !== text) el.value = text;
-}
-
-/** Fills a <select> with `options` ({value, text}) and picks `current`; rebuilds only when the list changed. */
-function syncOptions(select, options, current) {
-  const signature = options.map((o) => `${o.value}\u0000${o.text}`).join("\n");
-  if (select.dataset.signature !== signature) {
-    select.dataset.signature = signature;
-    select.replaceChildren(...options.map((o) => {
-      const el = document.createElement("option");
-      el.value = o.value;
-      el.textContent = o.text;
-      return el;
-    }));
-  }
-  if (select.value !== String(current)) select.value = String(current);
-}
-
-const lists = new WeakMap();
-
-/** Keeps `container`'s children in the order of `items`, creating and dropping rows by key and never recreating one that stays. */
-function syncList(container, items, keyOf, create, update) {
-  let rows = lists.get(container);
-  if (!rows) lists.set(container, (rows = new Map()));
-  const seen = new Set();
-  let prev = null;
-  for (const item of items) {
-    const key = keyOf(item);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    let el = rows.get(key);
-    if (!el) {
-      el = create(item);
-      rows.set(key, el);
-    }
-    update(el, item);
-    const want = prev ? prev.nextElementSibling : container.firstElementChild;
-    if (want !== el) container.insertBefore(el, want);
-    prev = el;
-  }
-  for (const [key, el] of rows) {
-    if (!seen.has(key)) {
-      el.remove();
-      rows.delete(key);
-    }
-  }
-}
-
 function titleText(title) {
   return title.key ? t(page.lang, title.key, title.vars) : title.text;
 }
@@ -249,12 +200,8 @@ function press(id, card, action) {
 
 /** A button: its label, whether it is armed or busy, and whether it can be pressed. */
 function setButton(btn, { id, label, vars, can }) {
-  const busy = state.busy.has(id);
   if (state.armed?.id === id && !can) disarm(); // what it would do is no longer possible
-  const armed = state.armed?.id === id;
-  setData(btn, "state", busy ? "busy" : armed ? "armed" : "idle");
-  setText(btn, t(page.lang, busy ? "working" : armed ? "press_again" : label, vars));
-  setDisabled(btn, !can || busy);
+  paintButton(btn, { label, vars, can, armed: state.armed?.id === id, busy: state.busy.has(id) });
 }
 
 function showFieldError(input, errEl, errorKey) {

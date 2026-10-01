@@ -79,11 +79,71 @@ export function setAttr(el, name, value) {
   if (el.getAttribute(name) !== value) el.setAttribute(name, value);
 }
 
+export function setInput(el, value) {
+  const text = String(value ?? "");
+  if (el.value !== text) el.value = text;
+}
+
 /** The elements marked `data-f` under `root`, by their name. */
 export function fieldMap(root) {
   const f = {};
   for (const el of root.querySelectorAll("[data-f]")) f[el.dataset.f] = el;
   return f;
+}
+
+/** Fills a <select> with `options` ({value, text}) and picks `current`; rebuilds only when the list changed. */
+export function syncOptions(select, options, current) {
+  const signature = options.map((o) => `${o.value}\u0000${o.text}`).join("\n");
+  if (select.dataset.signature !== signature) {
+    select.dataset.signature = signature;
+    select.replaceChildren(...options.map((o) => {
+      const el = document.createElement("option");
+      el.value = o.value;
+      el.textContent = o.text;
+      return el;
+    }));
+  }
+  if (select.value !== String(current)) select.value = String(current);
+}
+
+const lists = new WeakMap();
+
+/** Keeps `container`'s children in the order of `items`, creating and dropping rows by key and never recreating one that stays. */
+export function syncList(container, items, keyOf, create, update) {
+  let rows = lists.get(container);
+  if (!rows) lists.set(container, (rows = new Map()));
+  const seen = new Set();
+  let prev = null;
+  for (const item of items) {
+    const key = keyOf(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    let el = rows.get(key);
+    if (!el) {
+      el = create(item);
+      rows.set(key, el);
+    }
+    update(el, item);
+    const want = prev ? prev.nextElementSibling : container.firstElementChild;
+    if (want !== el) container.insertBefore(el, want);
+    prev = el;
+  }
+  for (const [key, el] of rows) {
+    if (!seen.has(key)) {
+      el.remove();
+      rows.delete(key);
+    }
+  }
+}
+
+/**
+ * A button that can be armed by a first press or busy with a request: its state (`data-state`), its label
+ * (`label` is a STRINGS key that takes `vars`; armed and busy replace it) and whether it can be pressed.
+ */
+export function paintButton(btn, { label, vars, can, armed = false, busy = false }) {
+  setData(btn, "state", busy ? "busy" : armed ? "armed" : "idle");
+  setText(btn, t(page.lang, busy ? "working" : armed ? "press_again" : label, vars));
+  setDisabled(btn, !can || busy);
 }
 
 /** Static labels: `data-i18n` sets the text, `data-i18n-title` the tooltip and accessible name. */

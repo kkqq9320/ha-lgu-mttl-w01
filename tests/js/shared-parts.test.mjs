@@ -9,7 +9,7 @@ globalThis.window = { matchMedia: () => ({ matches: false, addEventListener() {}
 globalThis.window.parent = globalThis.window;
 const page = await import(new URL("../../mttl_w01/backend/static/page.mjs", import.meta.url));
 
-const HELPERS = ["setData", "setHidden", "setDisabled", "setAttr", "fieldMap"];
+const HELPERS = ["setData", "setHidden", "setDisabled", "setAttr", "fieldMap", "setInput", "syncOptions", "syncList", "paintButton"];
 const PAGE_MODULES = ["dashboard.mjs", "logview.mjs", "settings.mjs"];
 
 /** An element stand-in that counts every write to the properties and attributes under test. */
@@ -70,6 +70,80 @@ test("fieldMap names the elements marked data-f under a root", () => {
   const root = { querySelectorAll: (sel) => (sel === "[data-f]" ? [a, b] : []) };
   assert.deepEqual(page.fieldMap(root), { title: a, mac: b });
   assert.deepEqual(page.fieldMap({ querySelectorAll: () => [] }), {});
+});
+
+test("setInput writes a field's value only when it changed", () => {
+  let writes = 0;
+  let value = "";
+  const input = { get value() { return value; }, set value(v) { writes++; value = v; } };
+  page.setInput(input, "a");
+  page.setInput(input, "a");
+  page.setInput(input, 5);
+  page.setInput(input, null);
+  assert.equal(writes, 3);
+  assert.equal(value, "");
+});
+
+test("syncOptions rebuilds a select only when its list changed and picks the current value", () => {
+  globalThis.document = { createElement: () => ({}) };
+  let rebuilt = 0;
+  const select = { dataset: {}, value: "", replaceChildren(...opts) { rebuilt++; this.options = opts; } };
+  const list = [{ value: "30", text: "30 s" }, { value: "60", text: "1 min" }];
+  page.syncOptions(select, list, 60);
+  assert.deepEqual(select.options, [{ value: "30", textContent: "30 s" }, { value: "60", textContent: "1 min" }]);
+  assert.equal(select.value, "60");
+  page.syncOptions(select, list, 30);
+  assert.equal(rebuilt, 1, "the same list is not rebuilt");
+  assert.equal(select.value, "30");
+  page.syncOptions(select, [...list, { value: "120", text: "2 min" }], 120);
+  assert.equal(rebuilt, 2);
+  assert.equal(select.value, "120");
+  delete globalThis.document;
+});
+
+test("syncList keeps the rows that stay, creates the new ones, drops the gone ones and orders them", () => {
+  const container = {
+    kids: [],
+    get firstElementChild() { return this.kids[0] ?? null; },
+    insertBefore(el, before) {
+      const at = this.kids.indexOf(el);
+      if (at !== -1) this.kids.splice(at, 1);
+      this.kids.splice(before ? this.kids.indexOf(before) : this.kids.length, 0, el);
+      el.parent = this;
+    },
+  };
+  const rowOf = (key) => ({
+    key,
+    parent: null,
+    get nextElementSibling() { return this.parent?.kids[this.parent.kids.indexOf(this) + 1] ?? null; },
+    remove() { this.parent.kids.splice(this.parent.kids.indexOf(this), 1); this.parent = null; },
+  });
+  const made = [];
+  const create = (item) => { const el = rowOf(item.id); made.push(item.id); return el; };
+  const update = (el, item) => { el.label = item.label; };
+  page.syncList(container, [{ id: "a", label: 1 }, { id: "b", label: 1 }, { id: "a", label: 9 }], (i) => i.id, create, update);
+  assert.deepEqual(container.kids.map((e) => e.key), ["a", "b"], "a repeated key is one row");
+  const rowA = container.kids[0];
+  page.syncList(container, [{ id: "c", label: 2 }, { id: "a", label: 2 }], (i) => i.id, create, update);
+  assert.deepEqual(container.kids.map((e) => e.key), ["c", "a"]);
+  assert.equal(container.kids[1], rowA, "a row that stays is not created again");
+  assert.equal(rowA.label, 2);
+  assert.deepEqual(made, ["a", "b", "c"]);
+  page.syncList(container, [], (i) => i.id, create, update);
+  assert.deepEqual(container.kids, []);
+});
+
+test("paintButton shows idle, armed and busy and turns the button off while it cannot be pressed", () => {
+  page.page.lang = "en"; // the labels are looked up in the page's language
+  const btn = { dataset: {}, textContent: "", lang: "", disabled: false };
+  page.paintButton(btn, { label: "btn_save", can: true });
+  assert.deepEqual([btn.dataset.state, btn.textContent, btn.disabled], ["idle", "Save", false]);
+  page.paintButton(btn, { label: "btn_save", can: true, armed: true });
+  assert.deepEqual([btn.dataset.state, btn.textContent, btn.disabled], ["armed", "Press again", false]);
+  page.paintButton(btn, { label: "btn_save", can: true, armed: true, busy: true });
+  assert.deepEqual([btn.dataset.state, btn.textContent, btn.disabled], ["busy", "Working…", true]);
+  page.paintButton(btn, { label: "fw_update_all", vars: { n: 3 }, can: false });
+  assert.deepEqual([btn.dataset.state, btn.textContent, btn.disabled], ["idle", "Update all (3)", true]);
 });
 
 test("the page modules import the DOM helpers from page.mjs and define none of their own", () => {

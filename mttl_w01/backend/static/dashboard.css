@@ -9,6 +9,7 @@
  * red as the hide button, and a set Child Lock bit is a selected state.
  * Every color is a custom property.
  * Shared by dashboard.html, logview.html and settings.html, and by the device window of the dashboard.
+ * The device window and the hidden devices section of the dashboard are at the end of the card rules.
  */
 
 :root {
@@ -58,6 +59,7 @@
   --bad-soft: #f06b5f26;
   --idle: #9c988d;
   --idle-soft: #ffffff0f;
+  --scrim: #000000b3; /* behind the device window */
   --topbar-ok: #86d692; /* the top bar is dark in both themes */
   --topbar-ok-bg: #3aa14f33;
   --topbar-bad: #f59a90;
@@ -118,6 +120,7 @@
   --bad-soft: #fbe3e0;
   --idle: #6b675e;
   --idle-soft: #ecebe7;
+  --scrim: #00000073;
 }
 
 @media (min-width: 680px) {
@@ -483,6 +486,7 @@ button.tool-lock[data-state="view"]:hover:not(:disabled) {
 .devices,
 .banner,
 .empty,
+.hidden-section,
 .log-page {
   width: min(calc(100% - 2 * var(--pad)), 1920px);
   margin-inline: auto;
@@ -770,23 +774,47 @@ button.tool-lock[data-state="view"]:hover:not(:disabled) {
   background: var(--accent-soft);
 }
 
-/* The whole slot is the link: text on the left, a chevron at the right edge. */
-.notice[data-kind="fw"] .notice-fw {
+/* The whole slot is a button that opens the device window: text on the left, a chevron at the right edge. */
+.notice[data-kind="fw"] .notice-fw,
+.notice[data-kind="fw"] .notice-fw:hover:not(:disabled) {
   display: flex;
   flex: 1;
   align-items: center;
   gap: 8px;
   align-self: stretch;
   padding: 0 10px;
+  border-radius: 0;
+  background: transparent;
   color: var(--accent-soft-text);
   font-weight: 600;
-  text-decoration: none;
+  letter-spacing: normal;
+  text-align: left;
+  text-transform: none;
 }
 
 .notice-fw span {
   overflow: hidden;
   min-width: 0;
   text-overflow: ellipsis;
+}
+
+/* A running OTA job: a pulsing dot in front of the state. */
+.notice-dot {
+  display: none;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.notice[data-live="yes"] .notice-dot {
+  display: block;
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+.notice-fw span[lang] {
+  letter-spacing: normal;
 }
 
 .notice[data-kind="fw"] .notice-fw::after {
@@ -998,28 +1026,39 @@ button.tool-lock[data-state="view"]:hover:not(:disabled) {
   color: var(--accent-text);
 }
 
-/* ---- Bottom row: hide the device (Tuo's hide; restore in Settings) ---- */
+/* ---- Bottom row: DEVICE SETTINGS and HIDE DEVICE, the same size, and the hide note under them ---- */
 
 .card-tools {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--line);
 }
 
-.tools-note {
-  overflow: hidden;
+.card-tools > button {
   min-width: 0;
-  color: var(--muted);
-  font-size: 12px;
+  padding: 8px;
+  overflow: hidden;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Fixed width: "Confirm hide" must not move anything when it replaces "Hide device". */
+/* The note keeps its line, so a card does not grow while the hide button is armed. */
+.tools-note {
+  grid-column: 1 / -1;
+  min-height: 18px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The red hide look; its size comes from the grid cell on a card and from min-width in the hidden list. */
 .hide-btn {
   flex: none;
   width: 132px;
@@ -1027,6 +1066,10 @@ button.tool-lock[data-state="view"]:hover:not(:disabled) {
   background: var(--bad-soft);
   color: var(--bad);
   font-weight: 600;
+}
+
+.card-tools > .hide-btn {
+  width: auto;
 }
 
 .hide-btn:hover:not(:disabled) {
@@ -1037,6 +1080,216 @@ button.tool-lock[data-state="view"]:hover:not(:disabled) {
 .hide-btn[data-state="armed"],
 .hide-btn[data-state="armed"]:hover:not(:disabled) {
   box-shadow: inset 0 0 0 2px currentColor;
+}
+
+/* ---- Device window: a dialog opened from a card's DEVICE SETTINGS ---- */
+
+.dev-dialog {
+  width: min(560px, calc(100% - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 40px var(--scrim);
+}
+
+.dev-dialog::backdrop {
+  background: var(--scrim);
+}
+
+/* The page behind does not scroll while the window is open. */
+body:has(.dev-dialog[open]) {
+  overflow: hidden;
+}
+
+.dw {
+  display: grid;
+  gap: 14px;
+  max-height: calc(100dvh - 26px);
+  overflow-y: auto;
+  padding: 0 16px 16px;
+}
+
+/* The title stays in view while a tall window scrolls, with the close button. */
+.dw-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 -16px;
+  padding: 14px 16px 10px;
+  background: var(--surface);
+}
+
+.dw-id {
+  flex: 1;
+  min-width: 0;
+}
+
+.dw-id h2 {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
+.dw-sub {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dw-sub b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.dw-close {
+  padding: 6px;
+}
+
+/* Why the controls are off: locked, view only, offline. */
+.dw-state {
+  padding: 8px 12px;
+  border-radius: 3px;
+  background: var(--idle-soft);
+}
+
+.dw-section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Korean breaks between words here, not inside them. */
+.dw .note:lang(ko),
+.hidden-body .note:lang(ko) {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+/*
+ * The window scrolls and nothing sits below a hidden section's line, so an empty line takes no room. It stays in
+ * the page as a live region, clipped to a pixel, so a message that appears in it is still announced.
+ */
+.dw .alert-line[data-kind="none"],
+.hidden-body .alert-line[data-kind="none"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- Hidden devices: a folded section under the cards ---- */
+
+.hidden-section {
+  margin-bottom: 32px;
+}
+
+.hidden-section > summary {
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
+.hidden-section[open] > summary {
+  margin-bottom: 12px;
+}
+
+.hidden-body,
+.hidden-list {
+  display: grid;
+  gap: 12px;
+}
+
+.hidden-list {
+  gap: 8px;
+}
+
+.hidden-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 10px 12px;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+
+.hidden-main {
+  min-width: 0;
+}
+
+.hidden-name {
+  display: block;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hidden-meta {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.hidden-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.hidden-actions > button {
+  min-height: 34px;
+  padding: 0 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hidden-actions > .hide-btn {
+  width: auto;
+  min-width: 132px;
+}
+
+/* A locked screen is a view mode here too: states stay readable, just not clickable. */
+.hidden-section[data-controls="locked"] button:disabled {
+  opacity: 0.8;
+  cursor: default;
+}
+
+/* The word box of a permanent delete, under its row. */
+.purge-box {
+  grid-column: 1 / -1;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.purge-box .field {
+  max-width: 320px;
+}
+
+.purge-box .btn-row > * {
+  flex: 0 1 180px;
 }
 
 /* ---- Log page (logview.html) ---- */
@@ -1379,6 +1632,50 @@ button[data-state="busy"]:disabled {
   font-size: 12px;
 }
 
+/* ---- Firmware job: a row of the settings page list and of the device window ---- */
+
+.job-row {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+
+.job-row[data-tone="bad"] {
+  background: var(--bad-soft);
+}
+
+.job-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.job-label {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--label);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
+.job-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.job-detail {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.job-row[data-tone="bad"] .job-detail {
+  color: var(--bad);
+}
+
 /* ---- Phones ---- */
 
 @media (max-width: 479px) {
@@ -1398,8 +1695,17 @@ button[data-state="busy"]:disabled {
 
   /* One card per row: nothing to line up with, so empty reserved slots can go. */
   .notice[data-kind="none"],
-  .lock[data-supported="no"] {
+  .lock[data-supported="no"],
+  .tools-note:empty {
     display: none;
+  }
+
+  .hidden-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hidden-actions > button {
+    flex: 1;
   }
 
   .log-row {

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const core = await import(new URL("../../mttl_w01/backend/static/dashboard-core.mjs", import.meta.url));
-const { JOB_STATES, FWR_SIZE, jobStateKey } = await import(new URL("../../mttl_w01/backend/static/firmware-core.mjs", import.meta.url));
+const { JOB_STATES, FWR_SIZE, jobStateKey, deviceFirmware } = await import(new URL("../../mttl_w01/backend/static/firmware-core.mjs", import.meta.url));
 const {
   STRINGS, t, pickLang, resolveTheme, normalizeMac,
   fmtWatts, fmtKwh, fmtTemp, fmtVolt, fmtRssi, fmtAge,
@@ -12,6 +12,8 @@ const {
   pressConfirm, scriptLang,
   reducePoll, diffMacs, canToggleLock, toggleMask, withDevice, applyPending, nameEditOutcome,
   apiGet, apiSend, apiSendRaw,
+  DIAG_INTERVALS, DIAG_DEFAULT, deviceTitle, deviceWindowModel, measureForm, measurePayload, hiddenModel, deleteWordOk,
+  lockErrorKey, otaWarnKeys, jobLabel, cardNotice, intervalUnit, fmtAgo, demoConfig,
 } = core;
 
 const staticFile = (name) => readFileSync(new URL(`../../mttl_w01/backend/static/${name}`, import.meta.url), "utf-8");
@@ -238,7 +240,6 @@ test("cardModel guest view hides admin parts", () => {
   assert.equal(m.firmware, "1.0.66");
   assert.equal(m.online, true);
   assert.equal(m.lock, null);
-  assert.equal(m.fwAction, null);
   assert.equal(m.controls, false);
   assert.equal(m.voltage, null);
   assert.equal(m.rssi, null);
@@ -250,7 +251,6 @@ test("cardModel guest view hides admin parts", () => {
   const admin = demoResponse().devices.find((d) => d.childlock_supported);
   const leaked = cardModel({ ...admin, firmware_action: "update" }, { authenticated: false, unlocked: true, lang: "en" });
   assert.equal(leaked.lock, null);
-  assert.equal(leaked.fwAction, null);
   assert.equal(leaked.controls, false);
 });
 
@@ -334,14 +334,12 @@ test("cardModel admin lock bits", () => {
   const m = cardModel(device, { authenticated: true, unlocked: true, lang: "en" });
   assert.equal(m.title, "Desk");
   assert.deepEqual(m.lock, { supported: true, synced: true, bits: [true, false, true, false, false] });
-  assert.equal(m.fwAction, "update");
   assert.equal(m.controls, true);
   assert.equal(m.voltage, "221.4 V");
   assert.equal(m.rssi, "-54 dBm");
 
   const unknown = cardModel({ ...device, childlock_synced: false, childlock_mask: null, firmware_action: "weird" }, { authenticated: true, lang: "en" });
   assert.deepEqual(unknown.lock, { supported: true, synced: false, bits: [false, false, false, false, false] });
-  assert.equal(unknown.fwAction, null);
 
   const offline = cardModel({ ...device, online: false }, { authenticated: true, unlocked: true, lang: "en" });
   assert.equal(offline.controls, false);
@@ -629,4 +627,329 @@ test("apiGet answers status and body, or an error", async () => {
   await withFetch(() => Promise.reject(new TypeError("Failed to fetch")), async () => {
     assert.deepEqual(await apiGet("api/devices"), { error: "Failed to fetch" });
   });
+});
+
+// ---- Device window, hidden devices and the links to the settings page ----
+
+const LIVING = "0a1b2c3d4e5f"; // 1.0.111, online, Child Lock mask 4, voltage and RSSI on
+const OFFICE = "0a1b2c3d4e60"; // 1.0.66, online, update to 1.0.111
+const GARAGE = "0a1b2c3d4e62"; // 1.0.111, offline, an OTA job still running
+const open = { unlocked: true, viewOnly: false };
+const demoDevice = (mac) => demoResponse().devices.find((d) => d.mac === mac);
+
+test("deviceWindowModel locks controls when locked, view-only or offline", () => {
+  const dev = demoResponse().devices[0];
+  assert.equal(deviceWindowModel(dev, { jobs: [] }, { unlocked: true, viewOnly: false }).controls, true);
+  assert.equal(deviceWindowModel(dev, { jobs: [] }, { unlocked: false, viewOnly: false }).controls, false);
+  assert.equal(deviceWindowModel(dev, { jobs: [] }, { unlocked: true, viewOnly: true }).controls, false);
+  assert.equal(deviceWindowModel({ ...dev, online: false }, { jobs: [] }, { unlocked: true, viewOnly: false }).controls, false);
+  // Whatever is missing counts as locked.
+  assert.equal(deviceWindowModel(dev, { jobs: [] }, {}).controls, false);
+  assert.equal(deviceWindowModel(dev, { jobs: [] }, { unlocked: true }).controls, true);
+});
+
+test("deviceWindowModel shows Child Lock only on 1.0.111 devices", () => {
+  const living = demoDevice(LIVING);
+  assert.deepEqual(deviceWindowModel(living, { jobs: [] }, open).lock, { mask: 4, synced: true, canReread: true });
+  assert.equal(deviceWindowModel(demoDevice(OFFICE), { jobs: [] }, open).lock, null);
+  assert.equal(deviceWindowModel({ ...living, childlock_supported: false }, { jobs: [] }, open).lock, null);
+  // An offline strip keeps its last mask but is not in sync and cannot be read.
+  assert.deepEqual(deviceWindowModel(demoDevice(GARAGE), { jobs: [] }, open).lock, { mask: 1, synced: false, canReread: false });
+  // Reading needs an online strip whose Child Lock wire access is safe.
+  assert.equal(deviceWindowModel({ ...living, childlock_probe_safe: false }, { jobs: [] }, open).lock.canReread, false);
+  assert.equal(deviceWindowModel({ ...living, online: false }, { jobs: [] }, open).lock.canReread, false);
+  assert.equal(deviceWindowModel({ ...living, childlock_mask: null, childlock_synced: false }, { jobs: [] }, open).lock.mask, null);
+  // The screen lock does not hide the panel; the page turns the button off with `controls`.
+  assert.equal(deviceWindowModel(living, { jobs: [] }, { unlocked: false, viewOnly: false }).lock.canReread, true);
+});
+
+test("deviceWindowModel reads firmware from deviceFirmware and measurement from the device", () => {
+  const data = demoResponse();
+  const living = deviceWindowModel(demoDevice(LIVING), data.firmware, open);
+  assert.deepEqual(living.measure, { voltage: true, rssi: true, interval: 60 });
+  assert.deepEqual(living.fw, deviceFirmware(demoDevice(LIVING), data.firmware));
+  assert.equal(living.fw.action, null);
+
+  const office = deviceWindowModel(demoDevice(OFFICE), data.firmware, open);
+  assert.deepEqual(office.measure, { voltage: false, rssi: false, interval: 60 });
+  assert.equal(office.fw.action, "update");
+  assert.equal(office.fw.canUpdate, true);
+  assert.equal(office.fw.target, "1.0.111");
+
+  const garage = deviceWindowModel(demoDevice(GARAGE), data.firmware, open);
+  assert.equal(garage.fw.active, true);
+  assert.equal(garage.fw.block, "busy");
+  assert.equal(garage.fw.job.state, "RECONNECTING");
+
+  // A value the window does not offer stays visible; a missing one is the default.
+  assert.equal(deviceWindowModel({ ...demoDevice(OFFICE), diagnostics: { poll_interval: 45 } }, data.firmware, open).measure.interval, 45);
+  assert.equal(deviceWindowModel({ ...demoDevice(OFFICE), diagnostics: {} }, data.firmware, open).measure.interval, DIAG_DEFAULT);
+  const bare = deviceWindowModel(null, null, open);
+  assert.deepEqual(bare.measure, { voltage: false, rssi: false, interval: 60 });
+  assert.equal(bare.lock, null);
+  assert.equal(bare.controls, false);
+  assert.equal(bare.fw.action, null);
+});
+
+test("the measurement choices are the backend's", () => {
+  assert.deepEqual(DIAG_INTERVALS, [30, 60, 120, 300, 600, 1800]);
+  assert.deepEqual([...DIAG_INTERVALS], demoConfig().diagnostic_allowed);
+  assert.equal(DIAG_DEFAULT, 60);
+  assert.ok(DIAG_INTERVALS.includes(DIAG_DEFAULT));
+  for (const n of DIAG_INTERVALS) for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][intervalUnit(n).key], `${lang} ${n}`);
+});
+
+test("measureForm lays the user's changes over what the device holds", () => {
+  const saved = { voltage: false, rssi: true, interval: 60 };
+  assert.deepEqual(measureForm(saved, {}), { voltage: false, rssi: true, interval: 60, dirty: false });
+  assert.deepEqual(measureForm(saved, { voltage: true }), { voltage: true, rssi: true, interval: 60, dirty: true });
+  assert.deepEqual(measureForm(saved, { interval: 300 }), { voltage: false, rssi: true, interval: 300, dirty: true });
+  // A field put back to what the device holds is no change.
+  assert.equal(measureForm(saved, { voltage: false, interval: 60 }).dirty, false);
+  // The device changed under a field the user did not touch: the new value shows, the touched field stays.
+  assert.deepEqual(measureForm({ voltage: false, rssi: false, interval: 300 }, { voltage: true }), { voltage: true, rssi: false, interval: 300, dirty: true });
+  // Apply sends all three values together.
+  assert.deepEqual(measurePayload(measureForm(saved, { interval: 120 })), { voltage_enabled: false, rssi_enabled: true, poll_interval: 120 });
+  assert.deepEqual(measurePayload({ voltage: true, rssi: true, interval: 1800, dirty: false }), { voltage_enabled: true, rssi_enabled: true, poll_interval: 1800 });
+});
+
+test("hiddenModel sums preserved energy", () => {
+  const removed = [{ mac: "0A:1B:2C:3D:4E:63", alias: "Guest Room", channels: [{ selector: 1, energy_lifetime_wh: 1000 }, { selector: 2, energy_lifetime_wh: 2500 }] }];
+  assert.deepEqual(hiddenModel(removed), [{ mac: "0a1b2c3d4e63", name: "Guest Room", macText: "0A:1B:2C:3D:4E:63", kwh: "3.50 kWh" }]);
+  assert.equal(hiddenModel(removed)[0].kwh, fmtKwh(3500));
+  // The demo's hidden strip: 12.48 + 3.32 kWh.
+  assert.deepEqual(hiddenModel(demoResponse().removed), [{ mac: "0a1b2c3d4e63", name: "Guest Room", macText: "0A:1B:2C:3D:4E:63", kwh: "15.80 kWh" }]);
+  // A strip without a name is MTTL and the last six digits, one without energy shows N/A, garbage rows are skipped.
+  assert.deepEqual(
+    hiddenModel([{ mac: "0a1b2c3d4e64", channels: [] }, null, { mac: "bad" }, "x", { mac: "0a1b2c3d4e65", channels: [{ selector: 0, energy_lifetime_wh: 9000 }] }]),
+    [
+      { mac: "0a1b2c3d4e64", name: "MTTL 3D4E64", macText: "0A:1B:2C:3D:4E:64", kwh: NA },
+      { mac: "0a1b2c3d4e65", name: "MTTL 3D4E65", macText: "0A:1B:2C:3D:4E:65", kwh: NA },
+    ],
+  );
+  assert.deepEqual(hiddenModel(undefined), []);
+  assert.deepEqual(hiddenModel(null), []);
+  assert.deepEqual(hiddenModel({}), []);
+});
+
+test("deviceTitle is the name or MTTL and the last six digits of the MAC", () => {
+  assert.equal(deviceTitle({ mac: LIVING, alias: "Living Room" }), "Living Room");
+  assert.equal(deviceTitle({ mac: LIVING, alias: "  " }), "MTTL 3D4E5F");
+  assert.equal(deviceTitle({ mac: LIVING }), "MTTL 3D4E5F");
+  assert.equal(deviceTitle(null), "MTTL ");
+  assert.equal(cardModel({ mac: LIVING }, { authenticated: true, lang: "en" }).title, "MTTL 3D4E5F");
+});
+
+test("deleteWordOk", () => {
+  assert.equal(deleteWordOk(" delete "), true);
+  assert.equal(deleteWordOk("DELETE"), true);
+  assert.equal(deleteWordOk("Delete\n"), true);
+  assert.equal(deleteWordOk("DELET"), false);
+  assert.equal(deleteWordOk("delete me"), false);
+  assert.equal(deleteWordOk("yes"), false);
+  assert.equal(deleteWordOk(""), false);
+  assert.equal(deleteWordOk(null), false);
+  assert.equal(deleteWordOk(undefined), false);
+});
+
+test("lockErrorKey turns a Child Lock read state into text in both languages", () => {
+  for (const state of ["busy", "channel_quarantined", "device_timeout", "state_unresolved", "invalid_device_mask", "observed_mismatch", "indeterminate"]) {
+    const key = lockErrorKey(state);
+    assert.ok(key, state);
+    assert.ok(!ENGLISH_ONLY.includes(key), key);
+    for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][key], `${lang}.${key}`);
+    assert.match(STRINGS.ko[key], /\p{Script=Hangul}/u, key);
+  }
+  assert.notEqual(lockErrorKey("busy"), lockErrorKey("device_timeout"));
+  // A state this page does not know is shown with the backend's own text.
+  for (const unknown of ["something_new", "", null, undefined]) assert.equal(lockErrorKey(unknown), null, String(unknown));
+});
+
+test("apiSend errors carry the backend's state and status", async () => {
+  await withFetch(() => jsonReply(409, { ok: false, state: "busy", error: "device transaction queue busy" }), async () => {
+    await assert.rejects(apiSend("POST", "api/devices/0a1b2c3d4e5f/childlock/refresh"), (err) => {
+      assert.equal(err.message, "device transaction queue busy");
+      assert.equal(err.state, "busy");
+      assert.equal(err.status, 409);
+      return true;
+    });
+  });
+  await withFetch(() => new Response("Forbidden", { status: 403 }), async () => {
+    await assert.rejects(apiSend("PUT", "api/devices/0a1b2c3d4e5f", { alias: "x" }), (err) => err.state === null && err.status === 403);
+  });
+});
+
+test("otaWarnKeys picks the warning of the action and adds the custom-file note", () => {
+  assert.deepEqual(otaWarnKeys("update", { kind: "official" }), ["dw_ota_update"]);
+  assert.deepEqual(otaWarnKeys("downgrade", { kind: "official" }), ["dw_ota_downgrade"]);
+  assert.deepEqual(otaWarnKeys("reflash", null), ["dw_ota_reflash"]);
+  assert.deepEqual(otaWarnKeys("update", { kind: "custom" }), ["dw_ota_update", "dw_ota_custom"]);
+  assert.deepEqual(otaWarnKeys(null, { kind: "custom" }), []);
+  for (const key of ["dw_ota_update", "dw_ota_downgrade", "dw_ota_reflash", "dw_ota_custom"]) {
+    for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][key], `${lang}.${key}`);
+  }
+  // The power warning is in every action's text, in both languages.
+  for (const key of ["dw_ota_update", "dw_ota_downgrade", "dw_ota_reflash"]) {
+    assert.match(STRINGS.en[key], /power/i, key);
+    assert.match(STRINGS.ko[key], /전원/, key);
+    assert.match(STRINGS.en[key], /\{to\}/, key);
+  }
+});
+
+test("jobLabel names a job state, and shows a state it does not know as sent", () => {
+  assert.equal(jobLabel("en", "DOWNLOADING"), "Downloading");
+  assert.equal(jobLabel("ko", "DOWNLOADING"), "내려받는 중");
+  assert.equal(jobLabel("en", "FAILED_DOWNLOAD"), "Failed: download");
+  assert.equal(jobLabel("en", "ROLLING_BACK"), "ROLLING_BACK");
+  assert.equal(jobLabel("ko", "ROLLING_BACK"), "ROLLING_BACK");
+  for (const none of [null, undefined, ""]) assert.equal(jobLabel("en", none), NA);
+});
+
+test("cardNotice shows a running job, else the offline note, else the update link", () => {
+  const data = demoResponse();
+  const admin = { authenticated: true, lang: "en" };
+  // A strip that reboots during its OTA job is offline, but the job is what matters.
+  assert.deepEqual(cardNotice(demoDevice(GARAGE), data.firmware, admin), { kind: "fw", text: "OTA · Reconnecting", live: true });
+  assert.deepEqual(cardNotice(demoDevice(GARAGE), data.firmware, { ...admin, lang: "ko" }), { kind: "fw", text: "OTA · 다시 연결 중", live: true });
+  assert.deepEqual(cardNotice(demoDevice(OFFICE), data.firmware, admin), { kind: "fw", text: "Firmware update → 1.0.111", live: false });
+  assert.deepEqual(cardNotice(demoDevice(LIVING), data.firmware, admin), { kind: "none", text: "", live: false });
+  assert.deepEqual(cardNotice({ ...demoDevice(OFFICE), online: false }, data.firmware, admin), { kind: "offline", text: "", live: false });
+  const downgrade = { ...demoDevice(LIVING), firmware_action: "downgrade", firmware_target: { version: "1.0.110", kind: "official" } };
+  assert.equal(cardNotice(downgrade, data.firmware, admin).text, "Firmware downgrade → 1.0.110");
+  // A finished job leaves the notice alone; an unknown state is shown as sent.
+  const done = { jobs: [{ mac: OFFICE, state: "FAILED_DOWNLOAD", queued_at: 1, updated_at: 2 }] };
+  assert.equal(cardNotice(demoDevice(OFFICE), done, admin).text, "Firmware update → 1.0.111");
+  const odd = { jobs: [{ mac: OFFICE, state: "ROLLING_BACK", queued_at: 1, updated_at: 2 }] };
+  assert.equal(cardNotice(demoDevice(OFFICE), odd, admin).text, "OTA · ROLLING_BACK");
+  // An action this page does not know is no update.
+  assert.equal(cardNotice({ ...demoDevice(LIVING), firmware_action: "weird" }, data.firmware, admin).kind, "none");
+  // A guest view has no firmware parts.
+  assert.deepEqual(cardNotice(demoDevice(OFFICE), data.firmware, { ...admin, authenticated: false }), { kind: "none", text: "", live: false });
+  assert.deepEqual(cardNotice({ ...demoDevice(OFFICE), online: false }, data.firmware, { ...admin, authenticated: false }), { kind: "offline", text: "", live: false });
+});
+
+test("intervalUnit picks seconds or minutes", () => {
+  assert.deepEqual(intervalUnit(10), { key: "unit_s", n: 10 });
+  assert.deepEqual(intervalUnit(15), { key: "unit_s", n: 15 });
+  assert.deepEqual(intervalUnit(60), { key: "unit_min", n: 1 });
+  assert.deepEqual(intervalUnit(120), { key: "unit_min", n: 2 });
+  assert.deepEqual(intervalUnit(1800), { key: "unit_min", n: 30 });
+  assert.deepEqual(intervalUnit(90), { key: "unit_s", n: 90 });
+  for (const n of [10, 15, 30, 60, 120, 300, 600, 1800]) {
+    for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][intervalUnit(n).key], `${lang} ${n}`);
+  }
+});
+
+test("fmtAgo counts up in English in both languages", () => {
+  const now = 10_000;
+  assert.equal(fmtAgo(now - 12.9, now), "12 s ago");
+  assert.equal(fmtAgo(now, now), "0 s ago");
+  assert.equal(fmtAgo(now + 5, now), "0 s ago");
+  assert.equal(fmtAgo(now - 59, now), "59 s ago");
+  assert.equal(fmtAgo(now - 60, now), "1 min ago");
+  assert.equal(fmtAgo(now - 3599, now), "59 min ago");
+  assert.equal(fmtAgo(now - 3600, now), "1 h ago");
+  assert.equal(fmtAgo(now - 86399, now), "23 h ago");
+  assert.equal(fmtAgo(now - 86400 * 3, now), "3 d ago");
+  for (const bad of [null, undefined, "", "x", NaN]) assert.equal(fmtAgo(bad, now), NA, String(bad));
+  assert.equal(fmtAgo("9990", now), "10 s ago");
+});
+
+// ---- Texts of the device window and the hidden section ----
+
+const WINDOW_KEYS = [
+  "device_settings", "dw_measure", "hidden_title", "fw_job_notice", "lock_mask",
+  "close", "dw_fw_current", "dw_fw_match", "dw_job", "dw_locked", "dw_offline", "dw_not_ready", "dw_auto_prepare",
+  "dw_ota_update", "dw_ota_downgrade", "dw_ota_reflash", "dw_ota_custom", "dw_ota_queued",
+  "dw_voltage", "dw_rssi", "dw_interval", "dw_measure_note", "dw_apply",
+  "lock_reread", "lock_status", "lock_stale", "lock_note", "lock_reread_ok",
+  "lock_err_busy", "lock_err_channel_quarantined", "lock_err_device_timeout", "lock_err_state_unresolved",
+  "lock_err_invalid_device_mask", "lock_err_observed_mismatch", "lock_err_indeterminate",
+  "hidden_note", "hidden_kept", "restore", "purge", "purge_warn", "purge_type", "purge_do", "purge_cancel", "restore_done", "purge_done",
+];
+
+test("the device window and hidden section texts exist in EN and KR", () => {
+  for (const key of WINDOW_KEYS) {
+    for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][key], `${lang}.${key}`);
+    // Whatever is not one of the English-only titles is translated.
+    if (!ENGLISH_ONLY.includes(key)) {
+      assert.match(STRINGS.ko[key], /\p{Script=Hangul}/u, key);
+      assert.notEqual(STRINGS.ko[key], STRINGS.en[key], key);
+    }
+  }
+  assert.equal(t("en", "hidden_kept", { kwh: "3.50 kWh" }), "Kept 3.50 kWh");
+  assert.match(t("ko", "hidden_kept", { kwh: "3.50 kWh" }), /3\.50 kWh/);
+  assert.match(t("en", "purge_warn", { name: "Guest Room" }), /Guest Room/);
+  assert.match(t("ko", "purge_warn", { name: "Guest Room" }), /Guest Room/);
+});
+
+test("DEVICE SETTINGS, MEASUREMENT, CHILD LOCK, HIDDEN DEVICES and the job notice read the same in EN and KR", () => {
+  for (const [key, want] of [
+    ["device_settings", "Device settings"], ["dw_measure", "Measurement"], ["lock", "Child lock"], ["hidden_title", "Hidden devices"],
+    ["fw_job_notice", "OTA · {state}"], ["lock_mask", "Mask {n}"],
+  ]) {
+    assert.ok(ENGLISH_ONLY.includes(key), key);
+    assert.equal(STRINGS.en[key], want, key);
+    assert.equal(STRINGS.ko[key], want, key);
+  }
+});
+
+test("the hide texts point to the hidden devices section", () => {
+  for (const lang of ["en", "ko"]) {
+    for (const key of ["hide_hint", "hide_note"]) assert.doesNotMatch(STRINGS[lang][key], /Settings|설정 화면/, `${lang}.${key}`);
+  }
+  assert.match(STRINGS.en.hide_note, /hidden/i);
+  assert.match(STRINGS.ko.hide_note, /HIDDEN DEVICES/);
+});
+
+// ---- Pages ----
+
+test("dashboard and log page no longer point at tuo.html", () => {
+  for (const name of ["dashboard.html", "dashboard.mjs", "logview.html"]) {
+    assert.ok(!staticFile(name).includes("tuo.html"), name);
+  }
+  const dashboard = staticFile("dashboard.html");
+  // The top bar, and the "Open settings" links of the summary cards (the demo keeps ?demo).
+  assert.match(dashboard, /<a class="tool" href="settings\.html" data-demo-href="settings\.html\?demo"/);
+  assert.match(dashboard, /href="settings\.html#mqtt" data-demo-href="settings\.html\?demo#mqtt"/);
+  assert.match(dashboard, /href="settings\.html#firmware" data-demo-href="settings\.html\?demo#firmware"/);
+  assert.match(staticFile("logview.html"), /<a class="tool" href="settings\.html" data-demo-href="settings\.html\?demo"/);
+  assert.equal(dashboard.match(/data-demo-href="settings\.html\?demo#(mqtt|firmware)"/g).length, 2);
+});
+
+test("every text key of the dashboard page exists in the string table", () => {
+  const html = staticFile("dashboard.html");
+  const keys = new Set([...html.matchAll(/data-i18n(?:-title)?="([^"]+)"/g)].map((m) => m[1]));
+  const js = staticFile("dashboard.mjs");
+  for (const m of js.matchAll(/\bt\((?:page\.)?lang,\s*"([a-z_0-9]+)"/g)) keys.add(m[1]);
+  for (const m of js.matchAll(/\blabel: "([a-z_0-9]+)"/g)) keys.add(m[1]); // button labels
+  for (const m of js.matchAll(/\bkeys: \[([^\]]*)\]/g)) for (const k of m[1].matchAll(/"([a-z_0-9]+)"/g)) keys.add(k[1]); // alert lines
+  assert.ok(keys.size > 40, `scan found ${keys.size} keys`);
+  for (const key of keys) assert.ok(key in STRINGS.en, `dashboard uses ${key}`);
+  for (const key of ["device_settings", "dw_measure", "hidden_title", "lock", "close", "restore", "purge"]) assert.ok(keys.has(key), `scan found ${key}`);
+});
+
+test("the card's bottom row has DEVICE SETTINGS on the left and HIDE DEVICE on the right, the same size", () => {
+  const card = staticFile("dashboard.html").match(/<div class="card-tools">[\s\S]*?<\/div>/)[0];
+  const opener = card.indexOf('data-act="open-window"');
+  const hide = card.indexOf('data-act="hide"');
+  assert.ok(opener !== -1 && hide !== -1 && opener < hide, "DEVICE SETTINGS comes before HIDE DEVICE");
+  assert.match(card, /data-i18n="device_settings"/);
+  const css = staticFile("dashboard.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /\.card-tools\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  // The firmware notice of the card opens the window instead of linking away.
+  assert.match(staticFile("dashboard.html"), /<button[^>]*class="notice-fw"[^>]*data-act="open-window"/);
+});
+
+test("the device window is a dialog with a close button, and the hidden devices a details section", () => {
+  const html = staticFile("dashboard.html");
+  assert.match(html, /<dialog[^>]*id="device-dialog"[^>]*aria-labelledby="dw-title"/);
+  assert.match(html, /id="dw-title"[^>]*data-i18n="device_settings"/);
+  assert.match(html, /data-act="dw-close"/);
+  for (const act of ["dw-ota", "dw-apply", "dw-reread"]) assert.match(html, new RegExp(`data-act="${act}"`), act);
+  assert.match(html, /<details[^>]*id="hidden-section"[^>]*hidden/);
+  for (const act of ["restore", "purge", "purge-do", "purge-cancel"]) assert.match(html, new RegExp(`data-act="${act}"`), act);
+  const js = staticFile("dashboard.mjs");
+  assert.match(js, /\.showModal\(\)/);
+  for (const sink of ["innerHTML", "outerHTML", "insertAdjacentHTML", "confirm(", "prompt("]) assert.ok(!js.includes(sink), sink);
 });

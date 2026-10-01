@@ -1,6 +1,10 @@
 // Dashboard and log page logic without DOM access, including the backend requests.
 // dashboard.mjs and logview.mjs wire it to the pages; tests/js/*.test.mjs run it under Node.
 
+// firmware-core.mjs imports this module too. Each side only calls the other's functions from inside
+// its own functions, never while the module loads, so the cycle is safe in either load order.
+import { deviceFirmware, jobStateKey } from "./firmware-core.mjs";
+
 /** Shown for any missing or unmeasured value, in both languages. */
 export const NA = "N/A";
 
@@ -66,12 +70,57 @@ export const STRINGS = {
     rename: "Rename",
     hide_device: "Hide device",
     hide_confirm: "Confirm hide",
-    hide_hint: "Removes the device from the dashboard and Home Assistant. Restore it in Settings.",
-    hide_note: "Restore it later in Settings",
+    hide_hint: "Removes the device from the dashboard and Home Assistant. Show it again under Hidden devices.",
+    hide_note: "Show it again under Hidden devices below",
     lock: "Child lock",
     lock_all: "All",
     lock_pending: "Waiting for sync",
     lock_bit: "Lock {name}",
+    device_settings: "Device settings",
+    dw_measure: "Measurement",
+    hidden_title: "Hidden devices",
+    fw_job_notice: "OTA · {state}",
+    lock_mask: "Mask {n}",
+    close: "Close",
+    dw_fw_current: "Current version",
+    dw_fw_match: "Matches the target version.",
+    dw_job: "Latest job",
+    dw_locked: "Locked. Unlock the dashboard to change these settings.",
+    dw_offline: "Offline. These settings stay read-only until the device reconnects.",
+    dw_not_ready: "The custom firmware file is not ready. Register it again on the Settings page.",
+    dw_auto_prepare: "Official firmware is prepared and verified when the update starts.",
+    dw_ota_update: "Updates this device from {from} to {to}. Do not cut power during the update. The device goes offline for a moment while the backend reconnects and checks the version.",
+    dw_ota_downgrade: "Downgrades this device from {from} to {to}. Do not cut power during the update. The device goes offline for a moment while the backend reconnects and checks the version.",
+    dw_ota_reflash: "Reinstalls {to}. The version is the same, but the installed build differs from the target build, so the verified build is installed again. Do not cut power during the update.",
+    dw_ota_custom: "This is a custom file. Only its structure was checked; it is not guaranteed to run on a real strip.",
+    dw_ota_queued: "Update queued.",
+    dw_voltage: "Measure voltage",
+    dw_rssi: "Measure Wi-Fi RSSI",
+    dw_interval: "Measurement interval",
+    dw_measure_note: "Only the measurements you turn on are read, and only they show a value on the dashboard card and in Home Assistant. The default is both off, every 1 min.",
+    dw_apply: "Apply",
+    lock_reread: "Read again",
+    lock_status: "Status",
+    lock_stale: "The last known mask {n} is kept, but it is not verified on the current connection, so it is not used for control.",
+    lock_note: "Locks only short presses of the master and outlet buttons. Remote control and protection stay active. The long-press factory and RESET_AP recovery is not locked.",
+    lock_reread_ok: "Read from the device: Mask {n}.",
+    lock_err_busy: "The device is busy with another request. Try again in a moment.",
+    lock_err_channel_quarantined: "Child Lock is paused until the device reconnects.",
+    lock_err_device_timeout: "The device did not answer in time.",
+    lock_err_state_unresolved: "The device could not confirm its Child Lock state.",
+    lock_err_invalid_device_mask: "The device returned a value that is not a valid mask.",
+    lock_err_observed_mismatch: "The device reported a different mask than requested.",
+    lock_err_indeterminate: "The backend gave up waiting for the device. Read again later.",
+    hidden_note: "Hiding keeps the name and accumulated energy, so the device can be shown again. Deleting the history removes them for good.",
+    hidden_kept: "Kept {kwh}",
+    restore: "Show again",
+    purge: "Delete history",
+    purge_warn: "Deletes the name, accumulated energy, history, measurement settings and Home Assistant registration of {name}. This cannot be undone. If the device is online it may appear again right away as a new device.",
+    purge_type: "Type DELETE to enable the button",
+    purge_do: "Delete permanently",
+    purge_cancel: "Cancel",
+    restore_done: "{name} is shown again.",
+    purge_done: "Deleted the history of {name}.",
     fw_update: "Firmware update → {v}",
     fw_downgrade: "Firmware downgrade → {v}",
     fw_reflash: "Reinstall firmware {v}",
@@ -340,11 +389,51 @@ export const STRINGS = {
     on: "ON",
     off: "OFF",
     rename: "이름 바꾸기",
-    hide_hint: "대시보드와 Home Assistant에서 빠집니다. 설정 화면에서 되살릴 수 있습니다.",
-    hide_note: "설정 화면에서 되살릴 수 있음",
+    hide_hint: "대시보드와 Home Assistant에서 빠집니다. 아래 HIDDEN DEVICES에서 다시 표시할 수 있습니다.",
+    hide_note: "아래 HIDDEN DEVICES에서 다시 표시할 수 있음",
     lock_all: "전체",
     lock_pending: "동기화 대기",
     lock_bit: "{name} 잠금",
+    close: "닫기",
+    dw_fw_current: "현재 버전",
+    dw_fw_match: "목표 버전과 일치합니다.",
+    dw_job: "최근 작업",
+    dw_locked: "잠겨 있습니다. 설정을 바꾸려면 대시보드 잠금을 푸세요.",
+    dw_offline: "Offline 상태라 기기가 다시 연결될 때까지 바꿀 수 없습니다.",
+    dw_not_ready: "사용자 지정 펌웨어 파일이 준비되지 않았습니다. 설정 페이지에서 다시 등록하세요.",
+    dw_auto_prepare: "공식 펌웨어는 업데이트를 시작할 때 준비하고 검증합니다.",
+    dw_ota_update: "이 기기를 {from}에서 {to}로 업데이트합니다. 업데이트 중에는 전원을 끄지 마세요. 기기가 잠시 Offline이 되며, 백엔드가 다시 연결해 버전을 확인합니다.",
+    dw_ota_downgrade: "이 기기를 {from}에서 {to}로 다운그레이드합니다. 업데이트 중에는 전원을 끄지 마세요. 기기가 잠시 Offline이 되며, 백엔드가 다시 연결해 버전을 확인합니다.",
+    dw_ota_reflash: "{to}를 다시 설치합니다. 버전은 같지만 설치된 빌드가 목표 빌드와 달라, 검증된 빌드로 다시 설치합니다. 업데이트 중에는 전원을 끄지 마세요.",
+    dw_ota_custom: "사용자 지정 파일입니다. 구조만 검증했고, 실제 기기에서 동작하는지는 보장하지 않습니다.",
+    dw_ota_queued: "업데이트를 시작했습니다.",
+    dw_voltage: "전압 측정",
+    dw_rssi: "Wi-Fi RSSI 측정",
+    dw_interval: "측정 주기",
+    dw_measure_note: "켠 측정만 읽으며, 그 값만 대시보드 카드와 Home Assistant에 나타납니다. 기본은 둘 다 끔, 1분입니다.",
+    dw_apply: "적용",
+    lock_reread: "다시 읽기",
+    lock_status: "상태",
+    lock_stale: "마지막으로 확인한 Mask {n}은 보존하지만 현재 연결에서 검증되지 않아 제어에 쓰지 않습니다.",
+    lock_note: "마스터와 콘센트 버튼의 짧은 누름만 잠급니다. 원격 제어와 보호 기능은 그대로 동작합니다. 오래 눌러 복구하는 Factory와 RESET_AP 동작은 잠그지 않습니다.",
+    lock_reread_ok: "기기에서 읽었습니다: Mask {n}.",
+    lock_err_busy: "기기가 다른 요청을 처리하는 중입니다. 잠시 뒤에 다시 시도하세요.",
+    lock_err_channel_quarantined: "기기가 다시 연결될 때까지 Child Lock을 쓸 수 없습니다.",
+    lock_err_device_timeout: "기기가 제때 응답하지 않았습니다.",
+    lock_err_state_unresolved: "기기가 Child Lock 상태를 확인해 주지 못했습니다.",
+    lock_err_invalid_device_mask: "기기가 올바른 마스크가 아닌 값을 돌려주었습니다.",
+    lock_err_observed_mismatch: "기기가 요청과 다른 마스크를 보고했습니다.",
+    lock_err_indeterminate: "백엔드가 기기의 응답을 기다리다 포기했습니다. 잠시 뒤에 다시 읽으세요.",
+    hidden_note: "숨기면 이름과 누적 에너지가 보존되어 다시 표시할 수 있습니다. 기록을 완전 삭제하면 모두 지워지고 되돌릴 수 없습니다.",
+    hidden_kept: "보존 누적 {kwh}",
+    restore: "다시 표시",
+    purge: "기록 완전 삭제",
+    purge_warn: "{name}의 별명, 누적 에너지, 기록, 측정 설정, Home Assistant 등록이 지워집니다. 되돌릴 수 없습니다. 기기가 Online이면 새 기기로 곧바로 다시 나타날 수 있습니다.",
+    purge_type: "DELETE를 입력하면 버튼이 켜집니다",
+    purge_do: "완전 삭제",
+    purge_cancel: "취소",
+    restore_done: "{name}을(를) 다시 표시합니다.",
+    purge_done: "{name}의 기록을 완전히 삭제했습니다.",
     action_failed: "요청 실패: {msg}",
     log_title: "Backend log",
     log_note: "메모리에 최근 5,000줄을 둡니다. DEBUG 이상은 backend.log 파일(5MB, 3개)에도 남습니다.",
@@ -381,13 +470,14 @@ export const STRINGS = {
   },
 };
 
-/** Shown in English in both languages: the top bar, the firmware update banner and some card labels. */
+/** Shown in English in both languages: the top bar, the firmware update banner, card and window titles and some labels. */
 export const ENGLISH_ONLY = [
   "demo", "server_online", "server_offline", "server_checking", "backend", "online_count",
   "unlock", "relock", "view_only", "settings", "logs", "theme", "theme_auto", "theme_dark", "theme_light",
   "language", "log_back", "unlock_hint", "relock_hint", "fw_update", "fw_downgrade", "fw_reflash",
   "rssi", "lock", "hide_device", "hide_confirm",
   "nav_dashboard", "card_fw", "card_files", "card_jobs", "card_poll", "card_mqtt",
+  "device_settings", "dw_measure", "hidden_title", "fw_job_notice", "lock_mask",
 ];
 for (const key of ENGLISH_ONLY) STRINGS.ko[key] = STRINGS.en[key];
 
@@ -502,6 +592,11 @@ function onState(v) {
 
 export const FW_ACTIONS = ["update", "downgrade", "reflash"];
 
+/** A device's name as the dashboard shows it: the alias, else MTTL and the last six digits of the MAC. */
+export function deviceTitle(device) {
+  return text(device?.alias) ?? `MTTL ${String(device?.mac ?? "").slice(-6).toUpperCase()}`;
+}
+
 /** Selector 1..4 → channel. Other selectors (0 is the whole strip) are ignored. */
 function outletChannels(device) {
   const bySel = new Map();
@@ -537,7 +632,7 @@ export function cardModel(device, { authenticated, unlocked, lang }) {
   const maskKnown = Number.isInteger(mask) && mask >= 0 && mask < 32;
   return {
     mac,
-    title: text(d.alias) ?? `MTTL ${mac.slice(-6).toUpperCase()}`,
+    title: deviceTitle(d),
     firmware: d.firmware_version ?? null,
     online,
     lastSeen: Number.isFinite(num(d.last_seen)) ? num(d.last_seen) : null,
@@ -554,8 +649,6 @@ export function cardModel(device, { authenticated, unlocked, lang }) {
           bits: [0, 1, 2, 3, 4].map((bit) => maskKnown && (mask & (1 << bit)) !== 0),
         }
       : null,
-    fwAction: admin && FW_ACTIONS.includes(d.firmware_action) ? d.firmware_action : null,
-    fwTarget: admin ? text(d.firmware_target?.version) : null,
     editable: open,
     controls: open && online,
   };
@@ -584,6 +677,132 @@ export function summaryModel(resp, ha) {
     fwPending: admin ? devices.filter((d) => FW_ACTIONS.includes(d?.firmware_action)).length : null,
     otaHost: admin ? text(resp?.firmware?.ota_host_ip) : null,
   };
+}
+
+// ---- Device window, hidden devices, card notice ----
+
+/** Measurement intervals in seconds that the backend accepts (backend.py ALLOWED_DIAG_POLL), and the one it starts with. */
+export const DIAG_INTERVALS = Object.freeze([30, 60, 120, 300, 600, 1800]);
+export const DIAG_DEFAULT = 60;
+
+/**
+ * What the device window shows for one device. `firmware` is the backend's `firmware` object (`jobs`).
+ * `fw` is deviceFirmware(); `measure` holds the voltage and RSSI settings; `lock` is the Child Lock status of
+ * a 1.0.111 strip, else null; `controls` is true while the window's buttons and fields can be used.
+ */
+export function deviceWindowModel(device, firmware, { unlocked, viewOnly } = {}) {
+  const d = device ?? {};
+  const diag = d.diagnostics ?? {};
+  const interval = num(diag.poll_interval);
+  const mask = d.childlock_mask;
+  const online = d.online === true;
+  return {
+    fw: deviceFirmware(device, firmware),
+    measure: {
+      voltage: diag.voltage_enabled === true,
+      rssi: diag.rssi_enabled === true,
+      interval: Number.isFinite(interval) ? interval : DIAG_DEFAULT,
+    },
+    lock: d.childlock_supported === true
+      ? {
+          mask: Number.isInteger(mask) && mask >= 0 && mask < 32 ? mask : null,
+          synced: d.childlock_synced === true,
+          canReread: online && d.childlock_probe_safe === true,
+        }
+      : null,
+    controls: unlocked === true && viewOnly !== true && online,
+  };
+}
+
+/**
+ * The measurement form: what the device holds (`saved`, the `measure` of deviceWindowModel) with the fields
+ * the user changed (`edits`, only those keys) laid over it. `dirty` is true while a field differs from the device.
+ */
+export function measureForm(saved, edits = {}) {
+  const form = { voltage: saved.voltage, rssi: saved.rssi, interval: saved.interval };
+  let dirty = false;
+  for (const key of Object.keys(form)) {
+    if (key in edits && edits[key] !== saved[key]) {
+      form[key] = edits[key];
+      dirty = true;
+    }
+  }
+  return { ...form, dirty };
+}
+
+/** Body of `PUT api/devices/<mac>/diagnostics`: the three values together. */
+export function measurePayload(form) {
+  return { voltage_enabled: form.voltage === true, rssi_enabled: form.rssi === true, poll_interval: Number(form.interval) };
+}
+
+/** Child Lock read states of the backend that have a plain text (`lock_err_<state>`). */
+const LOCK_ERRORS = new Set(["busy", "channel_quarantined", "device_timeout", "state_unresolved", "invalid_device_mask", "observed_mismatch", "indeterminate"]);
+
+/** Key of the STRINGS entry for a Child Lock read state, or null for a state this page does not know (show the backend's text). */
+export function lockErrorKey(state) {
+  return LOCK_ERRORS.has(state) ? `lock_err_${state}` : null;
+}
+
+/** Keys of the STRINGS entries that warn before an update starts; they take {from} and {to}. A custom file adds its note. */
+export function otaWarnKeys(action, target) {
+  if (!FW_ACTIONS.includes(action)) return [];
+  return [`dw_ota_${action}`, ...(target?.kind === "custom" ? ["dw_ota_custom"] : [])];
+}
+
+/** Text of an OTA job state; a state this page does not know is shown as the backend sent it. */
+export function jobLabel(lang, state) {
+  const key = jobStateKey(state);
+  if (key) return t(lang, key);
+  return text(state === null || state === undefined ? null : String(state)) ?? NA;
+}
+
+/**
+ * What the card's notice slot shows: a running OTA job (a strip that reboots during its job is offline, but the
+ * job is what matters), else the offline note, else the firmware update link, else nothing. `live` is true for a job.
+ */
+export function cardNotice(device, firmware, { authenticated, lang }) {
+  const fw = authenticated === true ? deviceFirmware(device, firmware) : null;
+  if (fw?.active) return { kind: "fw", text: t(lang, "fw_job_notice", { state: jobLabel(lang, fw.job.state) }), live: true };
+  if (device?.online !== true) return { kind: "offline", text: "", live: false };
+  if (fw?.action) return { kind: "fw", text: t(lang, `fw_${fw.action}`, { v: fw.target ?? NA }), live: false };
+  return { kind: "none", text: "", live: false };
+}
+
+/** The hidden devices' rows: name, MAC, and the energy kept since they were hidden (the sum of their outlets). */
+export function hiddenModel(removed) {
+  const rows = [];
+  for (const d of Array.isArray(removed) ? removed : []) {
+    const mac = normalizeMac(d?.mac);
+    if (!mac) continue;
+    rows.push({
+      mac,
+      name: deviceTitle({ ...d, mac }),
+      macText: fmtMac(mac),
+      kwh: fmtKwh(sum([...outletChannels(d).values()].map((ch) => ch.energy_lifetime_wh))),
+    });
+  }
+  return rows;
+}
+
+/** True when the typed text is the word that allows deleting a device's history for good. */
+export function deleteWordOk(word) {
+  return String(word ?? "").trim().toUpperCase() === "DELETE";
+}
+
+/** Unit of an interval: whole minutes from 60 s up, else seconds. `key` is a STRINGS entry that takes {n}. */
+export function intervalUnit(seconds) {
+  return seconds >= 60 && seconds % 60 === 0 ? { key: "unit_min", n: seconds / 60 } : { key: "unit_s", n: seconds };
+}
+
+/** Time since `ts` (epoch seconds) in the largest whole unit; English in both languages, like the device cards. */
+export function fmtAgo(ts, now) {
+  const then = num(ts);
+  if (!Number.isFinite(then) || !Number.isFinite(now)) return NA;
+  const s = Math.max(0, Math.floor(now - then));
+  if (s < 60) return `${s} s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  return `${Math.floor(s / 86400)} d ago`;
 }
 
 // The Supervisor serves the Home Assistant sidebar page under /api/hassio_ingress/<token>/.
@@ -645,10 +864,18 @@ export async function apiGet(url) {
   }
 }
 
-/** The JSON answer of a POST or PUT; rejects with the backend's error text when the status is not 2xx. */
+/**
+ * The JSON answer of a POST or PUT; rejects with the backend's error text when the status is not 2xx.
+ * The error also carries the backend's `state` (null when it sent none) and the HTTP `status`.
+ */
 async function answerOf(res) {
   const answer = (await jsonOf(res)) ?? {};
-  if (!res.ok) throw new Error(String(answer.error || answer.reason || answer.state || `HTTP ${res.status}`));
+  if (!res.ok) {
+    const err = new Error(String(answer.error || answer.reason || answer.state || `HTTP ${res.status}`));
+    err.state = typeof answer.state === "string" ? answer.state : null;
+    err.status = res.status;
+    throw err;
+  }
   return answer;
 }
 
@@ -1089,7 +1316,8 @@ export function demoConfig() {
 
 /**
  * The states a demo job passes through, in order. They are firmware-core's JOB_STATES up to SUCCESS; a test
- * keeps the two in step (firmware-core imports this module, so it cannot be imported here).
+ * keeps the two in step (firmware-core imports this module, so reading its list while this module loads could
+ * run before it is ready).
  */
 export const DEMO_JOB_STEPS = Object.freeze([
   "QUEUED", "PREPARING", "COMMAND_SENT", "ACKED", "DOWNLOADING", "TRANSFERRED", "RECONNECTING", "VERIFYING", "SUCCESS",
@@ -1206,6 +1434,80 @@ export function demoShiftFirmwareTimes(data, seconds) {
     p.created_at += seconds;
     p.updated_at += seconds;
   }
+}
+
+// ---- Demo devices: what the backend does for the device window and the hidden devices ----
+// Like the firmware functions above, they change the demo data they are given in place and take the time from the caller.
+
+/** The device of the demo data with this MAC (hidden devices are not included); throws like the backend when there is none. */
+function demoDeviceOf(data, mac) {
+  const device = data.devices.find((d) => d.mac === mac);
+  if (!device) throw new Error("device not found");
+  return device;
+}
+
+/**
+ * Stores the three measurement settings like `PUT api/devices/<mac>/diagnostics`; a key left out keeps its value.
+ * A measurement that is turned on gets a first value, and one that is turned off loses it, as in the backend.
+ */
+export function demoSetDiagnostics(data, mac, body, now) {
+  const device = demoDeviceOf(data, mac);
+  const old = device.diagnostics;
+  const voltage = body.voltage_enabled ?? old.voltage_enabled;
+  const rssi = body.rssi_enabled ?? old.rssi_enabled;
+  const interval = Number(body.poll_interval ?? old.poll_interval);
+  if (typeof voltage !== "boolean" || typeof rssi !== "boolean") throw new Error("voltage_enabled/rssi_enabled must be boolean");
+  if (!DIAG_INTERVALS.includes(interval)) throw new Error(`diagnostic poll_interval must be one of ${DIAG_INTERVALS.join(",")}`);
+  const next = { ...old, voltage_enabled: voltage, rssi_enabled: rssi, poll_interval: interval };
+  const seed = Number.parseInt(mac.slice(-2), 16); // a sample value that depends only on the strip
+  if (!voltage) {
+    delete next.voltage_mv;
+    delete next.voltage_updated_at;
+  } else if (next.voltage_mv === undefined) {
+    next.voltage_mv = 220000 + (seed % 20) * 100;
+    next.voltage_updated_at = now;
+  }
+  if (!rssi) {
+    delete next.rssi_dbm;
+    delete next.rssi_updated_at;
+  } else if (next.rssi_dbm === undefined) {
+    next.rssi_dbm = -50 - (seed % 30);
+    next.rssi_updated_at = now;
+  }
+  device.diagnostics = next;
+  return { ok: true, diagnostics: { voltage_enabled: voltage, rssi_enabled: rssi, poll_interval: interval } };
+}
+
+/** Reads the Child Lock mask again like `POST api/devices/<mac>/childlock/refresh`: the strip is in sync afterwards. */
+export function demoRereadLock(data, mac) {
+  const device = demoDeviceOf(data, mac);
+  if (device.childlock_supported !== true) throw new Error("Child Lock requires firmware 1.0.111");
+  if (device.online !== true) throw new Error("device offline");
+  if (!Number.isInteger(device.childlock_mask)) device.childlock_mask = 0;
+  device.childlock_verified = true;
+  device.childlock_synced = true;
+  return { ok: true, state: "confirmed", mask: device.childlock_mask };
+}
+
+/** Shows a hidden device on the dashboard again, like `POST api/devices/<mac>/restore`. */
+export function demoRestore(data, mac) {
+  const at = data.removed.findIndex((d) => d.mac === mac);
+  if (at === -1) throw new Error("device not found");
+  const [device] = data.removed.splice(at, 1);
+  const back = { ...device, removed: false, removed_at: null };
+  data.devices.push(back);
+  return { ok: true, device: back };
+}
+
+/** Deletes a hidden device's records for good, like `POST api/devices/<mac>/delete`; the backend only does it for a hidden one. */
+export function demoPurge(data, mac) {
+  const at = data.removed.findIndex((d) => d.mac === mac);
+  if (at === -1) {
+    if (data.devices.some((d) => d.mac === mac)) throw new Error("기록 완전 삭제는 먼저 숨긴 장치에서만 할 수 있습니다");
+    throw new Error("device not found");
+  }
+  data.removed.splice(at, 1);
+  return { ok: true, deleted: true, mac };
 }
 
 const DEMO_LOG_ROWS = [
