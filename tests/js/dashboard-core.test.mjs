@@ -54,11 +54,11 @@ test("KR keeps awkward technical terms in English", () => {
 
 test("top bar text is English in both languages (keys read from the pages)", () => {
   const keys = new Set();
-  for (const page of ["dashboard.html", "logview.html"]) {
+  for (const page of ["dashboard.html", "logview.html", "settings.html"]) {
     const header = staticFile(page).match(/<header class="topbar"[\s\S]*?<\/header>/)[0];
     for (const m of header.matchAll(/data-i18n(?:-title)?="([^"]+)"/g)) keys.add(m[1]);
   }
-  for (const mod of ["dashboard.mjs", "logview.mjs"]) {
+  for (const mod of ["dashboard.mjs", "logview.mjs", "settings.mjs"]) {
     const body = staticFile(mod).match(/\nfunction renderTopbar\(\) \{[\s\S]*?\n\}\n/)[0];
     for (const m of body.matchAll(/"([a-z_]+)"/g)) if (m[1] in STRINGS.en) keys.add(m[1]);
   }
@@ -320,7 +320,7 @@ test("VIEW ONLY reads the same in EN and KR; its tooltip is translated", () => {
 });
 
 test("both pages take the view-only decision from isViewOnly", () => {
-  for (const mod of ["dashboard.mjs", "logview.mjs"]) assert.match(staticFile(mod), /\bisViewOnly\(\{/, mod);
+  for (const mod of ["dashboard.mjs", "logview.mjs", "settings.mjs"]) assert.match(staticFile(mod), /\bisViewOnly\(\{/, mod);
 });
 
 test("cardModel admin lock bits", () => {

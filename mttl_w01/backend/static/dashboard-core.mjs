@@ -102,6 +102,78 @@ export const STRINGS = {
     fwr_ext: "Choose a .fwr file.",
     fwr_size: "The file must be 327,944 bytes.",
     action_failed: "Request failed: {msg}",
+    nav_dashboard: "Dashboard",
+    card_fw: "Firmware",
+    card_files: "Firmware files",
+    card_jobs: "Firmware jobs",
+    card_poll: "Polling",
+    card_mqtt: "Home Assistant MQTT",
+    btn_save: "Save",
+    press_again: "Press again",
+    working: "Working…",
+    saved: "Saved.",
+    unit_s: "{n} s",
+    unit_min: "{n} min",
+    fw_target: "Target firmware",
+    fw_ota_host_label: "OTA server IPv4",
+    fw_ota_host_note: "The address the strips download firmware from. Blank keeps the saved address.",
+    fw_prepare: "Prepare and verify",
+    fw_update_all: "Update all ({n})",
+    fw_save_first: "Save the target and address before updating.",
+    fw_prepared: "Firmware prepared and verified.",
+    fw_all_warn: "Updates these devices one at a time. Do not cut power during an update.",
+    fw_all_started: "Queued updates for {n} device(s).",
+    fw_target_mark: "Target",
+    fw_ready: "Ready",
+    fw_not_ready: "Needs prep",
+    fw_download: "Download FWR",
+    fw_delete: "Delete",
+    fw_delete_warn: "Deletes the file and its entry. If it is the target, the target goes back to 1.0.111.",
+    fw_deleted: "Deleted.",
+    fw_custom: "Custom {v}",
+    fw_upload_title: "Custom FWR",
+    fw_choose: "Choose .fwr file",
+    fw_no_file: "No file chosen",
+    fw_upload: "Upload and verify",
+    fw_upload_note: "The file is checked here first, then by the backend. An uploaded file is not chosen as the target.",
+    fw_uploaded: "Registered {name}.",
+    fw_demo_download: "Downloads are not available in the demo.",
+    jobs_note: "Latest 20 jobs, running ones first.",
+    jobs_empty: "No firmware jobs yet.",
+    poll_label: "Read interval",
+    poll_note: "How often power and state are read from each strip. The same for all devices. Default 15 s.",
+    mqtt_pw: "Password",
+    mqtt_pw_set: "Stored",
+    mqtt_pw_unset: "Not set",
+    mqtt_last_error: "Last error",
+    mqtt_no_error: "None",
+    mqtt_enable: "Use the Home Assistant integration",
+    mqtt_port: "Port",
+    mqtt_user: "MQTT ID",
+    mqtt_password: "Password",
+    mqtt_password_ph: "Leave blank to keep",
+    mqtt_tls: "TLS",
+    mqtt_report: "Reporting",
+    mqtt_power_threshold: "Power min change",
+    mqtt_power_interval: "Power report interval",
+    mqtt_energy_threshold: "Energy min change",
+    mqtt_energy_interval: "Energy report interval",
+    mqtt_report_note: "At each report interval, a value is sent only if it changed by at least the minimum change.",
+    mqtt_advanced: "Advanced",
+    mqtt_birth: "Birth topic",
+    mqtt_test: "Test connection",
+    mqtt_sync: "Resend discovery",
+    mqtt_save_warn: "Turning the integration off or changing the broker, port or topics deletes the Home Assistant entities of the previous broker.",
+    mqtt_test_ok: "Connected to the broker.",
+    mqtt_test_failed: "Connection failed: {msg}",
+    mqtt_synced: "Discovery and states sent again.",
+    lovelace: "Lovelace card",
+    lovelace_download: "Download mttl-up-card.js",
+    lovelace_install: "Copy it to /config/www/, then add /local/mttl-up-card.js as a JavaScript module resource in Home Assistant.",
+    err_ipv4: "Enter an IPv4 address such as 192.0.2.10, without leading zeros.",
+    err_required: "Required while the integration is on.",
+    err_port: "The port must be 1 to 65535.",
+    err_topic: "Cannot be empty or contain + or #.",
     log_title: "Backend log",
     log_note: "Memory keeps the latest 5,000 rows. DEBUG and above also go to backend.log (5 MB, 3 files).",
     log_back: "Dashboard",
@@ -175,6 +247,72 @@ export const STRINGS = {
     hint_custom: "구조 검증만 통과한 파일.",
     fwr_ext: ".fwr 파일을 고르세요.",
     fwr_size: "파일 크기가 327,944바이트여야 합니다.",
+    btn_save: "저장",
+    press_again: "한 번 더 누르기",
+    working: "처리 중…",
+    saved: "저장했습니다.",
+    unit_s: "{n}초",
+    unit_min: "{n}분",
+    fw_target: "목표 펌웨어",
+    fw_ota_host_label: "OTA server IPv4",
+    fw_ota_host_note: "멀티탭이 펌웨어를 내려받을 주소입니다. 비워 두면 저장된 주소를 그대로 둡니다.",
+    fw_prepare: "준비·검증",
+    fw_update_all: "모두 순차 업데이트 ({n}대)",
+    fw_save_first: "업데이트하기 전에 목표와 주소를 먼저 저장하세요.",
+    fw_prepared: "펌웨어를 준비하고 검증했습니다.",
+    fw_all_warn: "아래 기기를 한 대씩 업데이트합니다. 업데이트 중에는 전원을 끄지 마세요.",
+    fw_all_started: "{n}대의 업데이트를 시작했습니다.",
+    fw_target_mark: "목표",
+    fw_ready: "준비됨",
+    fw_not_ready: "준비 필요",
+    fw_download: "FWR 내려받기",
+    fw_delete: "삭제",
+    fw_delete_warn: "파일과 판 정보가 지워집니다. 목표였다면 1.0.111로 돌아갑니다.",
+    fw_deleted: "삭제했습니다.",
+    fw_custom: "사용자 지정 {v}",
+    fw_upload_title: "사용자 지정 FWR",
+    fw_choose: ".fwr 파일 고르기",
+    fw_no_file: "고른 파일 없음",
+    fw_upload: "올리고 검증",
+    fw_upload_note: "먼저 이 화면에서, 이어서 백엔드가 검증합니다. 올린 파일은 목표로 자동 선택되지 않습니다.",
+    fw_uploaded: "{name}을(를) 등록했습니다.",
+    fw_demo_download: "예시 화면에서는 내려받을 수 없습니다.",
+    jobs_note: "최근 작업 20개, 진행 중인 작업이 위에 있습니다.",
+    jobs_empty: "펌웨어 작업이 없습니다.",
+    poll_label: "읽기 주기",
+    poll_note: "각 멀티탭의 소비전력과 상태를 읽는 주기입니다. 모든 기기에 같게 적용됩니다. 기본값은 15초입니다.",
+    mqtt_pw: "암호",
+    mqtt_pw_set: "저장됨",
+    mqtt_pw_unset: "없음",
+    mqtt_last_error: "마지막 오류",
+    mqtt_no_error: "없음",
+    mqtt_enable: "Home Assistant 연동 사용",
+    mqtt_port: "Port",
+    mqtt_user: "MQTT ID",
+    mqtt_password: "암호",
+    mqtt_password_ph: "비우면 기존 암호 유지",
+    mqtt_tls: "TLS",
+    mqtt_report: "보고 기준",
+    mqtt_power_threshold: "Power 최소 변화량",
+    mqtt_power_interval: "Power 보고 주기",
+    mqtt_energy_threshold: "Energy 최소 변화량",
+    mqtt_energy_interval: "Energy 보고 주기",
+    mqtt_report_note: "보고 주기마다 값을 확인해, 최소 변화량 이상 바뀐 경우에만 보냅니다.",
+    mqtt_advanced: "고급",
+    mqtt_birth: "Birth topic",
+    mqtt_test: "연결 시험",
+    mqtt_sync: "Discovery 다시 보내기",
+    mqtt_save_warn: "연동을 끄거나 브로커·포트·토픽을 바꾸면 이전 브로커의 Home Assistant 엔티티가 지워집니다.",
+    mqtt_test_ok: "브로커에 연결했습니다.",
+    mqtt_test_failed: "연결 실패: {msg}",
+    mqtt_synced: "Discovery와 상태를 다시 보냈습니다.",
+    lovelace: "Lovelace 카드",
+    lovelace_download: "mttl-up-card.js 내려받기",
+    lovelace_install: "Home Assistant의 /config/www/에 복사한 뒤, 대시보드 리소스에 /local/mttl-up-card.js를 JavaScript 모듈로 추가하세요.",
+    err_ipv4: "192.0.2.10 같은 IPv4 주소를 앞자리 0 없이 입력하세요.",
+    err_required: "연동을 켜면 꼭 필요합니다.",
+    err_port: "포트는 1~65535여야 합니다.",
+    err_topic: "비울 수 없고 +, #를 쓸 수 없습니다.",
     fw_pending_count: "{n}대",
     fw_ota_host: "OTA server",
     fw_badge_pending: "Update {n}",
@@ -249,6 +387,7 @@ export const ENGLISH_ONLY = [
   "unlock", "relock", "view_only", "settings", "logs", "theme", "theme_auto", "theme_dark", "theme_light",
   "language", "log_back", "unlock_hint", "relock_hint", "fw_update", "fw_downgrade", "fw_reflash",
   "rssi", "lock", "hide_device", "hide_confirm",
+  "nav_dashboard", "card_fw", "card_files", "card_jobs", "card_poll", "card_mqtt",
 ];
 for (const key of ENGLISH_ONLY) STRINGS.ko[key] = STRINGS.en[key];
 
@@ -709,6 +848,87 @@ function demoTarget() {
   return { profile_id: "official-111", version: "1.0.111", label: "Official 1.0.111", kind: "official", ready: true };
 }
 
+/** Fixed-looking hex digits for sample hashes and ids, so the demo does not need a real file. */
+function demoHex(seed, length) {
+  let x = 2166136261;
+  for (let i = 0; i < seed.length; i++) x = Math.imul(x ^ seed.charCodeAt(i), 16777619) >>> 0; // every character of the seed counts
+  let out = "";
+  while (out.length < length) {
+    x = Math.imul(x ^ (x >>> 15), 2246822519) >>> 0;
+    x = Math.imul(x ^ (x >>> 13), 3266489917) >>> 0;
+    out += ((x ^ (x >>> 16)) >>> 0).toString(16).padStart(8, "0");
+  }
+  return out.slice(0, length);
+}
+
+function demoProfile(fields) {
+  return {
+    kind: "official",
+    sha256: demoHex(fields.id, 64),
+    size: 327944,
+    model: "LGU+-TAP-HW002",
+    filename: null,
+    original_filename: null,
+    created_at: DEMO_NOW - 86400 * 40,
+    updated_at: DEMO_NOW - 86400 * 40,
+    ready: false,
+    selected: false,
+    ...fields,
+  };
+}
+
+/** The four firmware files of the demo: three official ones (one prepared) and one custom file. */
+function demoProfiles() {
+  const custom = demoHex("custom-1.0.112", 64);
+  return [
+    demoProfile({
+      id: "official-111", version: "1.0.111", label: "UP + Child Lock · 1.0.111", sha256: `3f9c1e${demoHex("111", 58)}`,
+      filename: "official_1.0.111.fwr", ready: true, selected: true,
+    }),
+    demoProfile({ id: "official-110", version: "1.0.110", label: "UP · 1.0.110", filename: "official_1.0.110.fwr" }),
+    demoProfile({ id: "official-66", version: "1.0.66", label: "LG U+ Stock · 1.0.66", filename: "official_1.0.66.fwr" }),
+    demoProfile({
+      id: `custom-${custom.slice(0, 16)}`, kind: "custom", version: "1.0.112", label: "사용자 지정 1.0.112", sha256: custom,
+      filename: `custom-${custom.slice(0, 16)}.fwr`, original_filename: "lgu-tap-hw002-1.0.112.fwr",
+      created_at: DEMO_NOW - 86400 * 5, updated_at: DEMO_NOW - 86400 * 5, ready: true,
+    }),
+  ];
+}
+
+function demoJob(fields) {
+  return {
+    id: demoHex(`${fields.mac}-${fields.queued_at}`, 32),
+    profile_id: "official-111",
+    target_version: "1.0.111",
+    firmware_sha256: `3f9c1e${demoHex("111", 58)}`,
+    detail: null,
+    started_at: fields.queued_at + 4,
+    completed_at: null,
+    ...fields,
+  };
+}
+
+/** Three jobs: one still running (a strip that is rebooting), one finished, one that failed. */
+function demoJobs() {
+  const garage = "0a1b2c3d4e62";
+  const living = "0a1b2c3d4e5f";
+  const office = "0a1b2c3d4e60";
+  return [
+    demoJob({
+      mac: garage, from_version: "1.0.66", state: "RECONNECTING", queued_at: DEMO_NOW - 210, updated_at: DEMO_NOW - 8,
+      detail: "전송 완료 후 OTA 재부팅/TCP10086 재접속 대기",
+    }),
+    demoJob({
+      mac: office, from_version: "1.0.66", state: "FAILED_DOWNLOAD", queued_at: DEMO_NOW - 3 * 3600, updated_at: DEMO_NOW - 3 * 3600 + 40,
+      completed_at: DEMO_NOW - 3 * 3600 + 40, detail: "장치가 /ota.bin을 요청하지 않았습니다",
+    }),
+    demoJob({
+      mac: living, from_version: "1.0.110", state: "SUCCESS", queued_at: DEMO_NOW - 26 * 3600, updated_at: DEMO_NOW - 26 * 3600 + 95,
+      completed_at: DEMO_NOW - 26 * 3600 + 95, detail: "목표 버전 1.0.111 확인",
+    }),
+  ];
+}
+
 function demoDevice(fields) {
   const fw = fields.firmware_version;
   const lockable = fw === "1.0.111";
@@ -742,6 +962,25 @@ function demoDevice(fields) {
     firmware_action: fw === "1.0.111" ? null : "update",
     ota_job: null,
     ota_applied: null,
+  };
+}
+
+/** A device hidden from the dashboard: its energy history is kept until it is restored or deleted for good. */
+function demoHidden() {
+  const mac = "0a1b2c3d4e63";
+  const away = DEMO_NOW - 86400 * 3;
+  return {
+    ...demoDevice({
+      mac, alias: "Guest Room", firmware_version: "1.0.111", online: false, peer_ip: "192.0.2.25", last_seen: away, childlock_mask: 0,
+      channels: [
+        demoChannel(mac, 1, "Lamp", false, 0, 23, 12480, away),
+        demoChannel(mac, 2, "Fan", false, 0, 23, 3320, away),
+        demoChannel(mac, 3, null, false, 0, 22, 0, away),
+        demoChannel(mac, 4, null, false, 0, 22, 0, away),
+      ],
+    }),
+    removed: true,
+    removed_at: DEMO_NOW - 86400 * 2,
   };
 }
 
@@ -796,12 +1035,12 @@ export function demoResponse() {
         ],
       }),
     ],
-    removed: [],
+    removed: [demoHidden()],
     firmware: {
       target_profile: "official-111",
-      profiles: [],
+      profiles: demoProfiles(),
       active: null,
-      jobs: [],
+      jobs: demoJobs(),
       queue_depth: 0,
       ota_host_ip: "192.0.2.10",
       release: "1.0.111-canonical",
@@ -823,10 +1062,24 @@ export function demoHa() {
     topic_prefix: "mttl",
     discovery_prefix: "homeassistant",
     birth_topic: "homeassistant/status",
+    power_threshold_w: 0.1,
+    power_interval_s: 30,
+    energy_threshold_wh: 1,
+    energy_interval_s: 60,
     password_set: true,
     connected: true,
     last_error: null,
     connected_since: DEMO_NOW - 7200,
+  };
+}
+
+/** Demo answer for `api/config`. */
+export function demoConfig() {
+  return {
+    version: "0.2.11",
+    poll_interval: 15,
+    allowed: [10, 15, 30, 60, 120, 300],
+    diagnostic_allowed: [30, 60, 120, 300, 600, 1800],
   };
 }
 
