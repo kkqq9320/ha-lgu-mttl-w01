@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const core = await import(new URL("../../mttl_w01/backend/static/dashboard-core.mjs", import.meta.url));
+const { JOB_STATES, FWR_SIZE, jobStateKey } = await import(new URL("../../mttl_w01/backend/static/firmware-core.mjs", import.meta.url));
 const {
   STRINGS, t, pickLang, resolveTheme, normalizeMac,
   fmtWatts, fmtKwh, fmtTemp, fmtVolt, fmtRssi, fmtAge,
@@ -10,7 +11,7 @@ const {
   isIngressPath, isViewOnly,
   pressConfirm, scriptLang,
   reducePoll, diffMacs, canToggleLock, toggleMask, withDevice, applyPending, nameEditOutcome,
-  apiGet, apiSend,
+  apiGet, apiSend, apiSendRaw,
 } = core;
 
 const staticFile = (name) => readFileSync(new URL(`../../mttl_w01/backend/static/${name}`, import.meta.url), "utf-8");
@@ -95,6 +96,31 @@ test("card labels RSSI, CHILD LOCK and HIDE DEVICE read the same in EN and KR", 
   }
   // The restore hint stays translated.
   assert.notEqual(STRINGS.ko.hide_hint, STRINGS.en.hide_hint);
+});
+
+test("every job state and hint has EN and KR text", () => {
+  const keys = [...JOB_STATES.map((state) => jobStateKey(state)), "hint_111", "hint_110", "hint_66", "hint_custom", "fwr_ext", "fwr_size"];
+  assert.equal(keys.filter((key) => key?.startsWith("job_")).length, JOB_STATES.length);
+  for (const key of keys) {
+    assert.ok(key, "a job state has no text key");
+    assert.ok(!ENGLISH_ONLY.includes(key), key);
+    for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][key], `${lang}.${key}`);
+    // Translated texts: the Korean one is written in Korean.
+    assert.match(STRINGS.ko[key], /\p{Script=Hangul}/u, key);
+    assert.notEqual(STRINGS.ko[key], STRINGS.en[key], key);
+  }
+  assert.match(STRINGS.en.hint_111, /Child Lock/);
+  assert.match(STRINGS.en.hint_111, /49217/);
+  assert.match(STRINGS.ko.hint_111, /49217/);
+  assert.match(STRINGS.en.hint_110, /TCP 80/);
+  assert.match(STRINGS.en.hint_66, /LG U\+/);
+  assert.match(STRINGS.en.hint_custom, /structure/);
+  assert.equal(t("en", "job_downloading"), STRINGS.en.job_downloading);
+  // The size in the message is the size the check wants.
+  const size = FWR_SIZE.toLocaleString("en-US");
+  assert.ok(STRINGS.en.fwr_size.includes(size), STRINGS.en.fwr_size);
+  assert.ok(STRINGS.ko.fwr_size.includes(size), STRINGS.ko.fwr_size);
+  assert.match(STRINGS.en.fwr_ext, /\.fwr/);
 });
 
 test("scriptLang marks text by script so English renders the same in both languages", () => {
@@ -537,6 +563,56 @@ test("apiSend rejects with the backend's message", async () => {
   });
   await withFetch(() => new Response("Forbidden", { status: 403 }), async () => {
     await assert.rejects(apiSend("PUT", "api/devices/0a1b2c3d4e5f", { alias: "x" }), /HTTP 403/);
+  });
+});
+
+test("apiSendRaw posts raw bytes with the request and file-name headers", async () => {
+  const bytes = Uint8Array.from([0, 1, 2, 250, 251, 255]);
+  const calls = await withFetch(() => jsonReply(200, { ok: true, profile: { id: "custom-1" } }), async () => {
+    assert.deepEqual(await apiSendRaw("api/firmware/custom", bytes, "custom.fwr"), { ok: true, profile: { id: "custom-1" } });
+    // An ArrayBuffer (what File.arrayBuffer() gives) is sent as it is.
+    await apiSendRaw("api/firmware/custom", bytes.buffer.slice(0), "custom.fwr");
+  });
+  assert.equal(calls.length, 2);
+  for (const { url, init } of calls) {
+    assert.equal(url, "api/firmware/custom");
+    assert.equal(init.method, "POST");
+    assert.equal(init.credentials, "same-origin");
+    const headers = new Headers(init.headers);
+    assert.equal(headers.get("X-MTTL-Request"), "1");
+    assert.equal(headers.get("Content-Type"), "application/octet-stream");
+    assert.equal(headers.get("X-Filename"), "custom.fwr");
+    assert.deepEqual([...new Uint8Array(init.body)], [...bytes]);
+  }
+});
+
+test("apiSendRaw sends a file name that fetch accepts: anything outside printable ASCII becomes _", async () => {
+  const cases = [
+    ["거실 멀티탭.fwr", "__ ___.fwr"],
+    ["tab\tnew\nline.fwr", "tab_new_line.fwr"],
+    ["em😀oji.fwr", "em_oji.fwr"],
+    ["café.fwr", "caf_.fwr"],
+    ["plain name (1).fwr", "plain name (1).fwr"],
+  ];
+  const calls = await withFetch(() => jsonReply(200, { ok: true }), async () => {
+    for (const [name] of cases) await apiSendRaw("api/firmware/custom", new Uint8Array(1), name);
+  });
+  const names = calls.map(({ init }) => new Headers(init.headers).get("X-Filename"));
+  assert.deepEqual(names, cases.map(([, want]) => want));
+  // A real fetch throws a TypeError for a header value outside ISO-8859-1; the cleaned values pass.
+  assert.throws(() => new Headers({ "X-Filename": "거실.fwr" }), TypeError);
+  for (const name of names) assert.doesNotThrow(() => new Headers({ "X-Filename": name }), name);
+});
+
+test("apiSendRaw rejects with the backend's message", async () => {
+  await withFetch(() => jsonReply(400, { ok: false, error: "invalid FWR structure" }), async () => {
+    await assert.rejects(apiSendRaw("api/firmware/custom", new Uint8Array(1), "a.fwr"), /invalid FWR structure/);
+  });
+  await withFetch(() => new Response("Forbidden", { status: 403 }), async () => {
+    await assert.rejects(apiSendRaw("api/firmware/custom", new Uint8Array(1), "a.fwr"), /HTTP 403/);
+  });
+  await withFetch(() => Promise.reject(new TypeError("Failed to fetch")), async () => {
+    await assert.rejects(apiSendRaw("api/firmware/custom", new Uint8Array(1), "a.fwr"), /Failed to fetch/);
   });
 });
 

@@ -75,6 +75,32 @@ export const STRINGS = {
     fw_update: "Firmware update → {v}",
     fw_downgrade: "Firmware downgrade → {v}",
     fw_reflash: "Reinstall firmware {v}",
+    job_queued: "Queued",
+    job_preparing: "Preparing",
+    job_command_sent: "Command sent",
+    job_acked: "Device acknowledged",
+    job_downloading: "Downloading",
+    job_transferred: "Transferred",
+    job_reconnecting: "Reconnecting",
+    job_verifying: "Verifying",
+    job_success: "Success",
+    job_delayed_success: "Success (confirmed late)",
+    job_cancelled_restart: "Cancelled by restart",
+    job_result_unknown: "Result unknown",
+    job_failed_prepare: "Failed: prepare",
+    job_failed_config: "Failed: config",
+    job_failed_offline: "Failed: device offline",
+    job_failed_busy: "Failed: device busy",
+    job_failed_ack: "Failed: no acknowledgement",
+    job_failed_download: "Failed: download",
+    job_failed_version: "Failed: version mismatch",
+    job_failed_internal: "Failed: internal error",
+    hint_111: "Physical-button Child Lock. OTA tries TCP 49217 first, then 80.",
+    hint_110: "Local backend support. OTA on TCP 80.",
+    hint_66: "Stock LG U+ firmware. OTA on TCP 80.",
+    hint_custom: "A file that only passed structure validation.",
+    fwr_ext: "Choose a .fwr file.",
+    fwr_size: "The file must be 327,944 bytes.",
     action_failed: "Request failed: {msg}",
     log_title: "Backend log",
     log_note: "Memory keeps the latest 5,000 rows. DEBUG and above also go to backend.log (5 MB, 3 files).",
@@ -123,6 +149,32 @@ export const STRINGS = {
     sum_fw: "펌웨어",
     fw_target_label: "목표 버전",
     fw_pending_label: "업데이트 대상",
+    job_queued: "대기 중",
+    job_preparing: "준비 중",
+    job_command_sent: "명령 전송",
+    job_acked: "기기 응답",
+    job_downloading: "내려받는 중",
+    job_transferred: "전송 완료",
+    job_reconnecting: "다시 연결 중",
+    job_verifying: "확인 중",
+    job_success: "성공",
+    job_delayed_success: "성공(늦게 확인)",
+    job_cancelled_restart: "재시작으로 취소",
+    job_result_unknown: "결과를 알 수 없음",
+    job_failed_prepare: "실패: 준비",
+    job_failed_config: "실패: 설정",
+    job_failed_offline: "실패: 기기 Offline",
+    job_failed_busy: "실패: 기기 사용 중",
+    job_failed_ack: "실패: 기기 응답 없음",
+    job_failed_download: "실패: 내려받기",
+    job_failed_version: "실패: 버전 불일치",
+    job_failed_internal: "실패: 내부 오류",
+    hint_111: "물리 버튼 Child Lock. OTA는 TCP 49217을 먼저, 실패하면 80.",
+    hint_110: "로컬 백엔드 지원. OTA는 TCP 80.",
+    hint_66: "LG U+ 순정. OTA는 TCP 80.",
+    hint_custom: "구조 검증만 통과한 파일.",
+    fwr_ext: ".fwr 파일을 고르세요.",
+    fwr_size: "파일 크기가 327,944바이트여야 합니다.",
     fw_pending_count: "{n}대",
     fw_ota_host: "OTA server",
     fw_badge_pending: "Update {n}",
@@ -454,12 +506,30 @@ export async function apiGet(url) {
   }
 }
 
-/** POST or PUT `body` as JSON. Resolves with the answer; rejects with the backend's error text. */
-export async function apiSend(method, url, body = {}) {
-  const res = await fetch(url, { method, headers: { ...SEND_HEADERS }, body: JSON.stringify(body), credentials: "same-origin" });
+/** The JSON answer of a POST or PUT; rejects with the backend's error text when the status is not 2xx. */
+async function answerOf(res) {
   const answer = (await jsonOf(res)) ?? {};
   if (!res.ok) throw new Error(String(answer.error || answer.reason || answer.state || `HTTP ${res.status}`));
   return answer;
+}
+
+/** POST or PUT `body` as JSON. Resolves with the answer; rejects with the backend's error text. */
+export async function apiSend(method, url, body = {}) {
+  return answerOf(await fetch(url, { method, headers: { ...SEND_HEADERS }, body: JSON.stringify(body), credentials: "same-origin" }));
+}
+
+/**
+ * POST `bytes` (an ArrayBuffer or Uint8Array) as they are, with the file name in X-Filename.
+ * Answers and failures are the same as apiSend. A browser's fetch throws for a header value outside
+ * ISO-8859-1, so every character outside printable ASCII in the name becomes "_".
+ */
+export async function apiSendRaw(url, bytes, filename) {
+  const headers = {
+    ...SEND_HEADERS,
+    "Content-Type": "application/octet-stream",
+    "X-Filename": String(filename ?? "").replace(/[^\x20-\x7e]/gu, "_"),
+  };
+  return answerOf(await fetch(url, { method: "POST", headers, body: bytes, credentials: "same-origin" }));
 }
 
 /**
