@@ -49,13 +49,15 @@ function time(v) {
   return v !== null && v !== undefined && v !== "" && Number.isFinite(n) ? n : -Infinity;
 }
 
+// The latest job is the one queued last, as in backend.py ota_latest_for_mac (ORDER BY queued_at DESC).
+// A late confirmation can raise an old job's updated_at above a newer attempt, so updated_at only breaks ties.
 function isNewer(a, b) {
-  const [ua, ub] = [time(a.updated_at), time(b.updated_at)];
-  if (ua !== ub) return ua > ub;
-  return time(a.queued_at) > time(b.queued_at);
+  const [qa, qb] = [time(a.queued_at), time(b.queued_at)];
+  if (qa !== qb) return qa > qb;
+  return time(a.updated_at) > time(b.updated_at);
 }
 
-/** The most recently updated job of the device with this MAC, or null. */
+/** The most recently queued job of the device with this MAC, or null. */
 export function latestJobFor(jobs, mac) {
   const want = normalizeMac(mac);
   if (!want || !Array.isArray(jobs)) return null;
@@ -69,9 +71,10 @@ export function latestJobFor(jobs, mac) {
 
 /**
  * What the screen needs to decide a firmware button for one device. `firmware` is the backend's
- * `firmware` object (`jobs`). `block` is why no update can start: the device is offline or busy with a
- * job, or its target is a custom file that is not ready. An official target that is not prepared yet
- * is no block; Tuo builds it when the update starts.
+ * `firmware` object (`jobs`). `block` is why no update can start: a running job ("busy"), the device is
+ * offline, or its target is a custom file that is not ready. A running job wins over offline because
+ * a strip reboots during an OTA job. An official target that is not prepared yet is no block; Tuo builds
+ * it when the update starts.
  */
 export function deviceFirmware(device, firmware) {
   const action = FW_ACTIONS.includes(device?.firmware_action) ? device.firmware_action : null;
@@ -79,8 +82,8 @@ export function deviceFirmware(device, firmware) {
   const job = latestJobFor(firmware?.jobs, device?.mac);
   const active = isJobActive(job);
   let block = null;
-  if (device?.online !== true) block = "offline";
-  else if (active) block = "busy";
+  if (active) block = "busy";
+  else if (device?.online !== true) block = "offline";
   else if (target?.kind === "custom" && target.ready !== true) block = "not_ready";
   return {
     current: device?.firmware_version ?? null,

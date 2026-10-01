@@ -80,6 +80,13 @@ test("deviceFirmware blocks offline, busy and unready custom targets only", () =
   assert.equal(r.active, false);
   assert.equal(deviceFirmware({ ...dev, online: false }, { jobs: [] }).block, "offline");
   assert.equal(deviceFirmware({ ...dev, online: false }, { jobs: [] }).canUpdate, false);
+  // A strip that rebooted into an OTA job is offline, but the reason it cannot start another is the job.
+  const rebooting = deviceFirmware({ ...dev, online: false }, { jobs: [{ mac: dev.mac, state: "RECONNECTING", updated_at: 6 }] });
+  assert.equal(rebooting.block, "busy");
+  assert.equal(rebooting.active, true);
+  assert.equal(rebooting.canUpdate, false);
+  // Once the job is finished, an offline strip is just offline.
+  assert.equal(deviceFirmware({ ...dev, online: false }, { jobs: [{ mac: dev.mac, state: "FAILED_OFFLINE", updated_at: 6 }] }).block, "offline");
   const busy = deviceFirmware(dev, { jobs: [{ mac: dev.mac, state: "DOWNLOADING", updated_at: 5 }] });
   assert.equal(busy.block, "busy");
   assert.equal(busy.active, true);
@@ -127,15 +134,25 @@ test("latestJobFor picks the newest job of that device", () => {
   // MAC spelling does not matter.
   assert.equal(latestJobFor(jobs, "0A:1B:2C:3D:4E:60").state, "FAILED_ACK");
   assert.equal(latestJobFor([{ mac: "0A:1B:2C:3D:4E:60", state: "SUCCESS", updated_at: 1 }], MAC).state, "SUCCESS");
-  // Equal update times fall back to the queue time.
+  // The latest job is the one queued last, like the backend's ORDER BY queued_at DESC. A late
+  // confirmation can bump an old job's updated_at above a newer attempt; the newer attempt still wins.
+  const lateBump = [
+    { mac: MAC, state: "DELAYED_SUCCESS", queued_at: 1, updated_at: 900 },
+    { mac: MAC, state: "FAILED_ACK", queued_at: 2, updated_at: 50 },
+  ];
+  assert.equal(latestJobFor(lateBump, MAC).state, "FAILED_ACK");
+  assert.equal(latestJobFor([...lateBump].reverse(), MAC).state, "FAILED_ACK");
+  // Equal queue times fall back to the update time.
   const tied = [
-    { mac: MAC, state: "FAILED_ACK", updated_at: 5, queued_at: 1 },
-    { mac: MAC, state: "SUCCESS", updated_at: 5, queued_at: 2 },
+    { mac: MAC, state: "FAILED_ACK", queued_at: 4, updated_at: 5 },
+    { mac: MAC, state: "SUCCESS", queued_at: 4, updated_at: 8 },
   ];
   assert.equal(latestJobFor(tied, MAC).state, "SUCCESS");
   assert.equal(latestJobFor([...tied].reverse(), MAC).state, "SUCCESS");
   // A job without a time never beats one with a time.
   assert.equal(latestJobFor([{ mac: MAC, state: "QUEUED" }, { mac: MAC, state: "SUCCESS", updated_at: 1 }], MAC).state, "SUCCESS");
+  assert.equal(latestJobFor([{ mac: MAC, state: "SUCCESS", queued_at: 1 }, { mac: MAC, state: "QUEUED", updated_at: 900 }], MAC).state, "SUCCESS");
+  assert.equal(latestJobFor([{ mac: MAC, state: "QUEUED", updated_at: 900 }, { mac: MAC, state: "SUCCESS", queued_at: 1 }], MAC).state, "SUCCESS");
 });
 
 test("updateAllTargets lists online, visible devices with an action", () => {
