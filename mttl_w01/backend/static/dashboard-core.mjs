@@ -768,6 +768,17 @@ export function cardNotice(device, firmware, { authenticated, lang }) {
   return { kind: "none", text: "", live: false };
 }
 
+/**
+ * The line a page shows for what is due and for what happened last. `warning` is the warning of a two-press action
+ * that is under way (it is due while the action is open); `result` is the outcome of a request. A failure always
+ * wins, so a failed permanent delete, whose word box stays open and keeps its warning due, still shows why it failed.
+ * Both are `{kind, keys, vars}` or null.
+ */
+export function pickAlert(warning, result) {
+  if (result?.kind === "bad") return result;
+  return warning ?? result ?? null;
+}
+
 /** The hidden devices' rows: name, MAC, and the energy kept since they were hidden (the sum of their outlets). */
 export function hiddenModel(removed) {
   const rows = [];
@@ -1135,7 +1146,10 @@ function demoJob(fields) {
   };
 }
 
-/** Three jobs: one still running (a strip that is rebooting), one finished, one that failed. */
+/**
+ * Three jobs: one still running, one finished, one that failed. The running one belongs to a strip that is rebooting
+ * into 1.0.111: it is offline and still reports 1.0.66, the version the job started from.
+ */
 function demoJobs() {
   const garage = "0a1b2c3d4e62";
   const living = "0a1b2c3d4e5f";
@@ -1252,8 +1266,8 @@ export function demoResponse() {
         ],
       }),
       demoDevice({
-        mac: d, alias: "Garage", firmware_version: "1.0.111", online: false, peer_ip: "192.0.2.24",
-        last_seen: away, childlock_mask: 0b00001,
+        mac: d, alias: "Garage", firmware_version: "1.0.66", online: false, peer_ip: "192.0.2.24",
+        last_seen: away,
         channels: [
           demoChannel(d, 1, "Freezer", true, 61200, 24, 187650, away),
           demoChannel(d, 2, "Heater", false, 0, 22, 35890, away),

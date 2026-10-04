@@ -204,3 +204,74 @@ test("the settings page and its code use the shared part names", () => {
   assert.match(html, /class="hide-btn"[^>]*data-act="fw-delete"/);
   assert.match(html, /class="btn-row"/);
 });
+
+// ---- Armed buttons and the window backdrop (dashboard.css) ----
+
+const cssWithoutComments = (name) => staticFile(name).replace(/\/\*[\s\S]*?\*\//g, "");
+
+/** The declarations of the first innermost rule that has `selector` in its selector list, or null. */
+function ruleBody(css, selector) {
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selectors = m[1].split(",").map((x) => x.replace(/\s+/g, " ").trim());
+    if (selectors.includes(selector)) return m[2];
+  }
+  return null;
+}
+
+const rgbOf = (hex) => {
+  const m = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(hex.trim());
+  assert.ok(m, `not a color: ${hex}`);
+  return { rgb: [0, 2, 4].map((i) => Number.parseInt(m[1].slice(i, i + 2), 16)), a: m[2] ? Number.parseInt(m[2], 16) / 255 : 1 };
+};
+const tokenOf = (body, name) => rgbOf(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6,8})`).exec(body)?.[1] ?? "");
+const luminance = ([r, g, b]) => {
+  const lin = (v) => ((v / 255) <= 0.03928 ? (v / 255) / 12.92 : (((v / 255) + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+};
+const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + 0.05) / (Math.min(luminance(a), luminance(b)) + 0.05);
+
+test("a button armed by the first press is a borderless amber fill that is readable in both themes", () => {
+  const css = cssWithoutComments("dashboard.css");
+  for (const selector of ['button[data-state="armed"]', 'button[data-state="armed"]:hover:not(:disabled)']) {
+    const body = ruleBody(css, selector);
+    assert.ok(body, selector);
+    assert.match(body, /background:\s*var\(--armed-bg\)/, selector);
+    assert.match(body, /color:\s*var\(--armed-text\)/, selector);
+    // No ring, and nothing of the red that a failed job or an error uses.
+    assert.ok(!/box-shadow:\s*inset|border:\s*[1-9]|outline:/.test(body), `${selector} draws a border`);
+    assert.ok(!/--bad/.test(body), `${selector} is red`);
+  }
+  // Readable text on the fill, laid over the card, in the dark default and in the light theme.
+  const dark = ruleBody(css, ":root");
+  const light = ruleBody(css, ':root[data-theme="light"]');
+  for (const [name, theme, surface] of [["dark", dark, tokenOf(dark, "--surface")], ["light", light, tokenOf(light, "--surface")]]) {
+    const fill = tokenOf(theme, "--armed-bg");
+    const text = tokenOf(theme, "--armed-text");
+    const under = fill.rgb.map((v, i) => v * fill.a + surface.rgb[i] * (1 - fill.a));
+    assert.ok(contrast(text.rgb, under) >= 4.5, `${name} armed text contrast ${contrast(text.rgb, under).toFixed(2)}`);
+    // It is a warning color: red is the lowest channel's opposite, so it reads yellow, not red.
+    assert.ok(fill.rgb[0] > 200 && fill.rgb[1] > 140 && fill.rgb[2] < 150, `${name} armed fill is amber: ${fill.rgb}`);
+  }
+});
+
+test("the dashboard card's HIDE DEVICE keeps its red armed look", () => {
+  const css = cssWithoutComments("dashboard.css");
+  for (const selector of ['.card-tools .hide-btn[data-state="armed"]', '.card-tools .hide-btn[data-state="armed"]:hover:not(:disabled)']) {
+    const body = ruleBody(css, selector);
+    assert.ok(body, selector);
+    assert.match(body, /background:\s*var\(--bad-soft\)/, selector);
+    assert.match(body, /color:\s*var\(--bad\)/, selector);
+    assert.match(body, /box-shadow:\s*inset 0 0 0 2px currentColor/, selector);
+  }
+  // The card's button is a .hide-btn in the card's bottom row, and nothing else in the page is marked that way.
+  assert.match(staticFile("dashboard.html"), /<div class="card-tools">[\s\S]*?class="hide-btn"[^>]*data-act="hide"/);
+});
+
+test("the window backdrop is blurred and saturated", () => {
+  const body = ruleBody(cssWithoutComments("dashboard.css"), ".dev-dialog::backdrop");
+  assert.ok(body);
+  assert.match(body, /(?:^|[\s;])backdrop-filter:\s*blur\(8px\) saturate\(180%\)/);
+  assert.match(body, /-webkit-backdrop-filter:\s*blur\(8px\) saturate\(180%\)/);
+  // The scrim stays, so the window reads on a browser without backdrop-filter.
+  assert.match(body, /background:\s*var\(--scrim\)/);
+});

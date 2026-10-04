@@ -42,19 +42,20 @@
 
 <main class="settings-page">
   <div class="set-grid">
-    <div class="set-col">
-
-      <section class="panel set-card" id="firmware">
-        <div class="sum-head">
-          <h2 data-i18n="card_fw"></h2>
-          <span class="badge" data-f="badge"><span class="badge-dot"></span><span data-f="badgeText"></span></span>
-        </div>
-        <div class="form">
+    <section class="panel set-card" id="firmware">
+      <div class="sum-head">
+        <h2 data-i18n="card_fw"></h2>
+        <span class="badge" data-f="badge"><span class="badge-dot"></span><span data-f="badgeText"></span></span>
+      </div>
+      <div class="form form-row fw-fields">
+        <div class="fw-col">
           <label class="field">
             <span data-i18n="fw_target"></span>
             <select data-f="profile"></select>
           </label>
           <p class="note set-hint" data-f="hint"></p>
+        </div>
+        <div class="fw-col">
           <label class="field">
             <span data-i18n="fw_ota_host_label"></span>
             <input type="text" data-f="host" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="45" placeholder="192.0.2.10">
@@ -62,157 +63,154 @@
           </label>
           <p class="note" data-i18n="fw_ota_host_note"></p>
         </div>
-        <div class="btn-row">
-          <button class="action" type="button" data-act="fw-save" data-f="save"></button>
-          <button type="button" data-act="fw-prepare" data-f="prepare"></button>
-          <button type="button" data-act="fw-all" data-f="all"></button>
-        </div>
-        <div class="alert-line" data-f="alert" data-kind="none" role="status">
-          <p data-f="alertText"></p>
-          <ul data-f="alertItems" hidden></ul>
-        </div>
-      </section>
+      </div>
+      <div class="btn-row">
+        <button class="action" type="button" data-act="fw-save" data-f="save"></button>
+        <button type="button" data-act="fw-prepare" data-f="prepare"></button>
+        <button type="button" data-act="fw-all" data-f="all"></button>
+      </div>
+      <div class="alert-line" data-f="alert" data-kind="none" role="status">
+        <p data-f="alertText"></p>
+        <ul data-f="alertItems" hidden></ul>
+      </div>
+    </section>
 
-      <section class="panel set-card" id="firmware-files">
-        <div class="sum-head"><h2 data-i18n="card_files"></h2></div>
-        <div class="file-list" data-f="files"></div>
-        <div class="upload">
-          <h3 class="form-sub" data-i18n="fw_upload_title"></h3>
-          <div class="upload-row">
-            <button type="button" data-act="fw-choose" data-f="choose" data-i18n="fw_choose"></button>
-            <input type="file" accept=".fwr" data-f="file" hidden>
-            <span class="file-name num" data-f="fileName"></span>
-            <button class="action" type="button" data-act="fw-upload" data-f="upload"></button>
-          </div>
-          <p class="note" data-i18n="fw_upload_note"></p>
+    <section class="panel set-card" id="firmware-files">
+      <div class="sum-head"><h2 data-i18n="card_files"></h2></div>
+      <div class="file-list" data-f="files"></div>
+      <div class="upload">
+        <h3 class="form-sub" data-i18n="fw_upload_title"></h3>
+        <div class="upload-row">
+          <button type="button" data-act="fw-choose" data-f="choose" data-i18n="fw_choose"></button>
+          <input type="file" accept=".fwr" data-f="file" hidden>
+          <span class="file-name num" data-f="fileName"></span>
+          <button class="action" type="button" data-act="fw-upload" data-f="upload"></button>
         </div>
-        <div class="alert-line" data-f="alert" data-kind="none" role="status">
-          <p data-f="alertText"></p>
-          <ul data-f="alertItems" hidden></ul>
-        </div>
-      </section>
+        <p class="note" data-i18n="fw_upload_note"></p>
+      </div>
+      <div class="alert-line" data-f="alert" data-kind="none" role="status">
+        <p data-f="alertText"></p>
+        <ul data-f="alertItems" hidden></ul>
+      </div>
+    </section>
 
+    <section class="panel set-card" id="polling">
+      <div class="sum-head"><h2 data-i18n="card_poll"></h2></div>
+      <div class="form">
+        <label class="field">
+          <span data-i18n="poll_label"></span>
+          <select data-f="poll"></select>
+        </label>
+        <p class="note" data-i18n="poll_note"></p>
+      </div>
+      <div class="btn-row">
+        <button class="action" type="button" data-act="poll-save" data-f="save"></button>
+      </div>
+      <div class="alert-line" data-f="alert" data-kind="none" role="status">
+        <p data-f="alertText"></p>
+        <ul data-f="alertItems" hidden></ul>
+      </div>
+    </section>
 
-    </div>
-    <div class="set-col">
-
-      <section class="panel set-card" id="polling">
-        <div class="sum-head"><h2 data-i18n="card_poll"></h2></div>
-        <div class="form">
-          <label class="field">
-            <span data-i18n="poll_label"></span>
-            <select data-f="poll"></select>
-          </label>
-          <p class="note" data-i18n="poll_note"></p>
-        </div>
-        <div class="btn-row">
-          <button class="action" type="button" data-act="poll-save" data-f="save"></button>
-        </div>
-        <div class="alert-line" data-f="alert" data-kind="none" role="status">
-          <p data-f="alertText"></p>
-          <ul data-f="alertItems" hidden></ul>
-        </div>
-      </section>
-
-      <section class="panel set-card" id="mqtt">
-        <div class="sum-head">
-          <h2 data-i18n="card_mqtt"></h2>
-          <span class="badge" data-f="badge"><span class="badge-dot"></span><span data-f="badgeText"></span></span>
-        </div>
-        <dl class="kv set-status">
-          <div><dt data-i18n="mqtt_pw"></dt><dd data-f="pwState"></dd></div>
-          <div><dt data-i18n="mqtt_last_error"></dt><dd data-f="lastError"></dd></div>
-        </dl>
-        <div class="form">
+    <section class="panel set-card" id="mqtt">
+      <div class="sum-head">
+        <h2 data-i18n="card_mqtt"></h2>
+        <span class="badge" data-f="badge"><span class="badge-dot"></span><span data-f="badgeText"></span></span>
+      </div>
+      <dl class="kv set-status">
+        <div><dt data-i18n="mqtt_pw"></dt><dd data-f="pwState"></dd></div>
+        <div><dt data-i18n="mqtt_last_error"></dt><dd data-f="lastError"></dd></div>
+      </dl>
+      <div class="form">
+        <div class="toggle-row">
           <label class="check"><input type="checkbox" data-f="enabled"><span data-i18n="mqtt_enable"></span></label>
-          <div class="form-row broker-row">
-            <label class="field">
-              <span data-i18n="mqtt_broker"></span>
-              <input type="text" data-f="host" autocomplete="off" spellcheck="false" maxlength="253" placeholder="core-mosquitto">
-              <small class="field-err" data-f="err_host" role="alert" hidden></small>
-            </label>
-            <label class="field">
-              <span data-i18n="mqtt_port"></span>
-              <input type="text" data-f="port" inputmode="numeric" autocomplete="off" maxlength="5">
-              <small class="field-err" data-f="err_port" role="alert" hidden></small>
-            </label>
-          </div>
-          <div class="form-row">
-            <label class="field">
-              <span data-i18n="mqtt_user"></span>
-              <input type="text" data-f="username" autocomplete="off" spellcheck="false" maxlength="128">
-            </label>
-            <label class="field">
-              <span data-i18n="mqtt_password"></span>
-              <input type="password" data-f="password" autocomplete="new-password" maxlength="256">
-            </label>
-          </div>
           <label class="check"><input type="checkbox" data-f="tls"><span data-i18n="mqtt_tls"></span></label>
-          <h3 class="form-sub" data-i18n="mqtt_report"></h3>
-          <div class="form-row">
-            <label class="field">
-              <span data-i18n="mqtt_power_threshold"></span>
-              <select data-f="power_threshold_w" class="num"></select>
-            </label>
-            <label class="field">
-              <span data-i18n="mqtt_power_interval"></span>
-              <select data-f="power_interval_s" class="num"></select>
-            </label>
-            <label class="field">
-              <span data-i18n="mqtt_energy_threshold"></span>
-              <select data-f="energy_threshold_wh" class="num"></select>
-            </label>
-            <label class="field">
-              <span data-i18n="mqtt_energy_interval"></span>
-              <select data-f="energy_interval_s" class="num"></select>
-            </label>
-          </div>
-          <p class="note" data-i18n="mqtt_report_note"></p>
-          <details class="set-details" data-f="advanced">
-            <summary data-i18n="mqtt_advanced"></summary>
-            <div class="form">
-              <label class="field">
-                <span data-i18n="mqtt_topic"></span>
-                <input type="text" data-f="topic_prefix" autocomplete="off" spellcheck="false" maxlength="128" placeholder="mttl">
-                <small class="field-err" data-f="err_topic_prefix" role="alert" hidden></small>
-              </label>
-              <label class="field">
-                <span data-i18n="mqtt_discovery"></span>
-                <input type="text" data-f="discovery_prefix" autocomplete="off" spellcheck="false" maxlength="128" placeholder="homeassistant">
-                <small class="field-err" data-f="err_discovery_prefix" role="alert" hidden></small>
-              </label>
-              <label class="field">
-                <span data-i18n="mqtt_birth"></span>
-                <input type="text" data-f="birth_topic" autocomplete="off" spellcheck="false" maxlength="128" placeholder="homeassistant/status">
-                <small class="field-err" data-f="err_birth_topic" role="alert" hidden></small>
-              </label>
-            </div>
-          </details>
         </div>
-        <div class="btn-row">
-          <button class="action" type="button" data-act="mqtt-save" data-f="save"></button>
-          <button type="button" data-act="mqtt-test" data-f="test"></button>
-          <button type="button" data-act="mqtt-sync" data-f="sync"></button>
+        <div class="form-row broker-row">
+          <label class="field">
+            <span data-i18n="mqtt_broker"></span>
+            <input type="text" data-f="host" autocomplete="off" spellcheck="false" maxlength="253" placeholder="core-mosquitto">
+            <small class="field-err" data-f="err_host" role="alert" hidden></small>
+          </label>
+          <label class="field">
+            <span data-i18n="mqtt_port"></span>
+            <input type="text" data-f="port" inputmode="numeric" autocomplete="off" maxlength="5">
+            <small class="field-err" data-f="err_port" role="alert" hidden></small>
+          </label>
         </div>
-        <div class="alert-line" data-f="alert" data-kind="none" role="status">
-          <p data-f="alertText"></p>
-          <ul data-f="alertItems" hidden></ul>
+        <div class="form-row">
+          <label class="field">
+            <span data-i18n="mqtt_user"></span>
+            <input type="text" data-f="username" autocomplete="off" spellcheck="false" maxlength="128">
+          </label>
+          <label class="field">
+            <span data-i18n="mqtt_password"></span>
+            <input type="password" data-f="password" autocomplete="new-password" maxlength="256">
+          </label>
         </div>
-        <details class="set-details">
-          <summary data-i18n="lovelace"></summary>
+        <h3 class="form-sub" data-i18n="mqtt_report"></h3>
+        <div class="form-row report-row">
+          <label class="field">
+            <span data-i18n="mqtt_power_threshold"></span>
+            <select data-f="power_threshold_w" class="num"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="mqtt_power_interval"></span>
+            <select data-f="power_interval_s" class="num"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="mqtt_energy_threshold"></span>
+            <select data-f="energy_threshold_wh" class="num"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="mqtt_energy_interval"></span>
+            <select data-f="energy_interval_s" class="num"></select>
+          </label>
+        </div>
+        <p class="note" data-i18n="mqtt_report_note"></p>
+        <details class="set-details" data-f="advanced">
+          <summary data-i18n="mqtt_advanced"></summary>
           <div class="form">
-            <p><a class="btn" href="mttl-up-card.js" download data-i18n="lovelace_download"></a></p>
-            <pre class="yaml"><code>type: custom:mttl-up-card
-mac: 0a1b2c3d4e5f
-all_control: true</code></pre>
-            <p class="note" data-i18n="lovelace_install"></p>
+            <label class="field">
+              <span data-i18n="mqtt_topic"></span>
+              <input type="text" data-f="topic_prefix" autocomplete="off" spellcheck="false" maxlength="128" placeholder="mttl">
+              <small class="field-err" data-f="err_topic_prefix" role="alert" hidden></small>
+            </label>
+            <label class="field">
+              <span data-i18n="mqtt_discovery"></span>
+              <input type="text" data-f="discovery_prefix" autocomplete="off" spellcheck="false" maxlength="128" placeholder="homeassistant">
+              <small class="field-err" data-f="err_discovery_prefix" role="alert" hidden></small>
+            </label>
+            <label class="field">
+              <span data-i18n="mqtt_birth"></span>
+              <input type="text" data-f="birth_topic" autocomplete="off" spellcheck="false" maxlength="128" placeholder="homeassistant/status">
+              <small class="field-err" data-f="err_birth_topic" role="alert" hidden></small>
+            </label>
           </div>
         </details>
-      </section>
+      </div>
+      <div class="btn-row">
+        <button class="action" type="button" data-act="mqtt-save" data-f="save"></button>
+        <button type="button" data-act="mqtt-test" data-f="test"></button>
+        <button type="button" data-act="mqtt-sync" data-f="sync"></button>
+      </div>
+      <details class="set-details">
+        <summary data-i18n="lovelace"></summary>
+        <div class="form">
+          <p><a class="btn" href="mttl-up-card.js" download data-i18n="lovelace_download"></a></p>
+          <pre class="yaml"><code>type: custom:mttl-up-card
+mac: 0a1b2c3d4e5f
+all_control: true</code></pre>
+          <p class="note" data-i18n="lovelace_install"></p>
+        </div>
+      </details>
+      <div class="alert-line" data-f="alert" data-kind="none" role="status">
+        <p data-f="alertText"></p>
+        <ul data-f="alertItems" hidden></ul>
+      </div>
+    </section>
 
-    </div>
-
-    <section class="panel set-card set-wide" id="firmware-jobs">
+    <section class="panel set-card" id="firmware-jobs">
       <div class="sum-head"><h2 data-i18n="card_jobs"></h2></div>
       <p class="note" data-i18n="jobs_note"></p>
       <div class="job-list" data-f="jobs"></div>

@@ -13,7 +13,7 @@ const {
   reducePoll, diffMacs, canToggleLock, toggleMask, withDevice, applyPending, nameEditOutcome,
   apiGet, apiSend, apiSendRaw,
   DIAG_INTERVALS, DIAG_DEFAULT, deviceTitle, deviceWindowModel, measureForm, measurePayload, hiddenModel, deleteWordOk,
-  lockErrorKey, otaWarnKeys, jobLabel, cardNotice, intervalUnit, fmtAgo, demoConfig,
+  lockErrorKey, otaWarnKeys, jobLabel, cardNotice, pickAlert, intervalUnit, fmtAgo, demoConfig,
 } = core;
 
 const staticFile = (name) => readFileSync(new URL(`../../mttl_w01/backend/static/${name}`, import.meta.url), "utf-8");
@@ -383,7 +383,7 @@ test("summaryModel counts devices and tolerates missing admin parts", () => {
     },
     {
       online: 3, total: 4, mqtt: "connected", broker: "192.0.2.10:1883", topic: "mttl", discovery: "homeassistant",
-      fwTarget: "1.0.111", fwPending: 1, otaHost: "192.0.2.10", version: "0.2.11",
+      fwTarget: "1.0.111", fwPending: 2, otaHost: "192.0.2.10", version: "0.2.11",
     },
   );
   assert.equal(summaryModel(demoResponse(), { enabled: false, connected: false }).mqtt, "off");
@@ -633,7 +633,7 @@ test("apiGet answers status and body, or an error", async () => {
 
 const LIVING = "0a1b2c3d4e5f"; // 1.0.111, online, Child Lock mask 4, voltage and RSSI on
 const OFFICE = "0a1b2c3d4e60"; // 1.0.66, online, update to 1.0.111
-const GARAGE = "0a1b2c3d4e62"; // 1.0.111, offline, an OTA job still running
+const GARAGE = "0a1b2c3d4e62"; // 1.0.66, offline, the update to 1.0.111 still running
 const open = { unlocked: true, viewOnly: false };
 const demoDevice = (mac) => demoResponse().devices.find((d) => d.mac === mac);
 
@@ -654,7 +654,10 @@ test("deviceWindowModel shows Child Lock only on 1.0.111 devices", () => {
   assert.equal(deviceWindowModel(demoDevice(OFFICE), { jobs: [] }, open).lock, null);
   assert.equal(deviceWindowModel({ ...living, childlock_supported: false }, { jobs: [] }, open).lock, null);
   // An offline strip keeps its last mask but is not in sync and cannot be read.
-  assert.deepEqual(deviceWindowModel(demoDevice(GARAGE), { jobs: [] }, open).lock, { mask: 1, synced: false, canReread: false });
+  const offline = { ...living, online: false, childlock_synced: false };
+  assert.deepEqual(deviceWindowModel(offline, { jobs: [] }, open).lock, { mask: 4, synced: false, canReread: false });
+  // A strip still on an older firmware has no Child Lock to show.
+  assert.equal(deviceWindowModel(demoDevice(GARAGE), { jobs: [] }, open).lock, null);
   // Reading needs an online strip whose Child Lock wire access is safe.
   assert.equal(deviceWindowModel({ ...living, childlock_probe_safe: false }, { jobs: [] }, open).lock.canReread, false);
   assert.equal(deviceWindowModel({ ...living, online: false }, { jobs: [] }, open).lock.canReread, false);
@@ -676,10 +679,14 @@ test("deviceWindowModel reads firmware from deviceFirmware and measurement from 
   assert.equal(office.fw.canUpdate, true);
   assert.equal(office.fw.target, "1.0.111");
 
+  // The strip that reboots during its update: an update to 1.0.111 is under way, so the window never says "matches".
   const garage = deviceWindowModel(demoDevice(GARAGE), data.firmware, open);
   assert.equal(garage.fw.active, true);
   assert.equal(garage.fw.block, "busy");
   assert.equal(garage.fw.job.state, "RECONNECTING");
+  assert.equal(garage.fw.current, "1.0.66");
+  assert.equal(garage.fw.action, "update");
+  assert.equal(garage.fw.job.from_version, garage.fw.current);
 
   // A value the window does not offer stays visible; a missing one is the default.
   assert.equal(deviceWindowModel({ ...demoDevice(OFFICE), diagnostics: { poll_interval: 45 } }, data.firmware, open).measure.interval, 45);
@@ -826,6 +833,23 @@ test("cardNotice shows a running job, else the offline note, else the update lin
   // A guest view has no firmware parts.
   assert.deepEqual(cardNotice(demoDevice(OFFICE), data.firmware, { ...admin, authenticated: false }), { kind: "none", text: "", live: false });
   assert.deepEqual(cardNotice({ ...demoDevice(OFFICE), online: false }, data.firmware, { ...admin, authenticated: false }), { kind: "offline", text: "", live: false });
+});
+
+test("pickAlert shows a failure before the warning of an open two-press action", () => {
+  const warn = { kind: "warn", keys: ["purge_warn"], vars: { name: "Guest Room" } };
+  const bad = { kind: "bad", keys: ["action_failed"], vars: { msg: "boom" } };
+  const ok = { kind: "ok", keys: ["restore_done"], vars: { name: "Guest Room" } };
+  // A permanent delete that failed leaves the word box open, so its warning is still due; the failure must stay in view.
+  assert.equal(pickAlert(warn, bad), bad);
+  assert.equal(pickAlert(null, bad), bad);
+  // A warning that is due replaces a result that is only news.
+  assert.equal(pickAlert(warn, ok), warn);
+  assert.equal(pickAlert(warn, null), warn);
+  assert.equal(pickAlert(null, ok), ok);
+  assert.equal(pickAlert(null, null), null);
+  assert.equal(pickAlert(undefined, undefined), null);
+  // The pages choose their line with it.
+  for (const name of ["dashboard.mjs"]) assert.match(staticFile(name), /\bpickAlert\(/, name);
 });
 
 test("intervalUnit picks seconds or minutes", () => {

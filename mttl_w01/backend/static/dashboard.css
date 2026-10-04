@@ -59,7 +59,9 @@
   --bad-soft: #f06b5f26;
   --idle: #9c988d;
   --idle-soft: #ffffff0f;
-  --scrim: #000000b3; /* behind the device window */
+  --scrim: #0000007a; /* behind the device window, which blurs what is under it */
+  --armed-bg: #f2b01e3d; /* a button armed by the first press: the warning's amber, not the red of a failure */
+  --armed-text: #ffd36b;
   --topbar-ok: #86d692; /* the top bar is dark in both themes */
   --topbar-ok-bg: #3aa14f33;
   --topbar-bad: #f59a90;
@@ -120,7 +122,9 @@
   --bad-soft: #fbe3e0;
   --idle: #6b675e;
   --idle-soft: #ecebe7;
-  --scrim: #00000073;
+  --scrim: #0000004d;
+  --armed-bg: #f6d77a;
+  --armed-text: #5c3b00;
 }
 
 @media (min-width: 680px) {
@@ -1077,8 +1081,11 @@ button.tool-lock[data-state="view"]:hover:not(:disabled) {
   box-shadow: inset 0 0 0 1px currentColor;
 }
 
-.hide-btn[data-state="armed"],
-.hide-btn[data-state="armed"]:hover:not(:disabled) {
+/* The card's hide button stays red and ringed while armed; every other armed button is amber (see button[data-state="armed"]). */
+.card-tools .hide-btn[data-state="armed"],
+.card-tools .hide-btn[data-state="armed"]:hover:not(:disabled) {
+  background: var(--bad-soft);
+  color: var(--bad);
   box-shadow: inset 0 0 0 2px currentColor;
 }
 
@@ -1100,6 +1107,8 @@ button.tool-lock[data-state="view"]:hover:not(:disabled) {
 
 .dev-dialog::backdrop {
   background: var(--scrim);
+  -webkit-backdrop-filter: blur(8px) saturate(180%);
+  backdrop-filter: blur(8px) saturate(180%);
 }
 
 /* The page behind does not scroll while the window is open. */
@@ -1567,12 +1576,15 @@ button.action:hover:not(:disabled) {
   background: var(--btn-hover);
 }
 
-/* A press arms the button: red and ringed, like the hide button. The second press does the work. */
+/*
+ * A press arms the button: an amber fill with no border, the color of the warning line under it. Red is for failures
+ * (a failed job, an error), so an armed button must not look like one. The second press does the work.
+ */
 button[data-state="armed"],
 button[data-state="armed"]:hover:not(:disabled) {
-  background: var(--bad-soft);
-  color: var(--bad);
-  box-shadow: inset 0 0 0 2px currentColor;
+  background: var(--armed-bg);
+  color: var(--armed-text);
+  box-shadow: none;
 }
 
 /* A request is out: the label says so and the button pulses instead of looking disabled. */

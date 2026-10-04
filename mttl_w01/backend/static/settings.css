@@ -11,37 +11,27 @@
   text-transform: uppercase;
 }
 
-/* ---- Page grid: one column on a phone, two columns of cards from 1024 px ---- */
+/*
+ * ---- Page grid ----
+ * One cell per card. On a phone the cards stack at their content height. From 1024 px they sit on a 2x2 grid with
+ * the jobs card under it, and a row shares its height, so FIRMWARE and POLLING, and FIRMWARE FILES and HOME ASSISTANT
+ * MQTT, end at the same line.
+ */
 
 .settings-page {
   width: min(calc(100% - 2 * var(--pad)), 1240px);
   margin: 20px auto 32px;
 }
 
-.set-grid,
-.set-col {
+.set-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
-}
-
-.set-grid {
   align-items: start;
 }
 
-.set-col {
-  align-content: start;
-  min-width: 0;
-}
-
-@media (min-width: 1024px) {
-  .set-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .set-wide { grid-column: 1 / -1; }
-}
-
-/* Below that the cards stack in the order of the settings: firmware, files, jobs, polling, MQTT. */
+/* Below 1024 px the cards stack in the order of the settings: firmware, files, jobs, polling, MQTT. */
 @media (max-width: 1023px) {
-  .set-col { display: contents; }
   #firmware { order: 1; }
   #firmware-files { order: 2; }
   #firmware-jobs { order: 3; }
@@ -49,10 +39,27 @@
   #mqtt { order: 5; }
 }
 
+@media (min-width: 1024px) {
+  .set-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "firmware polling"
+      "files mqtt"
+      "jobs jobs";
+    align-items: stretch;
+  }
+
+  #firmware { grid-area: firmware; }
+  #polling { grid-area: polling; }
+  #firmware-files { grid-area: files; }
+  #mqtt { grid-area: mqtt; }
+  #firmware-jobs { grid-area: jobs; }
+}
+
 .set-card {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
-  align-content: start;
   outline: 2px solid transparent;
   outline-offset: 3px;
   transition: outline-color 0.3s;
@@ -63,9 +70,26 @@
   outline-color: var(--accent-line);
 }
 
-/* Two lines are kept so the card does not jump when another firmware is chosen. */
+/* One line is kept so the card does not jump when another firmware is chosen. */
 .set-hint {
-  min-height: 35px;
+  min-height: 18px;
+}
+
+/* FIRMWARE: the target and the address side by side, each with its note under it, where the card is wide enough. */
+.fw-fields {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.fw-col {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-width: 0;
+}
+
+@media (min-width: 600px) and (max-width: 1023px), (min-width: 1200px) {
+  .fw-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* The broker takes the width and the port a narrow column, also on a phone. */
@@ -80,6 +104,25 @@
   padding: 8px 10px;
   border-radius: 3px;
   background: var(--surface-2);
+}
+
+/* Integration and TLS are on-off choices of the connection: one row. */
+.toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 24px;
+}
+
+/* Where the card is wide, the status is one row and the four reporting choices sit side by side. */
+@media (min-width: 600px) and (max-width: 1023px), (min-width: 1200px) {
+  .set-status {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+}
+
+@media (min-width: 760px) and (max-width: 1023px), (min-width: 1280px) {
+  .report-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 .set-status dd {
@@ -117,8 +160,12 @@
 
 /* ---- Firmware files ---- */
 
+/* In a card that a taller neighbour stretches, the extra height is shared between the files, not left as one gap. */
 .file-list {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .file-row {

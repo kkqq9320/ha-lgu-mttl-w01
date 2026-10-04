@@ -9,7 +9,7 @@ const { DIAG_INTERVALS, demoResponse, demoSetDiagnostics, demoRereadLock, demoRe
 
 const LIVING = "0a1b2c3d4e5f"; // online, 1.0.111, Child Lock mask 4 in sync, voltage and RSSI on
 const OFFICE = "0a1b2c3d4e60"; // online, 1.0.66, no Child Lock
-const GARAGE = "0a1b2c3d4e62"; // offline, 1.0.111
+const GARAGE = "0a1b2c3d4e62"; // offline, 1.0.66, an update is running
 const HIDDEN = "0a1b2c3d4e63";
 
 const device = (data, mac) => data.devices.find((d) => d.mac === mac);
@@ -59,9 +59,11 @@ test("demoRereadLock puts a strip's Child Lock back in sync", () => {
 
 test("demoRereadLock refuses what the backend refuses", () => {
   const data = demoResponse();
+  device(data, LIVING).online = false; // a 1.0.111 strip that is offline
   const before = structuredClone(data);
-  assert.throws(() => demoRereadLock(data, GARAGE), /device offline/);
+  assert.throws(() => demoRereadLock(data, LIVING), /device offline/);
   assert.throws(() => demoRereadLock(data, OFFICE), /requires firmware 1\.0\.111/);
+  assert.throws(() => demoRereadLock(data, GARAGE), /requires firmware 1\.0\.111/);
   assert.throws(() => demoRereadLock(data, "0a1b2c3d4e99"), /device not found/);
   assert.throws(() => demoRereadLock(data, HIDDEN), /device not found/);
   assert.deepEqual(data, before);

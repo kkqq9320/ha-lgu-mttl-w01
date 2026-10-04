@@ -3,7 +3,7 @@
 import {
   NA, DIAG_INTERVALS, t, normalizeMac, fmtMac, fmtAge, fmtAgo, pressConfirm, scriptLang, intervalUnit,
   cardModel, cardNotice, summaryModel, apkUrl, apkUrlForHost, isViewOnly,
-  deviceTitle, deviceWindowModel, measureForm, measurePayload, hiddenModel, deleteWordOk, lockErrorKey, otaWarnKeys, jobLabel,
+  deviceTitle, deviceWindowModel, measureForm, measurePayload, hiddenModel, deleteWordOk, lockErrorKey, otaWarnKeys, jobLabel, pickAlert,
   apiGet, apiSend, reducePoll, withDevice, diffMacs, canToggleLock, toggleMask, applyPending, nameEditOutcome,
   demoResponse, demoHa, demoShiftFirmwareTimes, demoAdvanceJob, demoQueueJob, demoSetDiagnostics, demoRereadLock, demoRestore, demoPurge,
 } from "./dashboard-core.mjs";
@@ -764,7 +764,7 @@ function renderWindow() {
   const warn = otaArming.has("ota")
     ? { kind: "warn", keys: otaWarnKeys(fw.action, target), vars: { from: fw.current ?? NA, to: fw.target ?? NA } }
     : null;
-  showWindowAlert("fw", warn ?? win.alerts.fw);
+  showWindowAlert("fw", pickAlert(warn, win.alerts.fw));
 
   // MEASUREMENT
   const form = measureForm(m.measure, win.edits);
@@ -947,7 +947,7 @@ function renderHidden() {
   syncList(f.list, rows, (r) => r.mac, createHiddenRow, updateHiddenRow);
   const target = state.purge ? rows.find((r) => r.mac === state.purge.mac) : null;
   const warn = target ? { kind: "warn", keys: ["purge_warn"], vars: { name: target.name } } : null;
-  showHiddenAlert(warn ?? state.hiddenAlert);
+  showHiddenAlert(pickAlert(warn, state.hiddenAlert));
 }
 
 /** Sends one request for a hidden device, reads everything again and shows `okAlert`, or the failure. */
@@ -1005,6 +1005,7 @@ function onHiddenClick(event) {
       break;
     case "purge-cancel":
       state.purge = null;
+      state.hiddenAlert = null;
       purgeArming.clear();
       renderHidden();
       break;

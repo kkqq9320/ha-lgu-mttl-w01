@@ -13,7 +13,7 @@ const {
 
 const LIVING = "0a1b2c3d4e5f";
 const OFFICE = "0a1b2c3d4e60";
-const GARAGE = "0a1b2c3d4e62"; // offline, with a job that is still running
+const GARAGE = "0a1b2c3d4e62"; // offline, still on 1.0.66, with the update to 1.0.111 running
 const HIDDEN = "0a1b2c3d4e63";
 
 const actions = (data) => Object.fromEntries([...data.devices, ...data.removed].map((d) => [d.mac, d.firmware_action]));
@@ -54,13 +54,13 @@ test("demoProfileOf finds a profile or fails like the backend", () => {
 test("demoSetTarget makes a profile the target and refreshes every device", () => {
   const data = demoResponse();
   const initial = actions(data);
-  assert.deepEqual(initial, { [LIVING]: null, [OFFICE]: "update", "0a1b2c3d4e61": null, [GARAGE]: null, [HIDDEN]: null });
+  assert.deepEqual(initial, { [LIVING]: null, [OFFICE]: "update", "0a1b2c3d4e61": null, [GARAGE]: "update", [HIDDEN]: null });
 
   demoSetTarget(data, "official-110");
   assert.equal(data.firmware.target_profile, "official-110");
   assert.deepEqual(data.firmware.profiles.filter((p) => p.selected).map((p) => p.id), ["official-110"]);
   // 1.0.111 is newer than the target: a downgrade; the 1.0.66 strip still updates; hidden devices follow too.
-  assert.deepEqual(actions(data), { [LIVING]: "downgrade", [OFFICE]: "update", "0a1b2c3d4e61": "downgrade", [GARAGE]: "downgrade", [HIDDEN]: "downgrade" });
+  assert.deepEqual(actions(data), { [LIVING]: "downgrade", [OFFICE]: "update", "0a1b2c3d4e61": "downgrade", [GARAGE]: "update", [HIDDEN]: "downgrade" });
   const office = data.devices.find((d) => d.mac === OFFICE);
   assert.deepEqual(office.firmware_target, { profile_id: "official-110", version: "1.0.110", label: "UP · 1.0.110", kind: "official", ready: false });
   assert.equal(office.firmware_build_current, false);
@@ -192,6 +192,21 @@ test("demoShiftFirmwareTimes moves the sample jobs and files to now", () => {
   assert.ok(data.firmware.jobs.some((j) => j.completed_at === null), "a running job keeps its empty finish time");
   // Devices keep their times: the dashboard moves those itself.
   assert.equal(data.devices[0].last_seen, original.devices[0].last_seen);
+});
+
+test("a running demo job belongs to a strip that still reports the version the job started from", () => {
+  const data = demoResponse();
+  const running = data.firmware.jobs.filter(isJobActive);
+  assert.ok(running.length > 0, "the demo has an update in progress");
+  for (const job of running) {
+    const device = data.devices.find((d) => d.mac === job.mac);
+    assert.equal(device.firmware_version, job.from_version, job.mac);
+    // The strip has an update to do, so its window shows an update under way and not "matches the target".
+    assert.equal(device.firmware_action, "update", job.mac);
+    assert.equal(compareVersions(job.from_version, job.target_version), -1, job.mac);
+  }
+  // Every job of the sample data started from a version below its target, the way an update does.
+  for (const job of data.firmware.jobs) assert.equal(compareVersions(job.from_version, job.target_version) <= 0, true, job.id);
 });
 
 test("the settings page keeps no copy of the demo firmware simulation", () => {

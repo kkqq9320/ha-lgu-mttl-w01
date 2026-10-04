@@ -471,8 +471,8 @@ test("demo data covers the settings page", () => {
   assert.ok(hidden.removed_at > 0);
   assert.ok(hidden.channels.some((ch) => ch.energy_lifetime_wh > 0));
   assert.ok(!demo.devices.some((d) => d.mac === hidden.mac));
-  // The preloaded jobs do not change which devices count as "to update".
-  assert.equal(demo.devices.filter((d) => d.firmware_action).length, 1);
+  // Office waits for its update; Garage is still on 1.0.66 while its update runs (it is offline, so "update all" skips it).
+  assert.deepEqual(demo.devices.filter((d) => d.firmware_action).map((d) => d.mac), ["0a1b2c3d4e60", "0a1b2c3d4e62"]);
 
   const ha = demoHa();
   assert.deepEqual(
