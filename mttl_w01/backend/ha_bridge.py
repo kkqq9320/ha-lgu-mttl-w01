@@ -187,6 +187,9 @@ class HAController:
         timers=list(self._offline_timers.values());self._offline_timers.clear()
         for t in timers:t.cancel()
         c=self.client;self.client=None;self.connected=False;self.connected_since=None;self._last_state.clear()
+        return c
+    def _stop_client(self,c):
+        # Call without self.lock: loop_stop() joins paho's network thread, whose callbacks take self.lock.
         if c:
             try:c.publish(self.bridge_topic(),payload='offline',qos=1,retain=True).wait_for_publish(1)
             except Exception:pass
@@ -195,10 +198,14 @@ class HAController:
             try:c.loop_stop()
             except Exception:pass
     def stop(self):
-        with self.lock:self._generation+=1;self._stop_locked()
+        with self.lock:self._generation+=1;c=self._stop_locked()
+        self._stop_client(c)
     def reconfigure(self):
+        with self.lock:self._generation+=1;generation=self._generation;old=self._stop_locked()
+        self._stop_client(old)
         with self.lock:
-            self._generation+=1;generation=self._generation;self._stop_locked();self.last_error=None;c=self.config(True)
+            if generation!=self._generation:return
+            self.last_error=None;c=self.config(True)
             if not c['enabled']:return
             client=self._new_client(self.bridge_client_id(c));self.client=client
             if c['username'] or c['password']:client.username_pw_set(c['username'] or None,c['password'] or None)

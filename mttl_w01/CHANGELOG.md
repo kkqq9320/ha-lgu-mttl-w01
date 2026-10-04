@@ -11,6 +11,7 @@
 - `host_ip` is optional. When it is empty, the app takes the IPv4 address of the primary network interface from the Supervisor.
 - Supports amd64 and aarch64.
 - The MQTT service is optional (`mqtt:want`): the app starts without MQTT variables when no broker is available.
+- Fixes a hang in Tuo's backend: saving the MQTT settings while connected to the broker never finished, and the Home Assistant integration stayed disconnected until the app restarted.
 
 # 변경 기록
 
@@ -25,3 +26,4 @@
 - `host_ip`는 선택 사항이다. 비우면 Supervisor가 알려 주는 기본 네트워크 인터페이스의 IPv4 주소를 쓴다.
 - amd64와 aarch64를 지원한다.
 - MQTT 서비스는 필수가 아니다(`mqtt:want`). 브로커가 없으면 MQTT 변수 없이 시작한다.
+- 투오 백엔드의 멈춤을 고쳤다. 브로커에 연결된 동안 MQTT 설정을 저장하면 저장이 끝나지 않았고, 앱을 다시 시작할 때까지 Home Assistant 연동이 끊긴 채로 남았다.
