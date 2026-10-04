@@ -2,7 +2,7 @@
 
 [한국어](README.ko.md)
 
-A Home Assistant app (add-on) that runs Tuo's standalone backend for the LG U+ MTTL-W01 power strip. The power strips connect to Home Assistant over your own network instead of the LG U+ cloud. A dashboard in the Home Assistant sidebar switches the four outlets and shows power, energy and temperature. With the Mosquitto broker app installed, the outlets and their sensors also appear in Home Assistant through MQTT discovery.
+A Home Assistant app (add-on) that runs Tuo's standalone backend for the LG U+ MTTL-W01 power strip. The power strips connect to Home Assistant over your own network instead of the LG U+ cloud. A dashboard in the Home Assistant sidebar switches the four outlets and shows power, energy and temperature, and a settings page manages firmware updates and the MQTT connection. With the Mosquitto broker app installed, the outlets and their sensors also appear in Home Assistant through MQTT discovery.
 
 Each power strip needs Tuo's firmware 1.0.111, installed once with Tuo's PC tool. The [install guide](docs/install.md) covers the app and the power strips. The app version is the Tuo backend version followed by the packaging revision (`version` in [mttl_w01/config.yaml](mttl_w01/config.yaml)).
 

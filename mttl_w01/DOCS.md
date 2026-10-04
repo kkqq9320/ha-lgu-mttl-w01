@@ -2,7 +2,7 @@
 
 Korean follows English. 한국어 설명은 영어 설명 뒤에 있다.
 
-This app runs Tuo's standalone backend for LG U+ MTTL-W01 power strips. Installing the app, preparing the power strips and troubleshooting are covered in the [install guide](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.md).
+This app runs Tuo's standalone backend for LG U+ MTTL-W01 power strips. Installing the app, preparing the power strips, the settings page and device window, and troubleshooting are covered in the [install guide](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.md).
 
 ## Options
 
@@ -35,7 +35,7 @@ There is no login. Changes work only in the Home Assistant sidebar, which Home A
 
 # LG U+ 멀티탭 (MTTL-W01)
 
-이 앱은 LG U+ MTTL-W01 멀티탭용 투오 standalone 백엔드를 실행한다. 앱 설치, 멀티탭 준비, 문제 해결은 [설치 안내](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.ko.md)에 있다.
+이 앱은 LG U+ MTTL-W01 멀티탭용 투오 standalone 백엔드를 실행한다. 앱 설치, 멀티탭 준비, 설정 페이지와 기기 창, 문제 해결은 [설치 안내](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.ko.md)에 있다.
 
 ## 옵션
 

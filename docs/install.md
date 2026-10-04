@@ -22,14 +22,14 @@ If the Mosquitto broker app is installed, the app passes its connection details 
 
 The app has no login. Changes are accepted only through the Home Assistant sidebar:
 
-- **Sidebar.** Switching outlets, renaming, the child lock, firmware updates and the MQTT settings work only in **MTTL-W01** in the sidebar, or through **Open web UI** on the app page. Home Assistant's own login protects this page. Any change (POST or PUT) that does not come through the Home Assistant Supervisor gets 403 (`changes are only accepted through the Home Assistant sidebar`).
-- **Port 18282.** `http://192.0.2.10:18282` is for viewing and downloading. The dashboard there shows **VIEW ONLY** in place of **Unlock**, and the log page has no **Clear buffer**. Tuo's settings page opens there as well, but saving fails with the same 403. The APK download from the QR code, the PC tool's connection check and the link on each power strip's device page in Home Assistant only read, so they work on this port.
-- **Screen lock.** In the sidebar the dashboard opens locked every time. Select **Unlock** in the top bar to switch outlets, rename, set the child lock, refresh or hide a device, and **Lock** to lock it again. The screen lock prevents accidental presses and is not a security measure. Tuo's settings page (**Settings**) has no screen lock.
-- **Request header.** A change must also carry the header `X-MTTL-Request: 1`, which a web page on another site cannot send. The dashboard, the log page and Tuo's settings page add it.
+- **Sidebar.** Switching outlets, renaming, the child lock and every setting on the settings page and in the device window work only in **MTTL-W01** in the sidebar, or through **Open web UI** on the app page. Home Assistant's own login protects this page. Any change (POST or PUT) that does not come through the Home Assistant Supervisor gets 403 (`changes are only accepted through the Home Assistant sidebar`).
+- **Port 18282.** `http://192.0.2.10:18282` is for viewing and downloading. The dashboard there shows **VIEW ONLY** in place of **Unlock**, and the log page has no **Clear buffer**. The settings page, the device window and **HIDDEN DEVICES** show their values there, with every input and button disabled; only the downloads of firmware files and of the Lovelace card work. The APK download from the QR code, the PC tool's connection check and the link on each power strip's device page in Home Assistant only read, so they work on this port.
+- **Screen lock.** In the sidebar the dashboard opens locked every time. Select **Unlock** in the top bar to switch outlets, rename, set the child lock, refresh or hide a device, change a device's settings and restore or delete hidden devices, and **Lock** to lock it again. **DEVICE SETTINGS** opens while the dashboard is locked; only the changes in its window need **Unlock**. The screen lock prevents accidental presses and is not a security measure. The settings page has no screen lock.
+- **Request header.** A change must also carry the header `X-MTTL-Request: 1`, which a web page on another site cannot send. The dashboard, the log page and the settings page add it.
 
 What remains open: anyone on the same network who can reach port 18282 can read the device list, the power values and the logs, and download the APK, the PC tool and the firmware files. None of these responses contains a password. Keep ports 10086, 18282 and 49217 within your own network.
 
-Tuo's own documents ([docs/tuo](tuo/README.md) and [mttl_w01/backend/README.md](../mttl_w01/backend/README.md)) describe Tuo's standalone deployment, which has an admin login. This app removes that login and follows the rules above.
+Tuo's own documents ([docs/tuo](tuo/README.md) and [mttl_w01/backend/README.md](../mttl_w01/backend/README.md)) describe Tuo's standalone deployment, which has an admin login and Tuo's own web pages. This app removes that login, replaces those pages with its dashboard and settings page, and follows the rules above.
 
 ## Prepare the power strips
 
@@ -84,9 +84,15 @@ python mttl_setup.py install --version 66
 
 1.0.110 is Tuo's local-backend firmware without child lock, and 1.0.66 is the LG U+ stock-compatible firmware. Power strips on these versions download firmware over TCP port 80 only, which the app does not publish, so moving them back to 1.0.111 also takes the PC tool.
 
-## Troubleshooting
+## Settings page and device window
 
-Tuo's settings page (**Settings** on the dashboard, then **⚙ 설정**) is in Korean. Open it from the sidebar, the only place where it can save. The steps below quote its labels as they appear.
+Settings that apply to every power strip are on the settings page, and the settings of one power strip are in its device window. Both accept changes only in the sidebar; [Access and screen lock](#access-and-screen-lock) describes what the screen lock covers. This guide quotes the labels of the English display. The **EN**/**KR** switch in the top bar changes the language, and card and window titles stay in English.
+
+- **SETTINGS** in the top bar opens the settings page. Its cards are **FIRMWARE** (target version and OTA server), **FIRMWARE FILES**, **FIRMWARE JOBS**, **POLLING** (how often power and state are read) and **HOME ASSISTANT MQTT** (broker, reporting thresholds, resending discovery, the Lovelace card). The **Open settings** links on the dashboard's **Firmware** and **Home Assistant MQTT** cards go straight to the matching card. Actions with a lasting effect, such as a firmware update, need a second press.
+- **DEVICE SETTINGS** on a power strip's card opens its device window: the firmware update, **MEASUREMENT** (voltage, RSSI and the measurement interval) and **CHILD LOCK** (reads the state from the power strip again; firmware 1.0.111 only).
+- **HIDDEN DEVICES (N)** appears at the bottom of the dashboard once a device is hidden with **HIDE DEVICE**. **Show again** brings the device back with the name and accumulated energy it kept. **Delete history** erases that data for good: it takes a second press and then typing `DELETE`.
+
+## Troubleshooting
 
 ### The Home Assistant address changed
 
@@ -100,7 +106,7 @@ A DHCP reservation for the Home Assistant machine keeps its address from changin
 
 ### Firmware updates from the app do not start
 
-The power strips download firmware from the address shown as **OTA server** on the dashboard's **Firmware** card. The backend takes this address from `host_ip` at its first start only and keeps it afterwards. To change it, open **⚙ 설정 → 펌웨어 관리**, enter the address in **UP OTA 다운로드 서버 IPv4** and select **목표/OTA 주소 저장**.
+The power strips download firmware from the address shown as **OTA server** on the dashboard's **Firmware** card. The backend takes this address from `host_ip` at its first start only and keeps it afterwards. To change it, select **SETTINGS** to open the [settings page](#settings-page-and-device-window), enter the address in **OTA server IPv4** on the **FIRMWARE** card and select **Save**.
 
 Power strips on firmware 1.0.110 or 1.0.66 cannot update from the app; see [Roll back the firmware](#roll-back-the-firmware).
 
@@ -108,5 +114,5 @@ Power strips on firmware 1.0.110 or 1.0.66 cannot update from the app; see [Roll
 
 The backend stores the Mosquitto connection details once, at the first start that finds a broker, and keeps its stored settings afterwards.
 
-- If the Mosquitto broker app was installed after this app, restart this app. This works while no MQTT settings have been saved in Tuo's settings page.
-- To use other broker settings, open **⚙ 설정 → Home Assistant MQTT**, turn on **HA 연동 사용**, enter the broker address (`core-mosquitto` for the Mosquitto broker app), port, user name (**MQTT ID**) and password, and select **저장 / 연결**. **연결 테스트** tests the connection.
+- If the Mosquitto broker app was installed after this app, restart this app. This works while no MQTT settings have been saved on the settings page.
+- To use other broker settings, select **SETTINGS** to open the [settings page](#settings-page-and-device-window), turn on **Use the Home Assistant integration** on the **HOME ASSISTANT MQTT** card, enter the broker address (`core-mosquitto` for the Mosquitto broker app), port, user name (**MQTT ID**) and password, and select **Save**. **Test connection** tries the values you entered.
