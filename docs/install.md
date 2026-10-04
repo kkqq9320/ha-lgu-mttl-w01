@@ -89,7 +89,7 @@ python mttl_setup.py install --version 66
 Settings that apply to every power strip are on the settings page, and the settings of one power strip are in its device window. Both accept changes only in the sidebar; [Access and screen lock](#access-and-screen-lock) describes what the screen lock covers. This guide quotes the labels of the English display. The **EN**/**KR** switch in the top bar changes the language, and card and window titles stay in English.
 
 - **SETTINGS** in the top bar opens the settings page. Its cards are **FIRMWARE** (target version and OTA server), **FIRMWARE FILES**, **FIRMWARE JOBS**, **POLLING** (how often power and state are read) and **HOME ASSISTANT MQTT** (broker, reporting thresholds, resending discovery, the Lovelace card). The **Open settings** links on the dashboard's **Firmware** and **Home Assistant MQTT** cards go straight to the matching card. Actions with a lasting effect, such as a firmware update, need a second press.
-- **DEVICE SETTINGS** on a power strip's card opens its device window: the firmware update (on firmware below 1.0.111 the window points to the PC tool, see [Roll back the firmware](#roll-back-the-firmware)), **MEASUREMENT** (voltage, RSSI and the measurement interval) and **CHILD LOCK** (reads the state from the power strip again; firmware 1.0.111 only).
+- **DEVICE SETTINGS** on a power strip's card opens its device window: the firmware update (below firmware 1.0.111 its button stays off and the window points to the PC tool, see [Roll back the firmware](#roll-back-the-firmware)), **MEASUREMENT** (voltage, RSSI and the measurement interval) and **CHILD LOCK** (reads the state from the power strip again; firmware 1.0.111 only).
 - **HIDDEN DEVICES (N)** appears at the bottom of the dashboard once a device is hidden with **HIDE DEVICE**. **Show again** brings the device back with the name and accumulated energy it kept. **Delete history** erases that data for good: press it a second time, type `DELETE`, then press **Delete permanently**.
 
 ## Troubleshooting
@@ -108,7 +108,7 @@ A DHCP reservation for the Home Assistant machine keeps its address from changin
 
 The power strips download firmware from the address shown as **OTA server** on the dashboard's **Firmware** card. The backend takes this address from `host_ip` at its first start only and keeps it afterwards. To change it, select **SETTINGS** to open the [settings page](#settings-page-and-device-window), enter the address in **OTA server IPv4** on the **FIRMWARE** card and select **Save**.
 
-Power strips on firmware 1.0.110 or 1.0.66 cannot update from the app; see [Roll back the firmware](#roll-back-the-firmware).
+Power strips on firmware 1.0.110 or 1.0.66 cannot update from the app: the update button in their device window stays off, and the confirmation of **Update all** on the settings page marks them as "will fail, PC tool needed". See [Roll back the firmware](#roll-back-the-firmware).
 
 ### MQTT is not connected
 

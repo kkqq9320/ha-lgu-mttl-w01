@@ -3,7 +3,7 @@
 import {
   NA, DIAG_INTERVALS, t, normalizeMac, fmtMac, fmtAge, fmtAgo, pressConfirm, scriptLang, intervalUnit,
   cardModel, cardNotice, summaryModel, apkUrl, apkUrlForHost, isViewOnly,
-  deviceTitle, deviceWindowModel, measureForm, measurePayload, hiddenModel, deleteWordOk, lockErrorKey, otaWarnKeys, jobLabel, pickAlert,
+  deviceTitle, deviceWindowModel, measureForm, measurePayload, hiddenModel, deleteWordOk, lockErrorKey, otaWarnKeys, fwNoteKey, jobLabel, pickAlert,
   apiGet, apiSend, createDeviceAdminApi, reducePoll, withDevice, diffMacs, canToggleLock, toggleMask, applyPending, nameEditOutcome,
   demoResponse, demoHa, demoShiftFirmwareTimes, demoAdvanceJob, demoQueueJob, demoSetDiagnostics, demoRereadLock, demoRestore, demoPurge,
 } from "./dashboard-core.mjs";
@@ -734,13 +734,10 @@ function renderWindow() {
   setValue(f.fwCurrent, fw.current);
   setValue(f.fwTarget, fw.target);
   const target = raw.firmware_target;
-  const noteKey = fw.target === null ? null
-    : fw.action === null ? "dw_fw_match"
-      : fw.block === "not_ready" ? "dw_not_ready"
-        : target?.kind === "official" && target.ready !== true ? "dw_auto_prepare" : null;
+  const noteKey = fwNoteKey(fw, target, m.pcTool);
   setText(f.fwNote, noteKey ? t(lang, noteKey) : "");
   setHidden(f.fwNote, noteKey === null);
-  // Below 1.0.111 a strip listens for firmware on TCP 80 only, which the app does not open. The buttons stay as they are.
+  // Below 1.0.111 a strip listens for firmware on TCP 80 only, which the app does not open; deviceFirmware turns the update button off.
   setText(f.fwPort, m.pcTool ? t(lang, "dw_port80") : "");
   setHidden(f.fwPort, !m.pcTool);
   const job = fw.job;

@@ -147,8 +147,8 @@ export const STRINGS = {
     job_failed_version: "Failed: version mismatch",
     job_failed_internal: "Failed: internal error",
     hint_111: "Physical-button Child Lock. OTA tries TCP 49217 first, then 80.",
-    hint_110: "Local backend support. OTA on TCP 80, which the app does not open. Returning to 1.0.111 needs the PC tool.",
-    hint_66: "Stock LG U+ firmware. OTA on TCP 80, which the app does not open. Returning to 1.0.111 needs the PC tool.",
+    hint_110: "Local backend support. A strip on this version receives firmware only over TCP 80, which the app does not open, so returning to 1.0.111 needs the PC tool.",
+    hint_66: "Stock LG U+ firmware. A strip on this version receives firmware only over TCP 80, which the app does not open, so returning to 1.0.111 needs the PC tool.",
     hint_custom: "A file that only passed structure validation.",
     fwr_ext: "Choose a .fwr file.",
     fwr_size: "The file must be 327,944 bytes.",
@@ -173,6 +173,7 @@ export const STRINGS = {
     fw_save_first: "Save the target and address before updating.",
     fw_prepared: "Firmware prepared and verified.",
     fw_all_warn: "Updates these devices one at a time. Do not cut power during an update.",
+    fw_all_pc: "will fail, PC tool needed",
     fw_all_started: "Queued updates for {n} device(s).",
     fw_target_mark: "Target",
     fw_ready: "Ready",
@@ -293,8 +294,8 @@ export const STRINGS = {
     job_failed_version: "실패: 버전 불일치",
     job_failed_internal: "실패: 내부 오류",
     hint_111: "물리 버튼 Child Lock. OTA는 TCP 49217을 먼저, 실패하면 80.",
-    hint_110: "로컬 백엔드 지원. OTA는 TCP 80이며 앱은 이 포트를 열지 않습니다. 1.0.111로 돌아오려면 PC 도구가 필요합니다.",
-    hint_66: "LG U+ 순정. OTA는 TCP 80이며 앱은 이 포트를 열지 않습니다. 1.0.111로 돌아오려면 PC 도구가 필요합니다.",
+    hint_110: "로컬 백엔드 지원. 이 판을 쓰는 멀티탭은 TCP 80으로만 펌웨어를 받는데 앱은 이 포트를 열지 않으므로, 1.0.111로 돌아오려면 PC 도구가 필요합니다.",
+    hint_66: "LG U+ 순정. 이 판을 쓰는 멀티탭은 TCP 80으로만 펌웨어를 받는데 앱은 이 포트를 열지 않으므로, 1.0.111로 돌아오려면 PC 도구가 필요합니다.",
     hint_custom: "구조 검증만 통과한 파일.",
     fwr_ext: ".fwr 파일을 고르세요.",
     fwr_size: "파일 크기가 327,944바이트여야 합니다.",
@@ -312,6 +313,7 @@ export const STRINGS = {
     fw_save_first: "업데이트하기 전에 목표와 주소를 먼저 저장하세요.",
     fw_prepared: "펌웨어를 준비하고 검증했습니다.",
     fw_all_warn: "아래 기기를 한 대씩 업데이트합니다. 업데이트 중에는 전원을 끄지 마세요.",
+    fw_all_pc: "실패 예정, PC 도구 필요",
     fw_all_started: "{n}대의 업데이트를 시작했습니다.",
     fw_target_mark: "목표",
     fw_ready: "준비됨",
@@ -760,6 +762,18 @@ export function otaWarnKeys(action, target) {
     ...(action === "downgrade" && needsPcTool(target?.version) ? ["pc_return"] : []),
     ...(target?.kind === "custom" ? ["dw_ota_custom"] : []),
   ];
+}
+
+/**
+ * Key of the note under the version lines of the device window, or null. A strip below 1.0.111 gets no update note
+ * (`pcTool`): its update cannot start from the app, and dw_port80 says why, so "prepared when the update starts" would mislead.
+ */
+export function fwNoteKey(fw, target, pcTool) {
+  if (fw.target === null) return null;
+  if (fw.action === null) return "dw_fw_match";
+  if (pcTool) return null;
+  if (fw.block === "not_ready") return "dw_not_ready";
+  return target?.kind === "official" && target.ready !== true ? "dw_auto_prepare" : null;
 }
 
 /** Text of an OTA job state; a state this page does not know is shown as the backend sent it. */

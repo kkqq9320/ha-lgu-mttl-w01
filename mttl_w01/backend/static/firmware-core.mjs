@@ -71,10 +71,11 @@ export function latestJobFor(jobs, mac) {
 
 /**
  * What the screen needs to decide a firmware button for one device. `firmware` is the backend's
- * `firmware` object (`jobs`). `block` is why no update can start: a running job ("busy"), the device is
- * offline, or its target is a custom file that is not ready. A running job wins over offline because
- * a strip reboots during an OTA job. An official target that is not prepared yet is no block; Tuo builds
- * it when the update starts.
+ * `firmware` object (`jobs`). `block` is why no update can start, the first that applies of: a running job
+ * ("busy"), the device is offline, its firmware is below 1.0.111 ("pc_tool": it takes firmware over TCP 80 only,
+ * which the app does not open), or its target is a custom file that is not ready. A running job wins over
+ * offline because a strip reboots during an OTA job. An official target that is not prepared yet is no block;
+ * Tuo builds it when the update starts.
  */
 export function deviceFirmware(device, firmware) {
   const action = FW_ACTIONS.includes(device?.firmware_action) ? device.firmware_action : null;
@@ -84,6 +85,7 @@ export function deviceFirmware(device, firmware) {
   let block = null;
   if (active) block = "busy";
   else if (device?.online !== true) block = "offline";
+  else if (needsPcTool(device?.firmware_version)) block = "pc_tool";
   else if (target?.kind === "custom" && target.ready !== true) block = "not_ready";
   return {
     current: device?.firmware_version ?? null,

@@ -13,7 +13,7 @@ const {
   reducePoll, diffMacs, canToggleLock, toggleMask, withDevice, applyPending, nameEditOutcome,
   apiGet, apiSend, apiSendRaw,
   DIAG_INTERVALS, DIAG_DEFAULT, deviceTitle, deviceWindowModel, measureForm, measurePayload, hiddenModel, deleteWordOk,
-  lockErrorKey, otaWarnKeys, jobLabel, cardNotice, pickAlert, intervalUnit, fmtAgo, demoConfig,
+  lockErrorKey, otaWarnKeys, fwNoteKey, jobLabel, cardNotice, pickAlert, intervalUnit, fmtAgo, demoConfig,
 } = core;
 
 const staticFile = (name) => readFileSync(new URL(`../../mttl_w01/backend/static/${name}`, import.meta.url), "utf-8");
@@ -675,8 +675,10 @@ test("deviceWindowModel reads firmware from deviceFirmware and measurement from 
 
   const office = deviceWindowModel(demoDevice(OFFICE), data.firmware, open);
   assert.deepEqual(office.measure, { voltage: false, rssi: false, interval: 60 });
+  // Office is on 1.0.66: the update is due, but the app cannot start it (TCP 80 only).
   assert.equal(office.fw.action, "update");
-  assert.equal(office.fw.canUpdate, true);
+  assert.equal(office.fw.canUpdate, false);
+  assert.equal(office.fw.block, "pc_tool");
   assert.equal(office.fw.target, "1.0.111");
 
   // The strip that reboots during its update: an update to 1.0.111 is under way, so the window never says "matches".
@@ -705,13 +707,36 @@ test("deviceWindowModel says the PC tool installs firmware on a strip below 1.0.
   assert.equal(deviceWindowModel(demoDevice(GARAGE), data.firmware, open).pcTool, true);
   assert.equal(deviceWindowModel(demoDevice(LIVING), data.firmware, open).pcTool, false);
   assert.equal(deviceWindowModel({ ...demoDevice(LIVING), firmware_version: "1.0.110" }, data.firmware, open).pcTool, true);
-  // The note does not depend on the lock, the connection or the target; the buttons stay as they were.
+  // The note does not depend on the lock, the connection or the target.
   const locked = deviceWindowModel({ ...demoDevice(OFFICE), online: false }, data.firmware, { unlocked: false, viewOnly: true });
   assert.equal(locked.pcTool, true);
   assert.equal(deviceWindowModel({ ...demoDevice(OFFICE), firmware_version: null }, data.firmware, open).pcTool, false);
   assert.equal(deviceWindowModel(null, null, open).pcTool, false);
+  // The update button is off for it, and the same note says why. A strip on 1.0.111 can update.
   const office = deviceWindowModel(demoDevice(OFFICE), data.firmware, open);
-  assert.equal(office.fw.canUpdate, true);
+  assert.equal(office.fw.canUpdate, false);
+  assert.equal(office.fw.block, "pc_tool");
+  const reflash = { ...demoDevice(LIVING), firmware_action: "reflash" };
+  const living = deviceWindowModel(reflash, data.firmware, open);
+  assert.equal(living.fw.canUpdate, true);
+  assert.equal(living.pcTool, false);
+});
+
+test("fwNoteKey: a strip below 1.0.111 gets the TCP 80 note and none of the update notes", () => {
+  const official = { kind: "official", ready: false };
+  const fw = (extra = {}) => ({ target: "1.0.111", action: "update", block: null, ...extra });
+  assert.equal(fwNoteKey(fw(), official, false), "dw_auto_prepare");
+  assert.equal(fwNoteKey(fw(), { kind: "official", ready: true }, false), null);
+  assert.equal(fwNoteKey(fw({ block: "not_ready" }), { kind: "custom", ready: false }, false), "dw_not_ready");
+  assert.equal(fwNoteKey(fw({ action: null }), official, false), "dw_fw_match");
+  assert.equal(fwNoteKey(fw({ target: null, action: null }), official, false), null);
+  // Below 1.0.111 the update cannot start, so "prepared when the update starts" would mislead; dw_port80 is the reason.
+  assert.equal(fwNoteKey(fw({ block: "pc_tool" }), official, true), null);
+  assert.equal(fwNoteKey(fw({ block: "pc_tool" }), { kind: "custom", ready: false }, true), null);
+  assert.equal(fwNoteKey(fw({ block: "busy" }), official, true), null);
+  // Matching the target is still true for such a strip.
+  assert.equal(fwNoteKey(fw({ action: null }), official, true), "dw_fw_match");
+  assert.equal(fwNoteKey(fw(), null, false), null);
 });
 
 test("the measurement choices are the backend's", () => {
@@ -833,17 +858,30 @@ test("otaWarnKeys adds the PC tool note to a downgrade below 1.0.111 only", () =
 });
 
 test("the PC tool texts exist in EN and KR and name the tool and 1.0.111", () => {
-  for (const key of ["pc_return", "dw_port80", "hint_110", "hint_66"]) {
+  for (const key of ["pc_return", "dw_port80", "hint_110", "hint_66", "fw_all_pc"]) {
     for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][key], `${lang}.${key}`);
     assert.ok(!ENGLISH_ONLY.includes(key), key);
     assert.match(STRINGS.ko[key], /\p{Script=Hangul}/u, key);
     assert.match(STRINGS.en[key], /PC tool/, `en.${key}`);
     assert.match(STRINGS.ko[key], /PC 도구/, `ko.${key}`);
   }
+  // The mark in the update-all list is short: it follows the device's line.
+  assert.equal(STRINGS.en.fw_all_pc, "will fail, PC tool needed");
+  assert.equal(STRINGS.ko.fw_all_pc, "실패 예정, PC 도구 필요");
   // Going back to 1.0.111 is the point of the downgrade note and of both hints.
   for (const key of ["pc_return", "hint_110", "hint_66"]) {
     assert.match(STRINGS.en[key], /1\.0\.111/, `en.${key}`);
     assert.match(STRINGS.ko[key], /1\.0\.111/, `ko.${key}`);
+  }
+  // The hints speak of a strip that runs that version (it takes firmware over TCP 80 only). They do not say a strip on
+  // 1.0.111 fails to go down to it: that works over TCP 49217.
+  for (const key of ["hint_110", "hint_66"]) {
+    assert.match(STRINGS.en[key], /strip on this version/, key);
+    assert.match(STRINGS.ko[key], /이 판을 쓰는 멀티탭/, key);
+    assert.match(STRINGS.en[key], /TCP 80/);
+    assert.match(STRINGS.ko[key], /TCP 80/);
+    assert.doesNotMatch(STRINGS.en[key], /downgrad/i, key);
+    assert.doesNotMatch(STRINGS.ko[key], /다운그레이드/, key);
   }
   // The window's note says why: the strip listens on TCP 80 only and the app does not open that port.
   assert.match(STRINGS.en.dw_port80, /TCP 80/);
@@ -977,6 +1015,9 @@ test("the device window's FIRMWARE section has its own line for the TCP 80 note,
   const src = staticFile("dashboard.mjs");
   assert.match(src, /setText\(f\.fwPort, m\.pcTool \? t\(lang, "dw_port80"\) : ""\)/);
   assert.match(src, /setHidden\(f\.fwPort, !m\.pcTool\)/);
+  assert.match(src, /const noteKey = fwNoteKey\(fw, target, m\.pcTool\);/);
+  // The button follows deviceFirmware's canUpdate, which is off for a strip below 1.0.111.
+  assert.match(src, /const can = controls && fw\.canUpdate;/);
 });
 
 test("the install guide names every button of the permanent delete as the screen shows it", () => {
@@ -988,6 +1029,15 @@ test("the install guide names every button of the permanent delete as the screen
     // The last button, which stays off until DELETE is typed.
     assert.ok(line.includes(`**${STRINGS[lang].purge_do}**`), `${file} names ${STRINGS[lang].purge_do}`);
     assert.ok(line.includes("`DELETE`"), `${file} names the word`);
+  }
+});
+
+test("the install guide quotes the update-all mark and the update button's state for a strip below 1.0.111", () => {
+  const guide = (name) => readFileSync(new URL(`../../docs/${name}`, import.meta.url), "utf-8");
+  for (const [file, lang] of [["install.md", "en"], ["install.ko.md", "ko"]]) {
+    const text = guide(file);
+    assert.ok(text.includes(`"${STRINGS[lang].fw_all_pc}"`), `${file} quotes ${STRINGS[lang].fw_all_pc}`);
+    assert.ok(text.includes(`**${lang === "en" ? "Update all" : "모두 순차 업데이트"}**`), `${file} names the update-all button`);
   }
 });
 

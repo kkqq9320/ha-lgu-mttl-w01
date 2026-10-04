@@ -13,7 +13,7 @@ const {
   POLL_CHOICES, POWER_THRESHOLDS, REPORT_INTERVALS, ENERGY_THRESHOLDS, MQTT_FIELDS, JOB_ROW_LIMIT,
   isIPv4, validateFirmware, validateMqtt, dirtyKeys, mergeDraft, mqttPayload, mqttTestPayload, mqttNeedsConfirm, targetDirty,
   mqttDraft, firmwareDraft, firmwareChangedKeys, firmwareControls, mqttControls, pollCanSave,
-  fmtBytes, shortSha, deviceLabel, profileTitle, profileRows, jobRows, fileChoice,
+  fmtBytes, shortSha, deviceLabel, profileTitle, profileRows, jobRows, fileChoice, updateAllRows,
 } = settings;
 
 test("isIPv4 rejects leading zeros, IPv6 and garbage", () => {
@@ -521,7 +521,7 @@ test("every text the settings page uses exists in EN and KR", () => {
   for (const m of settingsMjs().matchAll(/\bt\(\s*(?:page\.lang|lang),\s*"([a-z0-9_]+)"/g)) keys.add(m[1]);
   for (const m of settingsMjs().matchAll(/\bkey: "([a-z0-9_]+)"/g)) keys.add(m[1]);
   for (const m of settingsMjs().matchAll(/\bafter: [^\n]*?"([a-z0-9_]+)"/g)) keys.add(m[1]);
-  for (const m of SETTINGS_CORE().matchAll(/"(err_[a-z0-9_]+|fw_custom)"/g)) keys.add(m[1]);
+  for (const m of SETTINGS_CORE().matchAll(/"(err_[a-z0-9_]+|fw_custom|fw_all_pc)"/g)) keys.add(m[1]);
   // intervalUnit, which the page shares with the device window, is in dashboard-core.mjs.
   for (const m of staticFile("dashboard-core.mjs").matchAll(/"(unit_[a-z]+)"/g)) keys.add(m[1]);
   assert.ok(keys.size > 40, `scan found ${keys.size} keys`);
@@ -531,6 +531,39 @@ test("every text the settings page uses exists in EN and KR", () => {
   for (const key of keys) {
     for (const lang of ["en", "ko"]) assert.ok(typeof STRINGS[lang][key] === "string" && STRINGS[lang][key] !== "", `${lang}.${key}`);
   }
+});
+
+// ---- The confirm list of "update all" ----
+
+test("updateAllRows marks a device below 1.0.111 as one that will fail", () => {
+  const targets = [
+    { mac: "0a1b2c3d4e5f", name: "Living Room", from: "1.0.111", to: "1.0.112" },
+    { mac: "0a1b2c3d4e60", name: "Office Desk", from: "1.0.66", to: "1.0.111" },
+    { mac: "0a1b2c3d4e61", name: "MTTL 3D4E61", from: "1.0.110", to: null },
+    { mac: "0a1b2c3d4e62", name: "Garage", from: null, to: "1.0.111" },
+  ];
+  assert.deepEqual(updateAllRows(targets), [
+    { text: "Living Room  1.0.111 → 1.0.112", mark: null },
+    { text: "Office Desk  1.0.66 → 1.0.111", mark: "fw_all_pc" },
+    { text: "MTTL 3D4E61  1.0.110 → N/A", mark: "fw_all_pc" },
+    { text: "Garage  N/A → 1.0.111", mark: null },
+  ]);
+  assert.deepEqual(updateAllRows([]), []);
+  assert.deepEqual(updateAllRows(null), []);
+  // The list the confirm shows is the backend's target list, nothing more or less.
+  const saved = firmwareDraft(demoResponse().firmware);
+  const base = { saved, draft: saved, profiles: profiles(), devices: devices(), viewOnly: false, busy: false };
+  const controls = firmwareControls(base);
+  assert.deepEqual(updateAllRows(controls.targets).length, controls.targets.length);
+  // With the default 1.0.111 target the demo's Office Desk (1.0.66) is in the list and marked.
+  const office = updateAllRows(controls.targets).find((r) => r.text.startsWith("Office Desk"));
+  assert.equal(office.mark, "fw_all_pc");
+});
+
+test("the update-all warning lists rows with their marks", () => {
+  const src = settingsMjs();
+  assert.match(src, /updateAllRows\(controls\.targets\)/);
+  assert.match(src, /r\.mark/);
 });
 
 // ---- Choosing a firmware file ----

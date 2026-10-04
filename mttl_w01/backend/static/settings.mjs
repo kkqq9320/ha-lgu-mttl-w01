@@ -8,7 +8,7 @@ import { FWR_SIZE, profileHintKey } from "./firmware-core.mjs";
 import {
   POLL_CHOICES, POWER_THRESHOLDS, REPORT_INTERVALS, ENERGY_THRESHOLDS, MQTT_FIELDS,
   isIPv4, dirtyKeys, mergeDraft, mqttPayload, mqttTestPayload, mqttDraft, firmwareDraft,
-  firmwareControls, mqttControls, pollCanSave, fmtBytes, profileTitle, profileRows, jobRows, fileChoice,
+  firmwareControls, mqttControls, pollCanSave, fmtBytes, profileTitle, profileRows, jobRows, fileChoice, updateAllRows,
   createSettingsApi, settleRequest, refreshReads,
 } from "./settings-core.mjs";
 import {
@@ -238,7 +238,7 @@ function armedAlert(id, controls) {
       kind: "warn",
       key: "fw_all_warn",
       after: controls.returnNeedsPcTool ? "pc_return" : null,
-      items: controls.targets.map((x) => `${x.name}  ${x.from ?? NA} → ${x.to ?? NA}`),
+      items: updateAllRows(controls.targets).map((r) => (r.mark ? `${r.text} · ${t(page.lang, r.mark)}` : r.text)),
     };
   }
   if (id === "mqtt-save") return { kind: "warn", key: "mqtt_save_warn" };

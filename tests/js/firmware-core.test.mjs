@@ -69,14 +69,17 @@ test("isJobActive and jobTone", () => {
   assert.equal(jobTone(null), "warn");
 });
 
-test("deviceFirmware blocks offline, busy and unready custom targets only", () => {
-  const dev = device();
+// A strip on 1.0.111 that installs the verified build again: nothing blocks it.
+const modern = (extra = {}) => device({ firmware_version: "1.0.111", firmware_action: "reflash", ...extra });
+
+test("deviceFirmware blocks offline, busy, below-1.0.111 and unready custom targets only", () => {
+  const dev = modern();
   const r = deviceFirmware(dev, { jobs: [] });
   assert.equal(r.canUpdate, true);
   assert.equal(r.block, null);
-  assert.equal(r.current, "1.0.66");
+  assert.equal(r.current, "1.0.111");
   assert.equal(r.target, "1.0.111");
-  assert.equal(r.action, "update");
+  assert.equal(r.action, "reflash");
   assert.equal(r.job, null);
   assert.equal(r.active, false);
   assert.equal(deviceFirmware({ ...dev, online: false }, { jobs: [] }).block, "offline");
@@ -104,8 +107,33 @@ test("deviceFirmware blocks offline, busy and unready custom targets only", () =
   assert.equal(deviceFirmware({ ...dev, firmware_action: null }, { jobs: [] }).action, null);
 });
 
+test("deviceFirmware blocks a strip below 1.0.111: the app opens TCP 49217, not TCP 80", () => {
+  for (const version of ["1.0.66", "1.0.110"]) {
+    const r = deviceFirmware(device({ firmware_version: version }), { jobs: [] });
+    assert.equal(r.block, "pc_tool", version);
+    assert.equal(r.canUpdate, false, version);
+    // The action is still reported; only starting it is blocked.
+    assert.equal(r.action, "update", version);
+    assert.equal(r.current, version);
+  }
+  for (const version of ["1.0.111", "1.0.112"]) assert.equal(deviceFirmware(device({ firmware_version: version }), { jobs: [] }).block, null, version);
+  // A version the screen cannot read is no reason to block.
+  assert.equal(deviceFirmware(device({ firmware_version: null }), { jobs: [] }).block, null);
+  assert.equal(deviceFirmware(device({ firmware_version: "x" }), { jobs: [] }).block, null);
+  // Order of the reasons: a running job, offline, below 1.0.111, a custom file that is not ready.
+  const old = device({ firmware_version: "1.0.66" });
+  assert.equal(deviceFirmware(old, { jobs: [{ mac: MAC, state: "DOWNLOADING", updated_at: 5 }] }).block, "busy");
+  assert.equal(deviceFirmware({ ...old, online: false }, { jobs: [{ mac: MAC, state: "RECONNECTING", updated_at: 5 }] }).block, "busy");
+  assert.equal(deviceFirmware({ ...old, online: false }, { jobs: [] }).block, "offline");
+  const custom = { ...old, firmware_target: { ...old.firmware_target, kind: "custom", ready: false } };
+  assert.equal(deviceFirmware(custom, { jobs: [] }).block, "pc_tool");
+  assert.equal(deviceFirmware({ ...custom, firmware_version: "1.0.111" }, { jobs: [] }).block, "not_ready");
+  // A finished job does not lift it.
+  assert.equal(deviceFirmware(old, { jobs: [{ mac: MAC, state: "FAILED_DOWNLOAD", updated_at: 5 }] }).block, "pc_tool");
+});
+
 test("deviceFirmware keeps the newest finished job and tolerates missing data", () => {
-  const dev = device();
+  const dev = modern();
   const done = deviceFirmware(dev, { jobs: [{ mac: dev.mac, state: "FAILED_ACK", updated_at: 7 }] });
   assert.equal(done.job.state, "FAILED_ACK");
   assert.equal(done.active, false);

@@ -242,6 +242,17 @@ export function firmwareControls({ saved, draft, profiles, devices, viewOnly, bu
 }
 
 /**
+ * The rows of the confirm list of "update all", one per target of the backend's `ota-all`. `mark` is the key of a note
+ * for a device that will fail: below 1.0.111 it takes firmware over TCP 80 only, which the app does not open.
+ */
+export function updateAllRows(targets) {
+  return (Array.isArray(targets) ? targets : []).map((x) => ({
+    text: `${x.name}  ${x.from ?? NA} → ${x.to ?? NA}`,
+    mark: needsPcTool(x.from) ? "fw_all_pc" : null,
+  }));
+}
+
+/**
  * What a firmware file input's event does. A browser fires `input` and then `change` for one choice, and a rejected file is
  * emptied from the input right after its check, so the second event would find no file and wipe the reason. Only `change`
  * counts. `fault` is a key of checkFwrFile, or null when the file is fine or none is chosen.
