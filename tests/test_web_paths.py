@@ -66,10 +66,14 @@ class WebPathsTest(unittest.TestCase):
             ("/", "dashboard.html", html),
             # The demo log page links back to dashboard.html?demo, which a plain static preview serves too.
             ("/dashboard.html", "dashboard.html", html),
-            ("/tuo.html", "index.html", html),
             ("/dashboard.css", "dashboard.css", "text/css; charset=utf-8"),
             ("/dashboard.mjs", "dashboard.mjs", js),
             ("/dashboard-core.mjs", "dashboard-core.mjs", js),
+            ("/settings.html", "settings.html", html),
+            ("/settings.mjs", "settings.mjs", js),
+            ("/settings-core.mjs", "settings-core.mjs", js),
+            ("/firmware-core.mjs", "firmware-core.mjs", js),
+            ("/settings.css", "settings.css", "text/css; charset=utf-8"),
             ("/qr.mjs", "qr.mjs", js),
             ("/logs.html", "logview.html", html),
             # The demo dashboard links to logview.html?demo, which a plain static preview serves too.
@@ -86,6 +90,16 @@ class WebPathsTest(unittest.TestCase):
         self.assertNotIn("'static/logs.html'", src)
         self.assertNotIn("'static/logs.js'", src)
 
+    def test_tuo_page_not_routed(self):
+        # Tuo's own page and script stay in the repository but are no longer served.
+        src = BACKEND.read_text(encoding="utf-8")
+        self.assertNotIn("p=='/tuo.html'", src)
+        self.assertNotIn("p=='/app.js'", src)
+        self.assertNotIn("'static/index.html'", src)
+        self.assertNotIn("'static/app.js'", src)
+        self.assertTrue((STATIC / "index.html").is_file())
+        self.assertTrue((STATIC / "app.js").is_file())
+
     def test_clients_send_request_header(self):
         app = (STATIC / "app.js").read_text(encoding="utf-8")
         api = next(line for line in app.splitlines() if line.startswith("async function api("))
@@ -93,12 +107,23 @@ class WebPathsTest(unittest.TestCase):
         self.assertIn("...o.headers,'X-MTTL-Request':'1'", api)
         core = (STATIC / "dashboard-core.mjs").read_text(encoding="utf-8")
         self.assertIn('"X-MTTL-Request": "1"', core)
-        for name in ("dashboard.mjs", "logview.mjs"):
-            with self.subTest(file=name):
+        # Every request goes through apiGet, apiSend and apiSendRaw, the only callers of fetch.
+        self.assertEqual(len(re.findall(r"\bfetch\(", core)), 3)
+        for name, sender in (
+            ("dashboard.mjs", "apiSend("),
+            ("logview.mjs", "apiSend("),
+            ("settings-core.mjs", "apiSend("),
+            ("settings-core.mjs", "apiSendRaw("),
+            ("settings.mjs", None),
+            ("firmware-core.mjs", None),
+        ):
+            with self.subTest(file=name, sender=sender):
                 src = (STATIC / name).read_text(encoding="utf-8")
-                self.assertIn("apiSend(", src)
-                # Every request goes through apiGet/apiSend in dashboard-core.mjs.
+                if sender:
+                    self.assertIn(sender, src)
                 self.assertNotIn("fetch(", src)
+                self.assertNotIn("XMLHttpRequest", src)
+                self.assertNotIn("sendBeacon", src)
 
     def test_frame_options_sameorigin(self):
         src = BACKEND.read_text(encoding="utf-8")

@@ -1,8 +1,9 @@
-// Settings page logic without DOM access: input checks, what the user has changed, and which buttons are on.
+// Settings page logic without DOM access: input checks, what the user has changed, which buttons are on,
+// the requests of the live data source and the order of a request and the reading after it.
 // Texts live in dashboard-core.mjs STRINGS; the functions here return their keys.
-// settings.mjs wires it to the page; tests/js/settings-core.test.mjs runs it under Node.
+// settings.mjs wires it to the page; tests/js/settings-core.test.mjs and api-sources.test.mjs run it under Node.
 
-import { NA, normalizeMac, fmtAgo } from "./dashboard-core.mjs";
+import { NA, normalizeMac, fmtAgo, apiGet, apiSend, apiSendRaw } from "./dashboard-core.mjs";
 import { isJobActive, jobTone, jobStateKey, updateAllTargets } from "./firmware-core.mjs";
 
 /** Polling choices in seconds: backend.py ALLOWED_POLL. */
@@ -351,4 +352,76 @@ export function jobRows(jobs, devices, now) {
     || newerFirst(a.updated, b.updated)
     || a.index - b.index);
   return entries.slice(0, JOB_ROW_LIMIT).map((e) => e.row);
+}
+
+// ---- Live data source ----
+
+/**
+ * The live source of settings.html. It reads load() -> {status, body} (`api/devices`), config() and ha() -> the answer of
+ * `api/config` or `api/ha`, or null unless the backend answers 200. A write resolves with the backend's answer and
+ * rejects with its error text (an Error with `status` and `state`), see apiSend. `settings.mjs` has the demo source
+ * with the same calls.
+ */
+export function createSettingsApi() {
+  const answerOf = async (url) => {
+    const result = await apiGet(url);
+    return result.status === 200 && result.body && typeof result.body === "object" ? result.body : null;
+  };
+  const profile = (id) => encodeURIComponent(String(id));
+  return {
+    demo: false,
+    load: () => apiGet("api/devices"),
+    config: () => answerOf("api/config"),
+    ha: () => answerOf("api/ha"),
+    savePoll: (seconds) => apiSend("PUT", "api/config", { poll_interval: seconds }),
+    saveTarget(profileId, host) {
+      const address = String(host ?? "").trim();
+      // Tuo keeps the stored address when the key is missing; an empty one would be refused as an invalid address.
+      return apiSend("PUT", "api/firmware/target", address === "" ? { profile_id: profileId } : { profile_id: profileId, ota_host_ip: address });
+    },
+    prepare: (profileId) => apiSend("POST", `api/firmware/prepare/${profile(profileId)}`),
+    otaAll: (profileId) => apiSend("POST", "api/firmware/ota-all", { profile_id: profileId }),
+    uploadFwr: (bytes, name) => apiSendRaw("api/firmware/custom", bytes, name),
+    deleteFwr: (profileId) => apiSend("POST", `api/firmware/custom/${profile(profileId)}/delete`),
+    saveMqtt: (body) => apiSend("PUT", "api/ha", body),
+    testMqtt: (body) => apiSend("POST", "api/ha/test", body),
+    syncMqtt: () => apiSend("POST", "api/ha/sync"),
+  };
+}
+
+// ---- Request and reading flow ----
+
+/**
+ * Sends one request and then reads the backend again, also when the request failed (Tuo stores the firmware target
+ * before it checks the address). Never rejects: `ok` tells whether the request worked, `failure` is its Error, and
+ * `reloaded` is false when the reading failed (it threw or answered false). With no `reload`, `reloaded` is true.
+ */
+export async function settleRequest(work, reload) {
+  let answer = null;
+  let failure = null;
+  try {
+    answer = await work();
+  } catch (err) {
+    failure = err instanceof Error ? err : new Error(String(err ?? "request failed"));
+  }
+  let reloaded = true;
+  if (reload) {
+    try {
+      reloaded = (await reload()) !== false;
+    } catch {
+      reloaded = false;
+    }
+  }
+  return { ok: failure === null, answer, failure, reloaded };
+}
+
+/**
+ * What the 5 s refresh reads: the device list every time. Config and HA status are read when the page has none yet
+ * and everything again after a failed reading, so the form follows the backend once it answers.
+ */
+export function refreshReads({ stale, hasConfig, hasHa }) {
+  const reads = ["devices"];
+  if (stale || !hasConfig) reads.push("config");
+  if (stale || !hasHa) reads.push("ha");
+  return reads;
 }

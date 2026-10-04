@@ -559,3 +559,107 @@ test("every field and button the page code names exists in the page, and every b
   // The page code picks cards by these ids.
   for (const id of ["firmware", "firmware-files", "firmware-jobs", "polling", "mqtt"]) assert.ok(html.includes(`id="${id}"`), id);
 });
+
+// ---- Request and reading flow ----
+
+const { settleRequest, refreshReads } = settings;
+
+test("settleRequest reads again after a request that worked", async () => {
+  const seen = [];
+  const out = await settleRequest(async () => "answer", async () => { seen.push("reload"); return true; });
+  assert.deepEqual(out, { ok: true, answer: "answer", failure: null, reloaded: true });
+  assert.deepEqual(seen, ["reload"]);
+});
+
+test("settleRequest reads again after a request that failed, because Tuo stores the target before it checks the address", async () => {
+  let reloads = 0;
+  const out = await settleRequest(async () => { throw new Error("OTA server IP must be a valid IPv4 address"); }, async () => { reloads++; return true; });
+  assert.equal(out.ok, false);
+  assert.equal(out.failure.message, "OTA server IP must be a valid IPv4 address");
+  assert.equal(out.answer, null);
+  assert.equal(out.reloaded, true);
+  assert.equal(reloads, 1);
+});
+
+test("settleRequest reports a reading that failed instead of letting it pass as done", async () => {
+  // A reading says "false" when the backend did not answer; one that throws counts the same. Neither makes settleRequest reject.
+  assert.equal((await settleRequest(async () => 1, async () => false)).reloaded, false);
+  const thrown = await settleRequest(async () => 1, async () => { throw new Error("offline"); });
+  assert.deepEqual([thrown.ok, thrown.reloaded], [true, false], "the request itself worked");
+  const both = await settleRequest(async () => { throw new Error("nope"); }, async () => { throw new Error("offline"); });
+  assert.deepEqual([both.ok, both.reloaded, both.failure.message], [false, false, "nope"]);
+  // A reading that returns nothing is a reading that worked; so is no reading at all.
+  assert.equal((await settleRequest(async () => 1, async () => undefined)).reloaded, true);
+  let called = false;
+  assert.equal((await settleRequest(async () => { called = true; return 1; })).reloaded, true);
+  assert.equal(called, true);
+});
+
+test("settleRequest turns anything thrown into an Error, even a falsy value", async () => {
+  for (const [thrown, message] of [["boom", "boom"], [undefined, "request failed"], [null, "request failed"], [0, "0"]]) {
+    const out = await settleRequest(async () => { throw thrown; });
+    assert.equal(out.ok, false, String(thrown));
+    assert.ok(out.failure instanceof Error);
+    assert.equal(out.failure.message, message);
+  }
+  const err = new TypeError("x");
+  assert.equal((await settleRequest(async () => { throw err; })).failure, err, "an Error is passed on as it is");
+});
+
+test("settleRequest waits for the request before it reads", async () => {
+  const order = [];
+  await settleRequest(async () => { await new Promise((r) => setTimeout(r, 5)); order.push("work"); }, async () => { order.push("reload"); });
+  assert.deepEqual(order, ["work", "reload"]);
+});
+
+test("refreshReads: the device list every time; config and HA status when they are missing or the last reading failed", () => {
+  assert.deepEqual(refreshReads({ stale: false, hasConfig: true, hasHa: true }), ["devices"]);
+  assert.deepEqual(refreshReads({ stale: false, hasConfig: false, hasHa: true }), ["devices", "config"]);
+  assert.deepEqual(refreshReads({ stale: false, hasConfig: true, hasHa: false }), ["devices", "ha"]);
+  assert.deepEqual(refreshReads({ stale: false, hasConfig: false, hasHa: false }), ["devices", "config", "ha"]);
+  // After a failure everything is read again, so the form shows what the backend holds once it answers.
+  assert.deepEqual(refreshReads({ stale: true, hasConfig: true, hasHa: true }), ["devices", "config", "ha"]);
+});
+
+test("the page reads from the live source unless it runs as a demo", () => {
+  const code = settingsMjs();
+  assert.match(code, /state\.source = demo \? createDemoSource\(\) : createSettingsApi\(\);/);
+  assert.ok(!/state\.source = demo \? createDemoSource\(\) : null/.test(code), "a null source would leave the page empty");
+});
+
+test("the file chooser and the upload button stay off until the page has loaded, like every other card", () => {
+  const code = settingsMjs();
+  const fn = (name) => code.slice(code.indexOf(`function ${name}(`), code.indexOf("\n}\n", code.indexOf(`function ${name}(`)));
+  const render = fn("renderFiles");
+  assert.match(render, /const lock = state\.viewOnly \|\| busy \|\| !state\.loaded;/);
+  assert.match(render, /setDisabled\(f\.choose, lock\)/);
+  assert.match(render, /id: "files-upload", label: "fw_upload", can: state\.file !== null && !lock/);
+  assert.match(fn("updateFileRow"), /const lock = state\.viewOnly \|\| filesBusy \|\| !state\.loaded;/);
+});
+
+test("run() frees the card in a finally block and takes the saved values into the form only after a successful reading", () => {
+  const code = settingsMjs();
+  const start = code.indexOf("async function run(");
+  const body = code.slice(start, code.indexOf("\n}\n", start));
+  assert.ok(start > 0 && body.includes("settleRequest("), "run() sends through settleRequest");
+  const tail = body.slice(body.indexOf("finally"));
+  assert.ok(body.includes("finally"), "run() has a finally block");
+  assert.ok(tail.includes("state.busy.delete(id)") && tail.includes("render()"), "the card is freed and drawn again in it");
+  assert.match(body, /if \(!settled\.reloaded\) state\.stale = true;/, "a failed reading turns the server badge offline");
+  assert.match(body, /if \(settled\.reloaded\) reset\?\.\(\);/, "the form keeps the user's values when the reading failed");
+});
+
+test("start() and the MQTT recheck cannot be stopped by a failed reading", () => {
+  const code = settingsMjs();
+  const start = code.slice(code.indexOf("async function start("), code.indexOf("function init()"));
+  assert.ok(start.indexOf("readAll()") !== -1 && start.indexOf("setInterval(") > start.indexOf("readAll()"));
+  assert.ok(!/await Promise\.all\(\[readDevices\(\), readConfig\(\), readHa\(\)\]\)/.test(start), "no bare Promise.all of readings");
+  // The reading functions answer false on failure; none of them throws.
+  for (const name of ["readDevices", "readConfig", "readHa"]) {
+    const at = code.indexOf(`async function ${name}(`);
+    const fn = code.slice(at, code.indexOf("\n}\n", at));
+    assert.ok(/catch/.test(fn) && /return false;/.test(fn) && /return true;/.test(fn), `${name} answers true or false`);
+  }
+  const recheck = code.slice(code.indexOf("state.haTimer = setTimeout"), code.indexOf("function testMqtt"));
+  assert.match(recheck, /if \(!await readHa\(\)\) state\.stale = true;/);
+});

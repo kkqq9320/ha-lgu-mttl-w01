@@ -9,6 +9,7 @@ import {
   POLL_CHOICES, POWER_THRESHOLDS, REPORT_INTERVALS, ENERGY_THRESHOLDS, MQTT_FIELDS,
   isIPv4, dirtyKeys, mergeDraft, mqttPayload, mqttTestPayload, mqttDraft, firmwareDraft,
   firmwareControls, mqttControls, pollCanSave, fmtBytes, profileTitle, profileRows, jobRows,
+  createSettingsApi, settleRequest, refreshReads,
 } from "./settings-core.mjs";
 import {
   page, applyTheme, applyStrings, initPage, setText, useDemoLinks, setData, setHidden, setDisabled, setAttr, fieldMap,
@@ -27,7 +28,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 // ha() -> the `api/ha` answer or null. It writes with savePoll(seconds), saveTarget(profileId, host),
 // prepare(profileId), otaAll(profileId), uploadFwr(bytes, name), deleteFwr(profileId), saveMqtt(body),
 // testMqtt(body) and syncMqtt(). A write resolves once the backend has answered and rejects with its
-// error text. Demo mode keeps everything in memory; a live source plugs in through the same calls.
+// error text. Demo mode keeps everything in memory; the live source is createSettingsApi() in settings-core.mjs.
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -294,6 +295,7 @@ function updateFileRow(el, r) {
   const f = fieldMap(el);
   const lang = page.lang;
   const filesBusy = isBusy("files-");
+  const lock = state.viewOnly || filesBusy || !state.loaded;
   el.dataset.id = r.id;
   setText(f.title, titleText(r.title));
   setHidden(f.mark, r.id !== state.saved.fw.profile);
@@ -308,7 +310,7 @@ function updateFileRow(el, r) {
   // Downloading is a GET and stays available outside the sidebar; deleting is not.
   const id = `files-delete:${r.id}`;
   setHidden(f.delete, !r.canDelete);
-  setButton(f.delete, { id, label: "fw_delete", can: r.canDelete && !state.viewOnly && !filesBusy });
+  setButton(f.delete, { id, label: "fw_delete", can: r.canDelete && !lock });
   setHidden(f.actions, !r.canDownload && !r.canDelete);
 }
 
@@ -317,9 +319,10 @@ function renderFiles() {
   const rows = profileRows(state.firmware?.profiles);
   syncList(f.files, rows, (r) => r.id, createFileRow, updateFileRow);
   const busy = isBusy("files-");
-  setDisabled(f.choose, state.viewOnly || busy);
+  const lock = state.viewOnly || busy || !state.loaded;
+  setDisabled(f.choose, lock);
   setText(f.fileName, state.file ? `${state.file.name} · ${fmtBytes(state.file.size)}` : t(page.lang, "fw_no_file"));
-  setButton(f.upload, { id: "files-upload", label: "fw_upload", can: state.file !== null && !state.viewOnly && !busy });
+  setButton(f.upload, { id: "files-upload", label: "fw_upload", can: state.file !== null && !lock });
   const armed = state.armed?.card === "files" ? armedAlert(state.armed.id, null) : null;
   showAlert("files", armed ?? state.alerts.files);
 }
@@ -439,48 +442,68 @@ function resetDraft(kind) {
   state.draft[kind] = { ...state.saved[kind] };
 }
 
+// The three readings answer true when the backend answered and false when it did not (or the answer was unusable).
+// None of them throws, so a failed reading cannot stop the first drawing or the 5 s refresh.
+
 async function readDevices() {
-  let result;
   try {
-    result = state.source ? await state.source.load() : { error: "no data source" };
-  } catch (err) {
-    result = { error: err?.message ?? String(err) };
+    const result = state.source ? await state.source.load() : { error: "no data source" };
+    const body = result?.status === 200 && result.body && typeof result.body === "object" ? result.body : null;
+    if (!body) return false;
+    state.loaded = true;
+    state.devices = Array.isArray(body.devices) ? body.devices : [];
+    state.firmware = body.firmware && typeof body.firmware === "object" ? body.firmware : null;
+    state.version = body.backend_version ?? state.version;
+    takeSaved("fw", firmwareDraft(state.firmware));
+    // The chosen firmware was deleted somewhere else: fall back to the saved target.
+    const profiles = Array.isArray(state.firmware?.profiles) ? state.firmware.profiles : [];
+    if (profiles.length > 0 && !profiles.some((p) => p.id === state.draft.fw.profile)) state.draft.fw.profile = state.saved.fw.profile;
+    return true;
+  } catch {
+    return false;
   }
-  const body = result?.status === 200 && result.body && typeof result.body === "object" ? result.body : null;
-  if (!body) {
-    state.stale = true;
-    return;
-  }
-  state.stale = false;
-  state.loaded = true;
-  state.devices = Array.isArray(body.devices) ? body.devices : [];
-  state.firmware = body.firmware && typeof body.firmware === "object" ? body.firmware : null;
-  state.version = body.backend_version ?? state.version;
-  takeSaved("fw", firmwareDraft(state.firmware));
-  // The chosen firmware was deleted somewhere else: fall back to the saved target.
-  const profiles = Array.isArray(state.firmware?.profiles) ? state.firmware.profiles : [];
-  if (profiles.length > 0 && !profiles.some((p) => p.id === state.draft.fw.profile)) state.draft.fw.profile = state.saved.fw.profile;
 }
 
 async function readConfig() {
-  const config = state.source ? await state.source.config() : null;
-  if (!config) return;
-  state.config = config;
-  takeSaved("poll", { poll_interval: Number(config.poll_interval) });
+  try {
+    const config = state.source ? await state.source.config() : null;
+    if (!config) return false;
+    state.config = config;
+    takeSaved("poll", { poll_interval: Number(config.poll_interval) });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function readHa() {
-  const ha = state.source ? await state.source.ha() : null;
-  if (!ha) return;
-  state.ha = ha;
-  takeSaved("mqtt", mqttDraft(ha));
+  try {
+    const ha = state.source ? await state.source.ha() : null;
+    if (!ha) return false;
+    state.ha = ha;
+    takeSaved("mqtt", mqttDraft(ha));
+    return true;
+  } catch {
+    return false;
+  }
 }
+
+const READINGS = { devices: readDevices, config: readConfig, ha: readHa };
+
+/** Reads the named parts; the server badge is offline while any reading fails. True when all of them worked. */
+async function readParts(parts) {
+  const results = await Promise.all(parts.map((part) => READINGS[part]()));
+  state.stale = results.includes(false);
+  return !state.stale;
+}
+
+const readAll = () => readParts(["devices", "config", "ha"]);
 
 async function refresh() {
   if (state.refreshing) return;
   state.refreshing = true;
   try {
-    await readDevices();
+    await readParts(refreshReads({ stale: state.stale, hasConfig: state.config !== null, hasHa: state.ha !== null }));
   } finally {
     state.refreshing = false;
   }
@@ -493,7 +516,8 @@ async function refresh() {
 /**
  * Sends one request. `id` is its slot in state.busy and `card` the card whose line shows the result.
  * `reload` reads the values again (also after a failure: Tuo stores the target before it checks the address),
- * `reset` takes the saved values back into the form and `ok(answer)` is the line shown on success.
+ * `reset` takes the saved values back into the form once that reading worked and `ok(answer)` is the line shown on success.
+ * When the reading failed, the form keeps what the user typed and the server badge goes offline; the next refresh reads again.
  */
 async function run(id, card, work, { reload, reset, ok, fail = "action_failed" } = {}) {
   if (!state.source || state.viewOnly || state.busy.has(id)) return;
@@ -501,26 +525,19 @@ async function run(id, card, work, { reload, reset, ok, fail = "action_failed" }
   state.busy.add(id);
   state.alerts[card] = null;
   render();
-  let answer;
-  let failure = null;
   try {
-    answer = await work();
-  } catch (err) {
-    failure = err;
+    const settled = await settleRequest(work, reload);
+    if (!settled.reloaded) state.stale = true;
+    if (settled.ok) {
+      if (settled.reloaded) reset?.();
+      state.alerts[card] = ok?.(settled.answer) ?? null;
+    } else {
+      state.alerts[card] = { kind: "bad", key: fail, vars: { msg: settled.failure.message } };
+    }
+  } finally {
+    state.busy.delete(id);
+    render();
   }
-  try {
-    await reload?.();
-  } catch {
-    // The next refresh shows what happened.
-  }
-  if (failure) {
-    state.alerts[card] = { kind: "bad", key: fail, vars: { msg: failure?.message ?? String(failure) } };
-  } else {
-    reset?.();
-    state.alerts[card] = ok?.(answer) ?? null;
-  }
-  state.busy.delete(id);
-  render();
 }
 
 function saveFirmware() {
@@ -605,7 +622,7 @@ function saveMqtt() {
   // The broker connects a moment after the save; read the status once more when it has had time to.
   clearTimeout(state.haTimer);
   state.haTimer = setTimeout(async () => {
-    await readHa();
+    if (!await readHa()) state.stale = true;
     render();
   }, HA_RECHECK_MS);
 }
@@ -711,7 +728,7 @@ function focusHash() {
 // ---- Start ----
 
 async function start() {
-  await Promise.all([readDevices(), readConfig(), readHa()]);
+  await readAll();
   for (const kind of ["fw", "poll", "mqtt"]) resetDraft(kind);
   render();
   focusHash();
@@ -722,7 +739,7 @@ async function start() {
 
 function init() {
   const demo = new URLSearchParams(location.search).has("demo");
-  state.source = demo ? createDemoSource() : null;
+  state.source = demo ? createDemoSource() : createSettingsApi();
   state.viewOnly = isViewOnly({ pathname: location.pathname, demo });
   $("#demo-badge").hidden = !demo;
   $("#view-badge").hidden = !state.viewOnly;

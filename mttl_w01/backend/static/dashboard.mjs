@@ -4,7 +4,7 @@ import {
   NA, DIAG_INTERVALS, t, normalizeMac, fmtMac, fmtAge, fmtAgo, pressConfirm, scriptLang, intervalUnit,
   cardModel, cardNotice, summaryModel, apkUrl, apkUrlForHost, isViewOnly,
   deviceTitle, deviceWindowModel, measureForm, measurePayload, hiddenModel, deleteWordOk, lockErrorKey, otaWarnKeys, jobLabel, pickAlert,
-  apiGet, apiSend, reducePoll, withDevice, diffMacs, canToggleLock, toggleMask, applyPending, nameEditOutcome,
+  apiGet, apiSend, createDeviceAdminApi, reducePoll, withDevice, diffMacs, canToggleLock, toggleMask, applyPending, nameEditOutcome,
   demoResponse, demoHa, demoShiftFirmwareTimes, demoAdvanceJob, demoQueueJob, demoSetDiagnostics, demoRereadLock, demoRestore, demoPurge,
 } from "./dashboard-core.mjs";
 import { jobTone } from "./firmware-core.mjs";
@@ -103,6 +103,7 @@ function createApiSource() {
     lock: (mac, mask) => apiSend("PUT", `${dev(mac)}/childlock`, { mask }),
     refresh: (mac) => apiSend("POST", `${dev(mac)}/refresh`),
     hide: (mac) => apiSend("POST", `${dev(mac)}/remove`),
+    ...createDeviceAdminApi(), // ota, diagnostics, rereadLock, restore, purge
   };
 }
 

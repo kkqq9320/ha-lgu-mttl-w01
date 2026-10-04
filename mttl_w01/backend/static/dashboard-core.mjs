@@ -910,6 +910,21 @@ export async function apiSendRaw(url, bytes, filename) {
 }
 
 /**
+ * The live calls of the device window and the hidden devices. Each resolves with the backend's answer and
+ * rejects like apiSend, so a failed Child Lock reread carries the backend's `state` (`busy`, `device_timeout`, ...).
+ */
+export function createDeviceAdminApi() {
+  const dev = (mac) => `api/devices/${mac}`;
+  return {
+    ota: (mac, profileId) => apiSend("POST", `${dev(mac)}/ota`, { profile_id: profileId }),
+    diagnostics: (mac, body) => apiSend("PUT", `${dev(mac)}/diagnostics`, body),
+    rereadLock: (mac) => apiSend("POST", `${dev(mac)}/childlock/refresh`),
+    restore: (mac) => apiSend("POST", `${dev(mac)}/restore`),
+    purge: (mac) => apiSend("POST", `${dev(mac)}/delete`),
+  };
+}
+
+/**
  * Next poll state after reading `api/devices`. `state` is `{devices, authenticated, stale, resp}`;
  * `result` is `{status, body}` or `{error}`. A 200 answer replaces everything; anything else keeps
  * the last devices on screen and marks them stale.
