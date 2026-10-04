@@ -96,6 +96,28 @@ export function deviceFirmware(device, firmware) {
   };
 }
 
+/**
+ * The firmware number a version string stands for ("1.0.111" and "111" are 111), read like firmware_manager.py
+ * version_number; null for anything else.
+ */
+export function firmwareNumber(version) {
+  const m = /^(?:1\.0\.)?(\d+)$/.exec(typeof version === "string" ? version.trim() : "");
+  return m ? Number.parseInt(m[1], 10) : null;
+}
+
+/** The first firmware number that takes an update over TCP 49217. Older firmware listens on TCP 80 only. */
+const PORT_49217_FROM = 111;
+
+/**
+ * True for a version below 1.0.111 (1.0.110, 1.0.66). A strip on it receives firmware only over TCP 80, which the app
+ * does not open, so the PC tool installs it, and the PC tool is also the way back to 1.0.111. A version that cannot
+ * be read gives false.
+ */
+export function needsPcTool(version) {
+  const n = firmwareNumber(version);
+  return n !== null && n < PORT_49217_FROM;
+}
+
 /** Devices the "update all" button works through: online, not hidden, with an update to do. */
 export function updateAllTargets(devices) {
   const out = [];

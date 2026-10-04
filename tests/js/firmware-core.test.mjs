@@ -6,6 +6,7 @@ const fw = await import(new URL("../../mttl_w01/backend/static/firmware-core.mjs
 const {
   FWR_SIZE, JOB_STATES, TERMINAL_STATES,
   jobStateKey, isJobActive, jobTone, latestJobFor, deviceFirmware, updateAllTargets, profileHintKey, checkFwrFile,
+  firmwareNumber, needsPcTool,
 } = fw;
 
 const MAC = "0a1b2c3d4e60";
@@ -197,4 +198,22 @@ test("checkFwrFile", () => {
   assert.equal(checkFwrFile({ name: "a.bin", size: 1 }), "fwr_ext");
   assert.equal(checkFwrFile({ name: undefined, size: FWR_SIZE }), "fwr_ext");
   assert.equal(checkFwrFile({ name: "a.fwr", size: FWR_SIZE + 1 }), "fwr_size");
+});
+
+test("firmwareNumber reads a version the way the backend's version_number does", () => {
+  assert.equal(firmwareNumber("1.0.111"), 111);
+  assert.equal(firmwareNumber("1.0.66"), 66);
+  assert.equal(firmwareNumber(" 1.0.110 "), 110);
+  // The backend accepts the bare number too.
+  assert.equal(firmwareNumber("111"), 111);
+  for (const bad of [null, undefined, "", "x", "1.0", "1.1.66", "2.0.111", "1.0.111-beta", "1.0.", 111]) {
+    assert.equal(firmwareNumber(bad), null, String(bad));
+  }
+});
+
+test("needsPcTool is true below 1.0.111, where a strip takes firmware only over TCP 80", () => {
+  for (const v of ["1.0.110", "1.0.66", "1.0.1", "66", "110"]) assert.equal(needsPcTool(v), true, v);
+  for (const v of ["1.0.111", "1.0.112", "1.0.200", "111", "1.0.1000"]) assert.equal(needsPcTool(v), false, v);
+  // A version that cannot be read is no reason to show the note.
+  for (const v of [null, undefined, "", "x", "1.0", "1.0.110-beta"]) assert.equal(needsPcTool(v), false, String(v));
 });

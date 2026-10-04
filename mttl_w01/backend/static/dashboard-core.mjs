@@ -3,7 +3,7 @@
 
 // firmware-core.mjs imports this module too. Each side only calls the other's functions from inside
 // its own functions, never while the module loads, so the cycle is safe in either load order.
-import { deviceFirmware, jobStateKey } from "./firmware-core.mjs";
+import { deviceFirmware, jobStateKey, needsPcTool } from "./firmware-core.mjs";
 
 /** Shown for any missing or unmeasured value, in both languages. */
 export const NA = "N/A";
@@ -89,10 +89,12 @@ export const STRINGS = {
     dw_offline: "Offline. These settings stay read-only until the device reconnects.",
     dw_not_ready: "The custom firmware file is not ready. Register it again on the Settings page.",
     dw_auto_prepare: "Official firmware is prepared and verified when the update starts.",
+    dw_port80: "This power strip receives firmware only over TCP 80, which the app does not open. Install firmware with the PC tool.",
     dw_ota_update: "Updates this device from {from} to {to}. Do not cut power during the update. The device goes offline for a moment while the backend reconnects and checks the version.",
     dw_ota_downgrade: "Downgrades this device from {from} to {to}. Do not cut power during the update. The device goes offline for a moment while the backend reconnects and checks the version.",
     dw_ota_reflash: "Reinstalls {to}. The version is the same, but the installed build differs from the target build, so the verified build is installed again. Do not cut power during the update.",
     dw_ota_custom: "This is a custom file. Only its structure was checked; it is not guaranteed to run on a real strip.",
+    pc_return: "Returning to 1.0.111 needs the PC tool.",
     dw_ota_queued: "Update queued.",
     dw_voltage: "Measure voltage",
     dw_rssi: "Measure Wi-Fi RSSI",
@@ -145,8 +147,8 @@ export const STRINGS = {
     job_failed_version: "Failed: version mismatch",
     job_failed_internal: "Failed: internal error",
     hint_111: "Physical-button Child Lock. OTA tries TCP 49217 first, then 80.",
-    hint_110: "Local backend support. OTA on TCP 80.",
-    hint_66: "Stock LG U+ firmware. OTA on TCP 80.",
+    hint_110: "Local backend support. OTA on TCP 80, which the app does not open. Returning to 1.0.111 needs the PC tool.",
+    hint_66: "Stock LG U+ firmware. OTA on TCP 80, which the app does not open. Returning to 1.0.111 needs the PC tool.",
     hint_custom: "A file that only passed structure validation.",
     fwr_ext: "Choose a .fwr file.",
     fwr_size: "The file must be 327,944 bytes.",
@@ -291,8 +293,8 @@ export const STRINGS = {
     job_failed_version: "실패: 버전 불일치",
     job_failed_internal: "실패: 내부 오류",
     hint_111: "물리 버튼 Child Lock. OTA는 TCP 49217을 먼저, 실패하면 80.",
-    hint_110: "로컬 백엔드 지원. OTA는 TCP 80.",
-    hint_66: "LG U+ 순정. OTA는 TCP 80.",
+    hint_110: "로컬 백엔드 지원. OTA는 TCP 80이며 앱은 이 포트를 열지 않습니다. 1.0.111로 돌아오려면 PC 도구가 필요합니다.",
+    hint_66: "LG U+ 순정. OTA는 TCP 80이며 앱은 이 포트를 열지 않습니다. 1.0.111로 돌아오려면 PC 도구가 필요합니다.",
     hint_custom: "구조 검증만 통과한 파일.",
     fwr_ext: ".fwr 파일을 고르세요.",
     fwr_size: "파일 크기가 327,944바이트여야 합니다.",
@@ -402,10 +404,12 @@ export const STRINGS = {
     dw_offline: "Offline 상태라 기기가 다시 연결될 때까지 바꿀 수 없습니다.",
     dw_not_ready: "사용자 지정 펌웨어 파일이 준비되지 않았습니다. 설정 페이지에서 다시 등록하세요.",
     dw_auto_prepare: "공식 펌웨어는 업데이트를 시작할 때 준비하고 검증합니다.",
+    dw_port80: "이 멀티탭은 TCP 80으로만 펌웨어를 받는데, 앱은 이 포트를 열지 않습니다. 펌웨어는 PC 도구로 설치하세요.",
     dw_ota_update: "이 기기를 {from}에서 {to}로 업데이트합니다. 업데이트 중에는 전원을 끄지 마세요. 기기가 잠시 Offline이 되며, 백엔드가 다시 연결해 버전을 확인합니다.",
     dw_ota_downgrade: "이 기기를 {from}에서 {to}로 다운그레이드합니다. 업데이트 중에는 전원을 끄지 마세요. 기기가 잠시 Offline이 되며, 백엔드가 다시 연결해 버전을 확인합니다.",
     dw_ota_reflash: "{to}를 다시 설치합니다. 버전은 같지만 설치된 빌드가 목표 빌드와 달라, 검증된 빌드로 다시 설치합니다. 업데이트 중에는 전원을 끄지 마세요.",
     dw_ota_custom: "사용자 지정 파일입니다. 구조만 검증했고, 실제 기기에서 동작하는지는 보장하지 않습니다.",
+    pc_return: "1.0.111로 돌아오려면 PC 도구가 필요합니다.",
     dw_ota_queued: "업데이트를 시작했습니다.",
     dw_voltage: "전압 측정",
     dw_rssi: "Wi-Fi RSSI 측정",
@@ -687,8 +691,9 @@ export const DIAG_DEFAULT = 60;
 
 /**
  * What the device window shows for one device. `firmware` is the backend's `firmware` object (`jobs`).
- * `fw` is deviceFirmware(); `measure` holds the voltage and RSSI settings; `lock` is the Child Lock status of
- * a 1.0.111 strip, else null; `controls` is true while the window's buttons and fields can be used.
+ * `fw` is deviceFirmware(); `pcTool` is true when the strip's firmware is below 1.0.111, so only the PC tool installs
+ * firmware on it; `measure` holds the voltage and RSSI settings; `lock` is the Child Lock status of a 1.0.111 strip,
+ * else null; `controls` is true while the window's buttons and fields can be used.
  */
 export function deviceWindowModel(device, firmware, { unlocked, viewOnly } = {}) {
   const d = device ?? {};
@@ -698,6 +703,7 @@ export function deviceWindowModel(device, firmware, { unlocked, viewOnly } = {})
   const online = d.online === true;
   return {
     fw: deviceFirmware(device, firmware),
+    pcTool: needsPcTool(d.firmware_version),
     measure: {
       voltage: diag.voltage_enabled === true,
       rssi: diag.rssi_enabled === true,
@@ -743,10 +749,17 @@ export function lockErrorKey(state) {
   return LOCK_ERRORS.has(state) ? `lock_err_${state}` : null;
 }
 
-/** Keys of the STRINGS entries that warn before an update starts; they take {from} and {to}. A custom file adds its note. */
+/**
+ * Keys of the STRINGS entries that warn before an update starts; they take {from} and {to}. A downgrade to a version below
+ * 1.0.111 adds that the PC tool is the way back, and a custom file adds its note.
+ */
 export function otaWarnKeys(action, target) {
   if (!FW_ACTIONS.includes(action)) return [];
-  return [`dw_ota_${action}`, ...(target?.kind === "custom" ? ["dw_ota_custom"] : [])];
+  return [
+    `dw_ota_${action}`,
+    ...(action === "downgrade" && needsPcTool(target?.version) ? ["pc_return"] : []),
+    ...(target?.kind === "custom" ? ["dw_ota_custom"] : []),
+  ];
 }
 
 /** Text of an OTA job state; a state this page does not know is shown as the backend sent it. */

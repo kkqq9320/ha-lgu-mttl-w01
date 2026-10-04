@@ -13,7 +13,7 @@ const {
   POLL_CHOICES, POWER_THRESHOLDS, REPORT_INTERVALS, ENERGY_THRESHOLDS, MQTT_FIELDS, JOB_ROW_LIMIT,
   isIPv4, validateFirmware, validateMqtt, dirtyKeys, mergeDraft, mqttPayload, mqttTestPayload, mqttNeedsConfirm, targetDirty,
   mqttDraft, firmwareDraft, firmwareChangedKeys, firmwareControls, mqttControls, pollCanSave,
-  fmtBytes, shortSha, deviceLabel, profileTitle, profileRows, jobRows,
+  fmtBytes, shortSha, deviceLabel, profileTitle, profileRows, jobRows, fileChoice,
 } = settings;
 
 test("isIPv4 rejects leading zeros, IPv6 and garbage", () => {
@@ -250,6 +250,27 @@ test("firmwareControls: update buttons wait for a saved target", () => {
   const onCustom = { saved: { ...saved, profile: custom.id }, draft: { ...saved, profile: custom.id } };
   assert.equal(firmwareControls({ ...base, ...onCustom, profiles: brokenProfiles }).canUpdateAll, false);
   assert.equal(firmwareControls({ ...base, ...onCustom }).canUpdateAll, true);
+});
+
+test("firmwareControls: returnNeedsPcTool is true while the saved target is below 1.0.111", () => {
+  const saved = firmwareDraft(demoResponse().firmware);
+  const base = { saved, draft: saved, profiles: profiles(), devices: devices(), viewOnly: false, busy: false };
+  assert.equal(saved.profile, "official-111");
+  assert.equal(firmwareControls(base).returnNeedsPcTool, false);
+  for (const id of ["official-110", "official-66"]) {
+    const on = { saved: { ...saved, profile: id }, draft: { ...saved, profile: id } };
+    assert.equal(firmwareControls({ ...base, ...on }).returnNeedsPcTool, true, id);
+  }
+  // It follows the saved target, not an unsaved choice; the confirm list is the same either way.
+  const choosing = firmwareControls({ ...base, draft: { ...saved, profile: "official-110" } });
+  assert.equal(choosing.returnNeedsPcTool, false);
+  assert.deepEqual(choosing.targets, firmwareControls(base).targets);
+  // A custom file counts by its own version; a target that is not in the list says nothing.
+  const custom = profiles().find((p) => p.kind === "custom");
+  const low = profiles().map((p) => (p.id === custom.id ? { ...p, version: "1.0.100" } : p));
+  const onCustom = { saved: { ...saved, profile: custom.id }, draft: { ...saved, profile: custom.id } };
+  assert.equal(firmwareControls({ ...base, ...onCustom, profiles: low }).returnNeedsPcTool, true);
+  assert.equal(firmwareControls({ ...base, saved: { ...saved, profile: "gone" } }).returnNeedsPcTool, false);
 });
 
 test("firmwareControls: only an official profile is prepared", () => {
@@ -499,6 +520,7 @@ test("every text the settings page uses exists in EN and KR", () => {
   for (const m of settingsHtml().matchAll(/data-i18n(?:-title|-ph)?="([^"]+)"/g)) keys.add(m[1]);
   for (const m of settingsMjs().matchAll(/\bt\(\s*(?:page\.lang|lang),\s*"([a-z0-9_]+)"/g)) keys.add(m[1]);
   for (const m of settingsMjs().matchAll(/\bkey: "([a-z0-9_]+)"/g)) keys.add(m[1]);
+  for (const m of settingsMjs().matchAll(/\bafter: [^\n]*?"([a-z0-9_]+)"/g)) keys.add(m[1]);
   for (const m of SETTINGS_CORE().matchAll(/"(err_[a-z0-9_]+|fw_custom)"/g)) keys.add(m[1]);
   // intervalUnit, which the page shares with the device window, is in dashboard-core.mjs.
   for (const m of staticFile("dashboard-core.mjs").matchAll(/"(unit_[a-z]+)"/g)) keys.add(m[1]);
@@ -509,6 +531,67 @@ test("every text the settings page uses exists in EN and KR", () => {
   for (const key of keys) {
     for (const lang of ["en", "ko"]) assert.ok(typeof STRINGS[lang][key] === "string" && STRINGS[lang][key] !== "", `${lang}.${key}`);
   }
+});
+
+// ---- Choosing a firmware file ----
+
+const WRONG = { name: "wrong.bin", size: 10 };
+const SHORT = { name: "official.fwr", size: 1000 };
+const GOOD = { name: "mine.fwr", size: 327944 };
+
+test("fileChoice acts on the change event only, so a rejected file keeps its reason", () => {
+  // A browser fires `input` and then `change` for one choice. The first check clears a rejected file from the input,
+  // and the second event would find no file and wipe the reason, so `input` is not handled.
+  assert.deepEqual(fileChoice("input", WRONG), { handle: false, fault: null });
+  assert.deepEqual(fileChoice("input", GOOD), { handle: false, fault: null });
+  assert.deepEqual(fileChoice("input", null), { handle: false, fault: null });
+  assert.deepEqual(fileChoice("change", WRONG), { handle: true, fault: "fwr_ext" });
+  assert.deepEqual(fileChoice("change", SHORT), { handle: true, fault: "fwr_size" });
+  assert.deepEqual(fileChoice("change", GOOD), { handle: true, fault: null });
+  // No file (the dialog was cancelled): handled, nothing wrong.
+  assert.deepEqual(fileChoice("change", null), { handle: true, fault: null });
+  assert.deepEqual(fileChoice("change", undefined), { handle: true, fault: null });
+  assert.deepEqual(fileChoice("click", WRONG), { handle: false, fault: null });
+});
+
+test("the event order of one wrong file leaves the reason on screen", () => {
+  // The page's sequence: `input` first, `change` second. The input is emptied when a file is rejected, and
+  // choosing the same file again fires `change` again.
+  const run = (file) => {
+    let alert = null;
+    let held = file;
+    for (const type of ["input", "change"]) {
+      const choice = fileChoice(type, held);
+      if (!choice.handle) continue;
+      if (choice.fault) {
+        held = null;
+        alert = choice.fault;
+      } else {
+        alert = null;
+      }
+    }
+    return { alert, held };
+  };
+  assert.deepEqual(run(WRONG), { alert: "fwr_ext", held: null });
+  assert.deepEqual(run(SHORT), { alert: "fwr_size", held: null });
+  assert.deepEqual(run(WRONG), { alert: "fwr_ext", held: null });
+  assert.deepEqual(run(GOOD), { alert: null, held: GOOD });
+});
+
+test("the settings page routes a file input through fileChoice", () => {
+  const src = settingsMjs();
+  assert.match(src, /fileChoice\(event\.type,/);
+  // The old shape handled every event of a file input.
+  assert.doesNotMatch(src, /if \(el\.type === "file"\) \{\s*chooseFile\(el\);/);
+  // Emptying the input after a rejection stays, so choosing the same file again fires `change` again.
+  assert.match(src, /cards\.files\.f\.file\.value = ""/);
+});
+
+test("the update-all warning adds the PC tool sentence from the controls", () => {
+  const src = settingsMjs();
+  assert.match(src, /key: "fw_all_warn"/);
+  assert.match(src, /after: [^\n]*"pc_return"/);
+  assert.match(src, /controls\.returnNeedsPcTool/);
 });
 
 test("card titles and the top bar read the same in EN and KR", () => {

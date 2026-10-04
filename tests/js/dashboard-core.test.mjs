@@ -698,6 +698,22 @@ test("deviceWindowModel reads firmware from deviceFirmware and measurement from 
   assert.equal(bare.fw.action, null);
 });
 
+test("deviceWindowModel says the PC tool installs firmware on a strip below 1.0.111", () => {
+  const data = demoResponse();
+  // Office and Garage are on 1.0.66, Living is on 1.0.111.
+  assert.equal(deviceWindowModel(demoDevice(OFFICE), data.firmware, open).pcTool, true);
+  assert.equal(deviceWindowModel(demoDevice(GARAGE), data.firmware, open).pcTool, true);
+  assert.equal(deviceWindowModel(demoDevice(LIVING), data.firmware, open).pcTool, false);
+  assert.equal(deviceWindowModel({ ...demoDevice(LIVING), firmware_version: "1.0.110" }, data.firmware, open).pcTool, true);
+  // The note does not depend on the lock, the connection or the target; the buttons stay as they were.
+  const locked = deviceWindowModel({ ...demoDevice(OFFICE), online: false }, data.firmware, { unlocked: false, viewOnly: true });
+  assert.equal(locked.pcTool, true);
+  assert.equal(deviceWindowModel({ ...demoDevice(OFFICE), firmware_version: null }, data.firmware, open).pcTool, false);
+  assert.equal(deviceWindowModel(null, null, open).pcTool, false);
+  const office = deviceWindowModel(demoDevice(OFFICE), data.firmware, open);
+  assert.equal(office.fw.canUpdate, true);
+});
+
 test("the measurement choices are the backend's", () => {
   assert.deepEqual(DIAG_INTERVALS, [30, 60, 120, 300, 600, 1800]);
   assert.deepEqual([...DIAG_INTERVALS], demoConfig().diagnostic_allowed);
@@ -803,6 +819,39 @@ test("otaWarnKeys picks the warning of the action and adds the custom-file note"
   }
 });
 
+test("otaWarnKeys adds the PC tool note to a downgrade below 1.0.111 only", () => {
+  const official = (version) => ({ kind: "official", version });
+  assert.deepEqual(otaWarnKeys("downgrade", official("1.0.110")), ["dw_ota_downgrade", "pc_return"]);
+  assert.deepEqual(otaWarnKeys("downgrade", official("1.0.66")), ["dw_ota_downgrade", "pc_return"]);
+  assert.deepEqual(otaWarnKeys("downgrade", { kind: "custom", version: "1.0.66" }), ["dw_ota_downgrade", "pc_return", "dw_ota_custom"]);
+  // A downgrade that stays at 1.0.111 or above can be undone from the app; other actions are unchanged.
+  assert.deepEqual(otaWarnKeys("downgrade", official("1.0.111")), ["dw_ota_downgrade"]);
+  assert.deepEqual(otaWarnKeys("downgrade", official("1.0.112")), ["dw_ota_downgrade"]);
+  assert.deepEqual(otaWarnKeys("update", official("1.0.110")), ["dw_ota_update"]);
+  assert.deepEqual(otaWarnKeys("reflash", official("1.0.66")), ["dw_ota_reflash"]);
+  assert.deepEqual(otaWarnKeys("downgrade", { kind: "official" }), ["dw_ota_downgrade"]);
+});
+
+test("the PC tool texts exist in EN and KR and name the tool and 1.0.111", () => {
+  for (const key of ["pc_return", "dw_port80", "hint_110", "hint_66"]) {
+    for (const lang of ["en", "ko"]) assert.ok(STRINGS[lang][key], `${lang}.${key}`);
+    assert.ok(!ENGLISH_ONLY.includes(key), key);
+    assert.match(STRINGS.ko[key], /\p{Script=Hangul}/u, key);
+    assert.match(STRINGS.en[key], /PC tool/, `en.${key}`);
+    assert.match(STRINGS.ko[key], /PC 도구/, `ko.${key}`);
+  }
+  // Going back to 1.0.111 is the point of the downgrade note and of both hints.
+  for (const key of ["pc_return", "hint_110", "hint_66"]) {
+    assert.match(STRINGS.en[key], /1\.0\.111/, `en.${key}`);
+    assert.match(STRINGS.ko[key], /1\.0\.111/, `ko.${key}`);
+  }
+  // The window's note says why: the strip listens on TCP 80 only and the app does not open that port.
+  assert.match(STRINGS.en.dw_port80, /TCP 80/);
+  assert.match(STRINGS.ko.dw_port80, /TCP 80/);
+  assert.match(STRINGS.en.dw_port80, /does not open/);
+  assert.match(STRINGS.ko.dw_port80, /열지 않/);
+});
+
 test("jobLabel names a job state, and shows a state it does not know as sent", () => {
   assert.equal(jobLabel("en", "DOWNLOADING"), "Downloading");
   assert.equal(jobLabel("ko", "DOWNLOADING"), "내려받는 중");
@@ -884,7 +933,7 @@ test("fmtAgo counts up in English in both languages", () => {
 const WINDOW_KEYS = [
   "device_settings", "dw_measure", "hidden_title", "fw_job_notice", "lock_mask",
   "close", "dw_fw_current", "dw_fw_match", "dw_job", "dw_locked", "dw_offline", "dw_not_ready", "dw_auto_prepare",
-  "dw_ota_update", "dw_ota_downgrade", "dw_ota_reflash", "dw_ota_custom", "dw_ota_queued",
+  "dw_port80", "pc_return", "dw_ota_update", "dw_ota_downgrade", "dw_ota_reflash", "dw_ota_custom", "dw_ota_queued",
   "dw_voltage", "dw_rssi", "dw_interval", "dw_measure_note", "dw_apply",
   "lock_reread", "lock_status", "lock_stale", "lock_note", "lock_reread_ok",
   "lock_err_busy", "lock_err_channel_quarantined", "lock_err_device_timeout", "lock_err_state_unresolved",
@@ -915,6 +964,30 @@ test("DEVICE SETTINGS, MEASUREMENT, CHILD LOCK, HIDDEN DEVICES and the job notic
     assert.ok(ENGLISH_ONLY.includes(key), key);
     assert.equal(STRINGS.en[key], want, key);
     assert.equal(STRINGS.ko[key], want, key);
+  }
+});
+
+test("the device window's FIRMWARE section has its own line for the TCP 80 note, below the match note", () => {
+  const html = staticFile("dashboard.html");
+  const match = html.indexOf('data-f="fwNote"');
+  const port = html.indexOf('data-f="fwPort"');
+  const job = html.indexOf('data-f="job"');
+  assert.ok(match !== -1 && port > match && port < job, "the note sits in the FIRMWARE section before the job row");
+  assert.match(html, /<p class="note" data-f="fwPort" hidden><\/p>/);
+  const src = staticFile("dashboard.mjs");
+  assert.match(src, /setText\(f\.fwPort, m\.pcTool \? t\(lang, "dw_port80"\) : ""\)/);
+  assert.match(src, /setHidden\(f\.fwPort, !m\.pcTool\)/);
+});
+
+test("the install guide names every button of the permanent delete as the screen shows it", () => {
+  const guide = (name) => readFileSync(new URL(`../../docs/${name}`, import.meta.url), "utf-8");
+  for (const [file, lang] of [["install.md", "en"], ["install.ko.md", "ko"]]) {
+    const text = guide(file);
+    const line = text.split("\n").find((l) => l.includes(`**${STRINGS[lang].purge}**`));
+    assert.ok(line, `${file} names ${STRINGS[lang].purge}`);
+    // The last button, which stays off until DELETE is typed.
+    assert.ok(line.includes(`**${STRINGS[lang].purge_do}**`), `${file} names ${STRINGS[lang].purge_do}`);
+    assert.ok(line.includes("`DELETE`"), `${file} names the word`);
   }
 });
 

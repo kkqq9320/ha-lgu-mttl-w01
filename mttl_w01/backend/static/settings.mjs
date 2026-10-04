@@ -4,11 +4,11 @@ import {
   NA, FW_ACTIONS, t, pressConfirm, isViewOnly, intervalUnit, demoResponse, demoHa, demoConfig, demoHex, demoProfileOf,
   demoSetTarget, demoQueueJob, demoAdvanceJob, demoShiftFirmwareTimes,
 } from "./dashboard-core.mjs";
-import { FWR_SIZE, checkFwrFile, profileHintKey } from "./firmware-core.mjs";
+import { FWR_SIZE, profileHintKey } from "./firmware-core.mjs";
 import {
   POLL_CHOICES, POWER_THRESHOLDS, REPORT_INTERVALS, ENERGY_THRESHOLDS, MQTT_FIELDS,
   isIPv4, dirtyKeys, mergeDraft, mqttPayload, mqttTestPayload, mqttDraft, firmwareDraft,
-  firmwareControls, mqttControls, pollCanSave, fmtBytes, profileTitle, profileRows, jobRows,
+  firmwareControls, mqttControls, pollCanSave, fmtBytes, profileTitle, profileRows, jobRows, fileChoice,
   createSettingsApi, settleRequest, refreshReads,
 } from "./settings-core.mjs";
 import {
@@ -217,7 +217,7 @@ function showFieldError(input, errEl, errorKey) {
 function showAlert(card, alert) {
   const { f } = cards[card];
   setData(f.alert, "kind", alert?.kind ?? "none");
-  setText(f.alertText, alert ? t(page.lang, alert.key, alert.vars) : "");
+  setText(f.alertText, alert ? [alert.key, alert.after].filter(Boolean).map((key) => t(page.lang, key, alert.vars)).join(" ") : "");
   setHidden(f.alertText, !alert);
   const items = alert?.items ?? [];
   setHidden(f.alertItems, items.length === 0);
@@ -237,6 +237,7 @@ function armedAlert(id, controls) {
     return {
       kind: "warn",
       key: "fw_all_warn",
+      after: controls.returnNeedsPcTool ? "pc_return" : null,
       items: controls.targets.map((x) => `${x.name}  ${x.from ?? NA} → ${x.to ?? NA}`),
     };
   }
@@ -580,9 +581,10 @@ function clearFile() {
   cards.files.f.file.value = "";
 }
 
-function chooseFile(input) {
-  const file = input.files?.[0] ?? null;
-  const fault = file ? checkFwrFile({ name: file.name, size: file.size }) : null;
+function chooseFile(event) {
+  const file = event.target.files?.[0] ?? null;
+  const { handle, fault } = fileChoice(event.type, file);
+  if (!handle) return;
   if (fault) {
     clearFile();
     disarm();
@@ -690,7 +692,7 @@ function onEdit(event) {
   const field = el.dataset?.f;
   if (!name || !field) return;
   if (el.type === "file") {
-    chooseFile(el);
+    chooseFile(event);
     return;
   }
   if (name === "fw") {

@@ -740,6 +740,9 @@ function renderWindow() {
         : target?.kind === "official" && target.ready !== true ? "dw_auto_prepare" : null;
   setText(f.fwNote, noteKey ? t(lang, noteKey) : "");
   setHidden(f.fwNote, noteKey === null);
+  // Below 1.0.111 a strip listens for firmware on TCP 80 only, which the app does not open. The buttons stay as they are.
+  setText(f.fwPort, m.pcTool ? t(lang, "dw_port80") : "");
+  setHidden(f.fwPort, !m.pcTool);
   const job = fw.job;
   setHidden(f.job, !job);
   if (job) {

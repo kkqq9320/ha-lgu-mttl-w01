@@ -4,7 +4,7 @@
 // settings.mjs wires it to the page; tests/js/settings-core.test.mjs and api-sources.test.mjs run it under Node.
 
 import { NA, normalizeMac, fmtAgo, apiGet, apiSend, apiSendRaw } from "./dashboard-core.mjs";
-import { isJobActive, jobTone, jobStateKey, updateAllTargets } from "./firmware-core.mjs";
+import { isJobActive, jobTone, jobStateKey, updateAllTargets, needsPcTool, checkFwrFile } from "./firmware-core.mjs";
 
 /** Polling choices in seconds: backend.py ALLOWED_POLL. */
 export const POLL_CHOICES = Object.freeze([10, 15, 30, 60, 120, 300]);
@@ -215,7 +215,8 @@ export function firmwareChangedKeys(saved, draft) {
 /**
  * State of the firmware card. `saved` and `draft` are firmwareDraft() forms, `profiles` and `devices` come from
  * `api/devices`, `busy` is true while a request is out. The update button uses the saved target and server
- * address, so it stays off while either is changed and not saved.
+ * address, so it stays off while either is changed and not saved. `returnNeedsPcTool` is true while the saved target is
+ * below 1.0.111: a strip updated to it can only come back with the PC tool.
  */
 export function firmwareControls({ saved, draft, profiles, devices, viewOnly, busy }) {
   const errors = validateFirmware(draft ?? {});
@@ -236,7 +237,18 @@ export function firmwareControls({ saved, draft, profiles, devices, viewOnly, bu
     canPrepare: !off && chosen?.kind === "official",
     targets,
     canUpdateAll: !off && !unsaved && !targetBroken && targets.length > 0,
+    returnNeedsPcTool: needsPcTool(target?.version),
   };
+}
+
+/**
+ * What a firmware file input's event does. A browser fires `input` and then `change` for one choice, and a rejected file is
+ * emptied from the input right after its check, so the second event would find no file and wipe the reason. Only `change`
+ * counts. `fault` is a key of checkFwrFile, or null when the file is fine or none is chosen.
+ */
+export function fileChoice(eventType, file) {
+  if (eventType !== "change") return { handle: false, fault: null };
+  return { handle: true, fault: file ? checkFwrFile({ name: file.name, size: file.size }) : null };
 }
 
 /** State of the MQTT card: faults, changed keys and which buttons are on. */
@@ -376,7 +388,7 @@ export function createSettingsApi() {
     savePoll: (seconds) => apiSend("PUT", "api/config", { poll_interval: seconds }),
     saveTarget(profileId, host) {
       const address = String(host ?? "").trim();
-      // Tuo keeps the stored address when the key is missing; an empty one would be refused as an invalid address.
+      // Tuo keeps the stored address when the key is missing and ignores a blank value, so a blank address is left out.
       return apiSend("PUT", "api/firmware/target", address === "" ? { profile_id: profileId } : { profile_id: profileId, ota_host_ip: address });
     },
     prepare: (profileId) => apiSend("POST", `api/firmware/prepare/${profile(profileId)}`),
