@@ -679,6 +679,11 @@ button.tool-lock[data-state="view"]:hover:not(:disabled) {
   text-align: center;
 }
 
+.qr-note a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* ---- Device card: every row has a fixed place so cards line up ---- */
 
 .card {
