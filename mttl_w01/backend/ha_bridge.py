@@ -291,8 +291,8 @@ class HAController:
         # Selector 0 is the firmware master command path. Expose it as HA 'All'
         # control while keeping physical outlets 1..4 as separate controls.
         cmps['switch_all']={'p':'switch','name':'All','unique_id':f'mttl_{mac}_switch_all','command_topic':f'{base}/outlet/0/set','state_topic':f'{base}/outlet/0/state','payload_on':'ON','payload_off':'OFF','icon':'mdi:power-plug'}
-        cmps['power_total']={'p':'sensor','name':'Total Power','unique_id':f'mttl_{mac}_power_total','state_topic':f'{base}/power/total_w','device_class':'power','state_class':'measurement','unit_of_measurement':'W','suggested_display_precision':3}
-        cmps['energy_total']={'p':'sensor','name':'Total Energy','unique_id':f'mttl_{mac}_energy_total','state_topic':f'{base}/energy/total_kwh','device_class':'energy','state_class':'total_increasing','unit_of_measurement':'kWh','suggested_display_precision':3}
+        cmps['power_total']={'p':'sensor','name':'Total Power','unique_id':f'mttl_{mac}_power_total','state_topic':f'{base}/power/total_w','device_class':'power','state_class':'measurement','unit_of_measurement':'W','suggested_display_precision':1}
+        cmps['energy_total']={'p':'sensor','name':'Total Energy','unique_id':f'mttl_{mac}_energy_total','state_topic':f'{base}/energy/total_kwh','device_class':'energy','state_class':'total_increasing','unit_of_measurement':'kWh','suggested_display_precision':2}
         channel_names={int(ch.get('selector')):(str(ch.get('name') or '').strip() or f"Outlet {int(ch.get('selector'))}") for ch in d.get('channels',[]) if str(ch.get('selector','')).isdigit() and 1<=int(ch.get('selector'))<=4}
         device_name=d.get('alias') or f'MTTL-W01 {mac[-6:].upper()}'
         childlock_supported=bool(self.manager and hasattr(self.manager,'childlock_supported') and self.manager.childlock_supported(d))
@@ -304,13 +304,13 @@ class HAController:
         for n in range(1,5):
             name=channel_names.get(n,f'Outlet {n}')
             cmps[f'switch_{n}']={'p':'switch','name':name,'unique_id':f'mttl_{mac}_switch_{n}','command_topic':f'{base}/outlet/{n}/set','state_topic':f'{base}/outlet/{n}/state','payload_on':'ON','payload_off':'OFF','icon':'mdi:power-socket-de'}
-            cmps[f'power_{n}']={'p':'sensor','name':f'{name} Power','unique_id':f'mttl_{mac}_power_{n}','state_topic':f'{base}/power/{n}_w','device_class':'power','state_class':'measurement','unit_of_measurement':'W','suggested_display_precision':3}
-            cmps[f'energy_{n}']={'p':'sensor','name':f'{name} Energy','unique_id':f'mttl_{mac}_energy_{n}','state_topic':f'{base}/energy/{n}_kwh','device_class':'energy','state_class':'total_increasing','unit_of_measurement':'kWh','suggested_display_precision':3}
+            cmps[f'power_{n}']={'p':'sensor','name':f'{name} Power','unique_id':f'mttl_{mac}_power_{n}','state_topic':f'{base}/power/{n}_w','device_class':'power','state_class':'measurement','unit_of_measurement':'W','suggested_display_precision':1}
+            cmps[f'energy_{n}']={'p':'sensor','name':f'{name} Energy','unique_id':f'mttl_{mac}_energy_{n}','state_topic':f'{base}/energy/{n}_kwh','device_class':'energy','state_class':'total_increasing','unit_of_measurement':'kWh','suggested_display_precision':2}
         for n in range(1,5):
             name=channel_names.get(n,f'Outlet {n}')
-            cmps[f'temperature_{n}']={'p':'sensor','name':f'{name} Temperature','unique_id':f'mttl_{mac}_temperature_{n}','state_topic':f'{base}/temperature/{n}_c','device_class':'temperature','state_class':'measurement','unit_of_measurement':'°C','suggested_display_precision':0}
+            cmps[f'temperature_{n}']={'p':'sensor','name':f'{name} Temperature','unique_id':f'mttl_{mac}_temperature_{n}','state_topic':f'{base}/temperature/{n}_c','device_class':'temperature','state_class':'measurement','unit_of_measurement':'°C','suggested_display_precision':0,'entity_category':'diagnostic'}
         if diag.get('voltage_enabled'):
-            cmps['voltage']={'p':'sensor','name':'Voltage','unique_id':f'mttl_{mac}_voltage','state_topic':f'{base}/diagnostic/voltage_v','device_class':'voltage','state_class':'measurement','unit_of_measurement':'V','suggested_display_precision':1}
+            cmps['voltage']={'p':'sensor','name':'Voltage','unique_id':f'mttl_{mac}_voltage','state_topic':f'{base}/diagnostic/voltage_v','device_class':'voltage','state_class':'measurement','unit_of_measurement':'V','suggested_display_precision':1,'entity_category':'diagnostic'}
         if diag.get('rssi_enabled'):
             cmps['rssi']={'p':'sensor','name':'Wi-Fi RSSI','unique_id':f'mttl_{mac}_rssi','state_topic':f'{base}/diagnostic/rssi_dbm','device_class':'signal_strength','state_class':'measurement','unit_of_measurement':'dBm','entity_category':'diagnostic'}
         cmps['backend_bridge']={'p':'binary_sensor','name':'Backend HA Bridge','unique_id':f'mttl_{mac}_backend_bridge','state_topic':self.bridge_topic(c),'payload_on':'online','payload_off':'offline','device_class':'connectivity','entity_category':'diagnostic'}

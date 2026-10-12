@@ -12,6 +12,7 @@
 - Supports amd64 and aarch64.
 - The MQTT service is optional (`mqtt:want`): the app starts without MQTT variables when no broker is available.
 - Fixes a hang in Tuo's backend: saving the MQTT settings while connected to the broker never finished, and the Home Assistant integration stayed disconnected until the app restarted.
+- In Home Assistant, power shows one decimal place and energy two, and the temperature and voltage sensors are listed under Diagnostic.
 
 # 변경 기록
 
@@ -27,3 +28,4 @@
 - amd64와 aarch64를 지원한다.
 - MQTT 서비스는 필수가 아니다(`mqtt:want`). 브로커가 없으면 MQTT 변수 없이 시작한다.
 - 투오 백엔드의 멈춤을 고쳤다. 브로커에 연결된 동안 MQTT 설정을 저장하면 저장이 끝나지 않았고, 앱을 다시 시작할 때까지 Home Assistant 연동이 끊긴 채로 남았다.
+- Home Assistant에서 전력은 소수 첫째 자리, 에너지는 소수 둘째 자리까지 보이고, 온도와 전압 센서는 진단(Diagnostic)으로 분류된다.
