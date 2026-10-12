@@ -675,6 +675,10 @@ button.tool-lock[data-state="view"]:hover:not(:disabled) {
   white-space: nowrap; /* the address wraps only at the <wbr> after each slash */
 }
 
+.qr-note {
+  text-align: center;
+}
+
 /* ---- Device card: every row has a fixed place so cards line up ---- */
 
 .card {
@@ -1183,7 +1187,8 @@ body:has(.dev-dialog[open]) {
 
 /* Korean breaks between words here, not inside them. */
 .dw .note:lang(ko),
-.hidden-body .note:lang(ko) {
+.hidden-body .note:lang(ko),
+.qr-note:lang(ko) {
   overflow-wrap: anywhere;
   word-break: keep-all;
 }
