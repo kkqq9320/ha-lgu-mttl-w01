@@ -33,7 +33,7 @@ Mosquitto broker 앱이 설치되어 있으면 앱이 시작할 때 그 접속 �
 
 ## 멀티탭 준비
 
-멀티탭마다 투오 펌웨어 1.0.111과 Home Assistant 주소가 필요하다. 투오 PC 도구가 한 번 실행으로 둘 다 처리한다. PC에서 펌웨어를 만들고, 멀티탭의 설정용 Wi-Fi로 설치한 뒤, 집 Wi-Fi와 Home Assistant 주소를 멀티탭에 저장한다. 멀티탭은 한 대씩 진행한다. 펌웨어 판과 도구의 자세한 내용은 투오의 [펌웨어 문서](tuo/docs/FIRMWARE_AND_PROVISIONING.md)(영어)에 있다.
+멀티탭마다 투오 펌웨어 1.0.111과 Home Assistant 주소가 필요하다. 둘 다 투오 PC 도구로 넣는다. 도구가 PC에서 펌웨어를 만들어 멀티탭의 설정용 Wi-Fi로 설치하고, 집 Wi-Fi와 Home Assistant 주소를 멀티탭에 저장한다. 멀티탭은 한 대씩 진행한다. 펌웨어 판과 도구의 자세한 내용은 투오의 [펌웨어 문서](tuo/docs/FIRMWARE_AND_PROVISIONING.md)(영어)에 있다.
 
 ### 준비물
 
@@ -50,28 +50,33 @@ Mosquitto broker 앱이 설치되어 있으면 앱이 시작할 때 그 접속 �
 
 ### PC 도구 실행
 
-도구 폴더(`mttl_setup.py`가 있는 폴더)에서 관리자 권한 터미널을 열고 다음을 실행한다.
+펌웨어 설치와 주소 저장을 따로 실행하고, 그 사이에 멀티탭을 설정 모드로 둔 채 2분 이상 기다린다.
 
-```text
-python mttl_setup.py install --version 111
-```
+1. 도구 폴더(`mttl_setup.py`가 있는 폴더)에서 관리자 권한 터미널을 열고 펌웨어만 설치한다.
 
-대부분의 macOS와 Linux처럼 Python 3의 이름이 `python3`이면 `python` 대신 `python3`을 쓴다. Windows에서는 `INSTALL_WINDOWS.bat`이 같은 설치를 실행하고 관리자 권한도 스스로 요청한다.
+   ```text
+   python mttl_setup.py ota --version 111
+   ```
 
-도구가 하는 일:
+   도구가 펌웨어 1.0.111을 만들어 SHA-256을 확인하고, PC를 멀티탭의 `TONLY_TAP_…` 네트워크에 연결한 뒤 PC의 TCP 80 포트로 펌웨어를 보낸다. 멀티탭은 다시 켜진 뒤 설정 모드로 돌아온다.
+2. 멀티탭의 전원을 그대로 두고 2분 이상 기다린다. 그동안 버튼을 누르지 않는다.
+3. PC가 `TONLY_TAP_…`에 연결되어 있는지 확인한다. 멀티탭이 다시 켜질 때 연결이 끊기고 저절로 다시 붙지 않을 수 있다. 그다음 주소를 저장한다.
 
-1. 펌웨어 1.0.111을 만들고 SHA-256을 확인한다.
-2. Home Assistant 주소(`Backend IPv4`)와 집 Wi-Fi 이름·암호를 묻는다.
-3. PC를 멀티탭의 `TONLY_TAP_…` 네트워크에 연결한다.
-4. PC의 TCP 80 포트로 펌웨어를 설치하고 멀티탭이 다시 켜지기를 기다린다.
-5. Home Assistant 주소와 집 Wi-Fi를 멀티탭에 저장한다.
-6. 멀티탭이 `http://<Home Assistant 주소>:18282/api/devices`에 온라인으로 나타나기를 기다린다.
+   ```text
+   python mttl_setup.py provision-up
+   ```
 
-도구가 펌웨어는 설치됐지만 설정(provisioning)이 남았다고 알리며 끝나면(종료 코드 3), 5단계의 설정이 저장되지 않은 것이다. 멀티탭을 다시 설정 모드로 바꾸고 `python mttl_setup.py provision-up`(Windows는 `PROVISION_UP_WINDOWS.bat`)을 실행한다. 펌웨어는 다시 설치하지 않는다. 도구는 실행할 때마다 `logs` 폴더에 기록을 남긴다.
+   도구가 Home Assistant 주소(`Backend IPv4`)와 집 Wi-Fi 이름·암호를 묻고 멀티탭에 저장한 뒤, 멀티탭이 `http://<Home Assistant 주소>:18282/api/devices`에 온라인으로 나타나기를 기다린다.
+
+대부분의 macOS와 Linux처럼 Python 3의 이름이 `python3`이면 `python` 대신 `python3`을 쓴다. Windows에서는 `OTA_WINDOWS.bat`이 1단계를 실행하고 관리자 권한도 스스로 요청하며, `PROVISION_UP_WINDOWS.bat`이 3단계를 실행한다. 도구는 실행할 때마다 `logs` 폴더에 기록을 남긴다.
+
+`python mttl_setup.py install --version 111`은 두 단계를 한 번에 실행하지만, 펌웨어를 보내고 약 10초 뒤 주소를 저장한다. 펌웨어 1.0.66이던 멀티탭 한 대에서 이 방법으로 설치했더니 새 펌웨어가 집 Wi-Fi에 붙은 채 처음 켜지고 30~40초 만에 다시 켜지며 1.0.66으로 돌아갔다. 위 순서로 설치했을 때는 1.0.111이 전원을 다시 켠 뒤에도 남았다(2026-10-13 확인).
+
+`provision-up`이 온라인 확인을 끝내지 못하고 끝나도, 멀티탭이 잠시 뒤 대시보드에 나타날 수 있다. 나타나지 않으면 멀티탭을 다시 설정 모드로 바꾸고 `provision-up`을 다시 실행한다. 펌웨어는 다시 설치하지 않는다.
 
 ### 결과 확인
 
-PC 도구는 멀티탭이 온라인이 되는지만 확인하고 펌웨어 판은 확인하지 않는다. 대시보드의 멀티탭 카드에서 이름 아래 줄에 MAC 주소와 `FW 1.0.111`이 나오는지 본다.
+PC 도구는 멀티탭이 온라인이 되는지만 확인하고 펌웨어 판은 확인하지 않는다. 대시보드의 멀티탭 카드에서 이름 아래 줄에 MAC 주소와 `FW 1.0.111`이 나오는지 보고, 몇 분 뒤에도 그대로인지 본다. `FW 1.0.66`으로 바뀌었으면 펌웨어가 자리 잡지 못한 것이므로 [PC 도구 실행](#pc-도구-실행)을 처음부터 다시 한다.
 
 ## 펌웨어 되돌리기
 
@@ -82,7 +87,7 @@ python mttl_setup.py install --version 110
 python mttl_setup.py install --version 66
 ```
 
-1.0.110은 잠금(child lock)이 없는 투오의 로컬 백엔드용 펌웨어이고, 1.0.66은 LG U+ 순정 호환 펌웨어다. 이 판의 멀티탭은 TCP 80 포트로만 펌웨어를 받는데 앱은 이 포트를 열지 않으므로, 1.0.111로 돌아갈 때도 PC 도구를 쓴다.
+1.0.110은 잠금(child lock)이 없는 투오의 로컬 백엔드용 펌웨어이고, 1.0.66은 LG U+ 순정 호환 펌웨어다. 이 판의 멀티탭은 TCP 80 포트로만 펌웨어를 받는데 앱은 이 포트를 열지 않으므로, 1.0.111로 돌아갈 때도 [PC 도구 실행](#pc-도구-실행)의 순서를 따른다.
 
 ## 설정 페이지와 기기 창
 

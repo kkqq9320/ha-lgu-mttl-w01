@@ -33,7 +33,7 @@ Tuo's own documents ([docs/tuo](tuo/README.md) and [mttl_w01/backend/README.md](
 
 ## Prepare the power strips
 
-Each power strip needs Tuo's firmware 1.0.111 and the address of Home Assistant. Tuo's PC tool does both in one run: it builds the firmware on your PC, installs it over the power strip's setup Wi-Fi, and then stores your Wi-Fi network and the Home Assistant address on the power strip. Do one power strip at a time. Tuo's [firmware notes](tuo/docs/FIRMWARE_AND_PROVISIONING.md) describe the firmware versions and the tool in detail.
+Each power strip needs Tuo's firmware 1.0.111 and the address of Home Assistant. Tuo's PC tool provides both: it builds the firmware on your PC, installs it over the power strip's setup Wi-Fi, and stores your Wi-Fi network and the Home Assistant address on the power strip. Do one power strip at a time. Tuo's [firmware notes](tuo/docs/FIRMWARE_AND_PROVISIONING.md) describe the firmware versions and the tool in detail.
 
 ### What you need
 
@@ -50,28 +50,33 @@ Hold the power button for about 10 seconds, until the orange LED blinks quickly.
 
 ### Run the PC tool
 
-Open a terminal as administrator in the tool folder, the folder that contains `mttl_setup.py`, and run:
+Install the firmware and store the address in two separate runs, and leave the power strip in setup mode for at least two minutes in between.
 
-```text
-python mttl_setup.py install --version 111
-```
+1. Open a terminal as administrator in the tool folder, the folder that contains `mttl_setup.py`, and install only the firmware:
 
-Use `python3` instead of `python` where that is the name of Python 3, as on most macOS and Linux systems. On Windows, `INSTALL_WINDOWS.bat` runs the same installation and asks for administrator rights itself.
+   ```text
+   python mttl_setup.py ota --version 111
+   ```
 
-The tool:
+   The tool builds firmware 1.0.111, checks its SHA-256, connects the PC to the power strip's `TONLY_TAP_…` network and sends the firmware from TCP port 80 of the PC. The power strip restarts and comes back in setup mode.
+2. Leave the power strip powered and wait at least two minutes. Do not press its button in the meantime.
+3. Check that the PC is connected to `TONLY_TAP_…`. The connection can drop while the power strip restarts and may not come back by itself. Then store the address:
 
-1. builds firmware 1.0.111 and checks its SHA-256,
-2. asks for the Home Assistant address (`Backend IPv4`) and the name and password of your Wi-Fi network,
-3. connects the PC to the power strip's `TONLY_TAP_…` network,
-4. installs the firmware from TCP port 80 of the PC and waits for the power strip to restart,
-5. stores the Home Assistant address and your Wi-Fi network on the power strip,
-6. waits for the power strip to come online at `http://<Home Assistant address>:18282/api/devices`.
+   ```text
+   python mttl_setup.py provision-up
+   ```
 
-If the tool reports that the firmware is installed but provisioning is pending (exit code 3), the settings of step 5 were not stored. Put the power strip in setup mode again and run `python mttl_setup.py provision-up` (on Windows, `PROVISION_UP_WINDOWS.bat`). Do not install the firmware again. The tool keeps a log of each run in its `logs` folder.
+   The tool asks for the Home Assistant address (`Backend IPv4`) and the name and password of your Wi-Fi network, stores them on the power strip and waits for the power strip to come online at `http://<Home Assistant address>:18282/api/devices`.
+
+Use `python3` instead of `python` where that is the name of Python 3, as on most macOS and Linux systems. On Windows, `OTA_WINDOWS.bat` runs step 1 and asks for administrator rights itself, and `PROVISION_UP_WINDOWS.bat` runs step 3. The tool keeps a log of each run in its `logs` folder.
+
+`python mttl_setup.py install --version 111` runs both steps at once, but it stores the address about 10 seconds after sending the firmware. On one power strip that had firmware 1.0.66, installing this way let the new firmware start for the first time while connected to the home Wi-Fi; it restarted 30 to 40 seconds later and came back on 1.0.66. Installed in the order above, 1.0.111 stayed after the power strip was unplugged and plugged in again (checked on 2026-10-13).
+
+If `provision-up` ends before it sees the power strip online, the power strip may still appear on the dashboard a little later. If it does not, put the power strip in setup mode again and run `provision-up` again. Do not install the firmware again.
 
 ### Check the result
 
-The PC tool checks that the power strip comes online, but not which firmware it runs. Check the power strip's card on the dashboard: the line under the name shows the MAC address followed by `FW 1.0.111`.
+The PC tool checks that the power strip comes online, but not which firmware it runs. Check the power strip's card on the dashboard: the line under the name shows the MAC address followed by `FW 1.0.111`. Check again a few minutes later. If it has changed to `FW 1.0.66`, the firmware did not stay; repeat [Run the PC tool](#run-the-pc-tool) from the start.
 
 ## Roll back the firmware
 
@@ -82,7 +87,7 @@ python mttl_setup.py install --version 110
 python mttl_setup.py install --version 66
 ```
 
-1.0.110 is Tuo's local-backend firmware without child lock, and 1.0.66 is the LG U+ stock-compatible firmware. Power strips on these versions download firmware over TCP port 80 only, which the app does not publish, so moving them back to 1.0.111 also takes the PC tool.
+1.0.110 is Tuo's local-backend firmware without child lock, and 1.0.66 is the LG U+ stock-compatible firmware. Power strips on these versions download firmware over TCP port 80 only, which the app does not publish, so moving them back to 1.0.111 also follows [Run the PC tool](#run-the-pc-tool).
 
 ## Settings page and device window
 
