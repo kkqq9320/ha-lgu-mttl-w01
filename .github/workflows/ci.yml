@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -39,3 +41,33 @@ jobs:
       - uses: frenck/action-addon-linter@v2
         with:
           path: ./mttl_w01
+
+  build:
+    name: Build ${{ matrix.arch }} image
+    # release.yml calls this workflow for the tests only and builds the published images itself.
+    if: github.event_name != 'release'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            os: ubuntu-24.04
+          - arch: aarch64
+            os: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Copy NOTICE.md and LICENSE into the build context
+        run: cp NOTICE.md LICENSE mttl_w01/
+      - uses: home-assistant/builder/actions/build-image@2026.09.0
+        with:
+          arch: ${{ matrix.arch }}
+          image: ghcr.io/kkqq9320/${{ matrix.arch }}-mttl_w01
+          image-tags: ci
+          version: ci
+          context: ./mttl_w01
+          push: "false"
+          cosign: "false"
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}

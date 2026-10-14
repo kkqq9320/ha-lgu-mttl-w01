@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+env:
+  ARCHITECTURES: '["amd64", "aarch64"]'
+
+jobs:
+  tests:
+    name: Tests
+    uses: ./.github/workflows/ci.yml
+
+  version:
+    name: Check the version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.info.outputs.version }}
+      name: ${{ steps.info.outputs.name }}
+      description: ${{ steps.info.outputs.description }}
+      url: ${{ steps.info.outputs.url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # Fails unless the tag is v<version> and matches version in mttl_w01/config.yaml.
+      - id: info
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: python tools/release_info.py "$TAG" --github-output "$GITHUB_OUTPUT"
+
+  matrix:
+    name: Prepare the build matrix
+    needs: [tests, version]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - id: matrix
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.09.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          image-name: mttl_w01
+
+  build:
+    name: Build ${{ matrix.arch }} image
+    needs: [matrix, version]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Copy NOTICE.md and LICENSE into the build context
+        run: cp NOTICE.md LICENSE mttl_w01/
+      - uses: home-assistant/builder/actions/build-image@2026.09.0
+        with:
+          arch: ${{ matrix.arch }}
+          image: ${{ matrix.image }}
+          context: ./mttl_w01
+          image-tags: |
+            ${{ needs.version.outputs.version }}
+            latest
+          version: ${{ needs.version.outputs.version }}
+          # A version that is already published is never overwritten.
+          skip-existing: ${{ needs.version.outputs.version }}
+          push: "true"
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          labels: |
+            io.hass.type=app
+            io.hass.name=${{ needs.version.outputs.name }}
+            io.hass.description=${{ needs.version.outputs.description }}
+            io.hass.url=${{ needs.version.outputs.url }}
+
+  manifest:
+    name: Publish the multi-arch manifest
+    needs: [build, version]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.09.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          image-name: mttl_w01
+          image-tags: |
+            ${{ needs.version.outputs.version }}
+            latest
+          skip-existing: ${{ needs.version.outputs.version }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
