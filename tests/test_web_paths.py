@@ -86,12 +86,12 @@ class WebPathsTest(unittest.TestCase):
                 self.assertIn(
                     f"if p=='{route}':return self.send_file(self.root/'static/{file}','{ctype}',cache='no-cache')", src
                 )
-        # Tuo's own log page stays in the repository but is no longer served.
+        # 투오's own log page stays in the repository but is no longer served.
         self.assertNotIn("'static/logs.html'", src)
         self.assertNotIn("'static/logs.js'", src)
 
     def test_tuo_page_not_routed(self):
-        # Tuo's own page and script stay in the repository but are no longer served.
+        # 투오's own page and script stay in the repository but are no longer served.
         src = BACKEND.read_text(encoding="utf-8")
         self.assertNotIn("p=='/tuo.html'", src)
         self.assertNotIn("p=='/app.js'", src)
@@ -103,7 +103,7 @@ class WebPathsTest(unittest.TestCase):
     def test_clients_send_request_header(self):
         app = (STATIC / "app.js").read_text(encoding="utf-8")
         api = next(line for line in app.splitlines() if line.startswith("async function api("))
-        # Tuo's api() adds the header to what the caller passes (custom firmware upload sends X-Filename).
+        # 투오's api() adds the header to what the caller passes (custom firmware upload sends X-Filename).
         self.assertIn("...o.headers,'X-MTTL-Request':'1'", api)
         core = (STATIC / "dashboard-core.mjs").read_text(encoding="utf-8")
         self.assertIn('"X-MTTL-Request": "1"', core)

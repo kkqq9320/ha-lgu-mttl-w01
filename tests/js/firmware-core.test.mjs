@@ -101,7 +101,7 @@ test("deviceFirmware blocks offline, busy, below-1.0.111 and unready custom targ
   assert.equal(deviceFirmware(custom, { jobs: [] }).canUpdate, false);
   // A custom file is registered only after it passed validation, so a ready one updates at once.
   assert.equal(deviceFirmware({ ...custom, firmware_target: { ...custom.firmware_target, ready: true } }, { jobs: [] }).canUpdate, true);
-  // An official target that is not prepared yet is built by Tuo when the update starts.
+  // An official target that is not prepared yet is built by 투오 when the update starts.
   assert.equal(deviceFirmware(dev, { jobs: [] }).block, null);
   assert.equal(deviceFirmware({ ...dev, firmware_action: null }, { jobs: [] }).canUpdate, false);
   assert.equal(deviceFirmware({ ...dev, firmware_action: null }, { jobs: [] }).action, null);

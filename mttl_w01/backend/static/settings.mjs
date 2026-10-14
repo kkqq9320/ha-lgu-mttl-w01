@@ -516,7 +516,7 @@ async function refresh() {
 
 /**
  * Sends one request. `id` is its slot in state.busy and `card` the card whose line shows the result.
- * `reload` reads the values again (also after a failure: Tuo stores the target before it checks the address),
+ * `reload` reads the values again (also after a failure: 투오 stores the target before it checks the address),
  * `reset` takes the saved values back into the form once that reading worked and `ok(answer)` is the line shown on success.
  * When the reading failed, the form keeps what the user typed and the server badge goes offline; the next refresh reads again.
  */

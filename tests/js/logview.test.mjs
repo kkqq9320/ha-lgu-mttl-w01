@@ -37,7 +37,7 @@ test("filterLogs mirrors UILogHandler.snapshot", () => {
   assert.deepEqual(seqs({ level: "DEBUG", category: "all", limit: 2 }), [4, 5]); // newest rows win
 });
 
-test("logLine formats like the Tuo text view", () => {
+test("logLine formats like the 투오 text view", () => {
   const r = row(7, "INFO", "ha", "mqtt connected host=192.0.2.10", 1790682546.5);
   assert.equal(fmtLogTime(1790682546.5, "UTC"), "2026-09-29 11:49:06.500");
   assert.equal(logLine(r, "UTC"), "2026-09-29 11:49:06.500 INFO    [ha] mqtt connected host=192.0.2.10");

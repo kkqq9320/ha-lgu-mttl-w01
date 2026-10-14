@@ -317,7 +317,7 @@ function updateCard(card, raw) {
   setData(f.lock, "active", synced && lock.bits.some(Boolean) ? "yes" : "no");
   setText(f.lockState, lock && !synced ? t(lang, "lock_pending") : "");
   card.lockBits.forEach((b, bit) => {
-    // Bits from an unverified mask are not shown as active (Tuo keeps the last value but does not trust it).
+    // Bits from an unverified mask are not shown as active (투오 keeps the last value but does not trust it).
     setAttr(b, "aria-pressed", String(synced && lock.bits[bit]));
     setDisabled(b, !m.controls || !lock || !canToggleLock(shown) || lockBusy);
     const name = bit === 0 ? t(lang, "lock_all") : m.outlets[bit - 1].name;

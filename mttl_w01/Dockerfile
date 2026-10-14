@@ -7,6 +7,6 @@ COPY backend/static /app/static
 COPY run.py /run.py
 COPY NOTICE.md LICENSE /usr/share/doc/mttl_w01/
 LABEL org.opencontainers.image.title="LG U+ Multitap (MTTL-W01)" \
-      org.opencontainers.image.description="Home Assistant app for the LG U+ MTTL-W01 power strip, based on Tuo's standalone backend. Sources and credits: https://github.com/kkqq9320/ha-lgu-mttl-w01 (NOTICE.md)"
+      org.opencontainers.image.description="Home Assistant app for the LG U+ MTTL-W01 power strip, based on the standalone backend by 투오 of the Naver HA Cafe. Sources and credits: https://github.com/kkqq9320/ha-lgu-mttl-w01 (NOTICE.md)"
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -q -O /dev/null http://127.0.0.1:8080/api/health || exit 1
 CMD ["python", "/run.py"]

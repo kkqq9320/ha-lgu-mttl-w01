@@ -16,6 +16,8 @@ HA_APPS = "https://github.com/kkqq9320/ha-apps"
 MY_LINK = ("https://my.home-assistant.io/redirect/supervisor_add_addon_repository/"
            "?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-apps")
 HANGUL = re.compile("[가-힣]")
+# A sentence or table cell that ends in 다 without 니 before it, like "있다." or "쓴다 |".
+PLAIN_ENDING = re.compile(r"[가-힣](?<!니)다(?:[.)]|\s*\||\s*$)")
 LATIN = re.compile("[A-Za-z]")
 LINK = re.compile(r"\]\(([^)\s]+)\)")
 
@@ -112,8 +114,29 @@ class DocsTest(unittest.TestCase):
         for rel in ("mttl_w01/README.md", "mttl_w01/DOCS.md"):
             with self.subTest(file=rel):
                 text = read(rel)
-                for s in (NOTICE_URL, "Tuo", "투오", "af950833", "power-socket-de"):
-                    self.assertIn(s, text)
+                self.assertIn(NOTICE_URL, text)
+                # Compare the text a reader sees: link labels without their targets.
+                shown = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+                for s in ("투오 of the Naver HA Cafe", "네이버 HA 카페 투오님", "af950833", "power-socket-de"):
+                    self.assertIn(s, shown)
+
+    def test_tuo_is_named_in_hangul(self):
+        # 투오님's name is not "Tuo" in English either; branch and tag names (`tuo`, `tuo-*`) are lower case.
+        for rel in (*LINKED_DOCS, "mttl_w01/config.yaml", "mttl_w01/Dockerfile", "mttl_w01/run.py"):
+            with self.subTest(file=rel):
+                self.assertNotRegex(read(rel), r"\bTuo\b")
+
+    def test_korean_docs_use_polite_style(self):
+        # Korean sentences end in -니다 (습니다체), not the plain -다.
+        for rel in ("README.ko.md", "docs/install.ko.md", "mttl_w01/translations/ko.yaml", *BILINGUAL):
+            fenced = False
+            for number, line in enumerate(read(rel).splitlines(), 1):
+                if line.startswith("```"):
+                    fenced = not fenced
+                if fenced or not HANGUL.search(line):
+                    continue
+                with self.subTest(file=rel, line=number):
+                    self.assertNotRegex(line, PLAIN_ENDING)
 
 
 if __name__ == "__main__":

@@ -11,8 +11,8 @@ LG U+ MTTL-W01 멀티탭을 투오 standalone 백엔드로 Home Assistant에서 
   1. `tuo` 가지에 원본을 커밋하고 태그를 붙인다.
   2. `main`에 `tuo`를 병합한다.
   3. `NOTICE.md`의 "Modified" 목록을 병합 결과와 맞춘다.
-  4. `mttl_w01/config.yaml`의 `description`에 적힌 백엔드 판(`based on Tuo standalone <판>`)을 바꾸고, `version`을 새 날짜 판으로 바꾼다.
-- 앱 판 번호는 `<연도 두 자리>.<월>.<순번>` 형식이다. 예: `26.10.0`, 같은 달 다음 판 `26.10.1`, 다음 달 첫 판 `26.11.0`. 월 앞에 0을 붙이지 않는다. 한 번 게시한 판 번호는 다시 쓰지 않는다. 앱이 쓰는 투오 백엔드 판은 `config.yaml`의 `description`(`based on Tuo standalone <판>`)에 적는다.
+  4. `mttl_w01/config.yaml`의 `description`에 적힌 백엔드 판(`based on 투오's standalone <판>`)을 바꾸고, `version`을 새 날짜 판으로 바꾼다.
+- 앱 판 번호는 `<연도 두 자리>.<월>.<순번>` 형식이다. 예: `26.10.0`, 같은 달 다음 판 `26.10.1`, 다음 달 첫 판 `26.11.0`. 월 앞에 0을 붙이지 않는다. 한 번 게시한 판 번호는 다시 쓰지 않는다. 앱이 쓰는 투오 백엔드 판은 `config.yaml`의 `description`(`based on 투오's standalone <판>`)에 적는다.
 
 ## 저장소에 넣지 않는 것
 
@@ -34,6 +34,8 @@ LG U+ MTTL-W01 멀티탭을 투오 standalone 백엔드로 Home Assistant에서 
 
 - 사용자 문서는 영어 파일과 한국어 `*.ko.md` 짝으로 둔다.
 - `mttl_w01/README.md`, `DOCS.md`, `NOTICE.md`, `CHANGELOG.md`는 한 파일에 영어를 먼저, 한국어를 뒤에 쓴다.
+- 사용자에게 보이는 한국어 문장(문서, `translations/ko.yaml`, 대시보드 문구)은 "-습니다"체로 쓴다. `tests/test_docs.py`가 문서와 `ko.yaml`을 검사한다.
+- 투오님은 한국어로 처음에 "네이버 HA 카페 투오님", 그 뒤로 "투오님"이라고 쓴다. 영어에서도 이름을 "투오"로 쓰고 처음에 "of the Naver HA Cafe"를 붙인다. "Tuo"로 옮기지 않는다. 가지와 태그 이름(`tuo`, `tuo-*`)은 식별자라 그대로 둔다.
 - `run.py` 로그는 영어로 쓰고 줄 앞에 `[run]`을 붙인다.
 - 대시보드는 EN/KR 전환을 지원한다.
 - `AGENTS.md`(이 파일)는 관리자용이므로 한국어로 쓴다.

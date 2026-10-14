@@ -130,7 +130,7 @@ class AddonPackageTest(unittest.TestCase):
         self.assertRegex(config_value("version"), VERSION_RE)
 
     def test_description_names_backend_version(self):
-        m = re.search(r"\(based on Tuo standalone (\d+\.\d+\.\d+)\)$", config_value("description"))
+        m = re.search(r"\(based on 투오's standalone (\d+\.\d+\.\d+)\)$", config_value("description"))
         backend = re.search(r"^BACKEND_VERSION='([^']+)'$", BACKEND_PY.read_text(encoding="utf-8"), re.MULTILINE)
         self.assertIsNotNone(m)
         self.assertIsNotNone(backend)
@@ -165,7 +165,7 @@ class AddonPackageTest(unittest.TestCase):
         self.assertRegex(text, r'org\.opencontainers\.image\.title="[^"]+"')
         description = re.search(r'org\.opencontainers\.image\.description="([^"]+)"', text)
         self.assertIsNotNone(description)
-        self.assertIn("Tuo", description.group(1))
+        self.assertIn("투오 of the Naver HA Cafe", description.group(1))
         self.assertIn("https://github.com/kkqq9320/ha-lgu-mttl-w01", description.group(1))
         self.assertLessEqual(len(description.group(1)), 512)
 

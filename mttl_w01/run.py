@@ -1,4 +1,4 @@
-"""Container entrypoint: turn the app options and Supervisor data into environment variables and exec the Tuo backend."""
+"""Container entrypoint: turn the app options and Supervisor data into environment variables and exec the 투오 backend."""
 
 import http.client
 import ipaddress

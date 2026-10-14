@@ -12,7 +12,7 @@ _spec.loader.exec_module(m)
 
 CONFIG = ('name: LG U+ Multitap (MTTL-W01)\nversion: "26.10.0"\nslug: mttl_w01\n'
           "url: https://github.com/kkqq9320/ha-lgu-mttl-w01\nimage: ghcr.io/kkqq9320/mttl_w01\n"
-          "description: Local backend (based on Tuo standalone 0.2.11)\nports:\n  10086/tcp: 10086\n")
+          "description: Local backend (based on 투오's standalone 0.2.11)\nports:\n  10086/tcp: 10086\n")
 
 
 class ReleaseInfoTest(unittest.TestCase):
@@ -20,7 +20,7 @@ class ReleaseInfoTest(unittest.TestCase):
         self.assertEqual(m.release_info("v26.10.0", CONFIG), {
             "version": "26.10.0",
             "name": "LG U+ Multitap (MTTL-W01)",
-            "description": "Local backend (based on Tuo standalone 0.2.11)",
+            "description": "Local backend (based on 투오's standalone 0.2.11)",
             "url": "https://github.com/kkqq9320/ha-lgu-mttl-w01",
         })
 
@@ -88,7 +88,7 @@ class ReleaseInfoTest(unittest.TestCase):
             self.assertEqual(m.main(["v26.10.0", "--config", str(cfg), "--github-output", str(out)]), 0)
             lines = out.read_text(encoding="utf-8").splitlines()
             self.assertEqual(lines, ["version=26.10.0", "name=LG U+ Multitap (MTTL-W01)",
-                                     "description=Local backend (based on Tuo standalone 0.2.11)",
+                                     "description=Local backend (based on 투오's standalone 0.2.11)",
                                      "url=https://github.com/kkqq9320/ha-lgu-mttl-w01"])
             self.assertEqual(m.main(["v26.10.9", "--config", str(cfg), "--github-output", str(out)]), 1)
             self.assertEqual(len(out.read_text(encoding="utf-8").splitlines()), 4)

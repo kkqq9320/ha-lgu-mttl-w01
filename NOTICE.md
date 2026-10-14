@@ -1,24 +1,24 @@
 # Notice / 출처 표기
 
-The app image `ghcr.io/kkqq9320/mttl_w01` is built from the `mttl_w01/` folder, so it contains Tuo's backend files and our dashboard files listed below. The image also carries this notice and [LICENSE](LICENSE) in `/usr/share/doc/mttl_w01/`.
+The app image `ghcr.io/kkqq9320/mttl_w01` is built from the `mttl_w01/` folder, so it contains 투오's backend files and our dashboard files listed below. The image also carries this notice and [LICENSE](LICENSE) in `/usr/share/doc/mttl_w01/`.
 
-앱 이미지 `ghcr.io/kkqq9320/mttl_w01`은 `mttl_w01/` 폴더로 만들므로 아래 목록의 투오 백엔드 파일과 우리 대시보드 파일이 들어 있다. 이미지 안 `/usr/share/doc/mttl_w01/`에는 이 문서와 [LICENSE](LICENSE)도 있다.
+앱 이미지 `ghcr.io/kkqq9320/mttl_w01`은 `mttl_w01/` 폴더로 만들므로 아래 목록의 투오님 백엔드 파일과 우리 대시보드 파일이 들어 있습니다. 이미지 안 `/usr/share/doc/mttl_w01/`에는 이 문서와 [LICENSE](LICENSE)도 있습니다.
 
-## Tuo / 투오
+## 투오 (Naver HA Cafe) / 네이버 HA 카페 투오님
 
-Tuo released custom firmware 1.0.111 for the LG U+ MTTL-W01 together with the MTTL-W01 UP Standalone package: a standalone backend, a PC provisioning tool and an Android setup app. The tools build the firmware on the user's own machine from the manufacturer's firmware image. This app runs Tuo's standalone backend, redistributes the PC tool and the Android app that come with it, and draws heavily on Tuo's work, including the documents kept in [docs/tuo](docs/tuo/README.md).
+투오 of the [Naver HA Cafe](https://cafe.naver.com/koreassistant/24088) released custom firmware 1.0.111 for the LG U+ MTTL-W01 together with the MTTL-W01 UP Standalone package: a standalone backend, a PC provisioning tool and an Android setup app. The tools build the firmware on the user's own machine from the manufacturer's firmware image. This app runs 투오's standalone backend, redistributes the PC tool and the Android app that come with it, and draws heavily on 투오's work, including the documents kept in [docs/tuo](docs/tuo/README.md).
 
-투오(Tuo)는 LG U+ MTTL-W01용 커스텀 펌웨어 1.0.111을 MTTL-W01 UP Standalone 묶음과 함께 공개했다. 묶음에는 standalone 백엔드, PC 설정 도구, 안드로이드 설정 앱이 들어 있다. 펌웨어는 이 도구들이 제조사 펌웨어 이미지로 사용자 기기에서 만든다. 이 앱은 투오의 standalone 백엔드를 실행하고, 백엔드에 함께 든 PC 도구와 안드로이드 앱을 다시 배포하며, [docs/tuo](docs/tuo/README.md)에 둔 문서를 비롯한 투오의 작업물을 많이 참고했다.
+[네이버 HA 카페](https://cafe.naver.com/koreassistant/24088) 투오님은 LG U+ MTTL-W01용 커스텀 펌웨어 1.0.111을 MTTL-W01 UP Standalone 묶음과 함께 공개했습니다. 묶음에는 standalone 백엔드, PC 설정 도구, 안드로이드 설정 앱이 들어 있습니다. 펌웨어는 이 도구들이 제조사 펌웨어 이미지로 사용자 기기에서 만듭니다. 이 앱은 투오님의 standalone 백엔드를 실행하고, 백엔드에 함께 든 PC 도구와 안드로이드 앱을 다시 배포하며, [docs/tuo](docs/tuo/README.md)에 둔 문서를 비롯한 투오님의 작업물을 많이 참고했습니다.
 
-Tuo's release is kept unchanged on the `tuo` branch, with one tag per release (for example `tuo-0.2.11-r3`). The two lists below cover every file on that branch except `.gitattributes`.
+투오's release is kept unchanged on the `tuo` branch, with one tag per release (for example `tuo-0.2.11-r3`). The two lists below cover every file on that branch except `.gitattributes`.
 
-투오 배포본 원본은 `tuo` 가지에 그대로 두고, 배포본마다 태그를 붙인다(예: `tuo-0.2.11-r3`). 아래 두 목록은 그 가지의 파일 중 `.gitattributes`를 뺀 전부다.
+투오님 배포본 원본은 `tuo` 가지에 그대로 두고, 배포본마다 태그를 붙입니다(예: `tuo-0.2.11-r3`). 아래 두 목록은 그 가지의 파일 중 `.gitattributes`를 뺀 전부입니다.
 
-## Unmodified Tuo files / 그대로 쓴 투오 파일
+## Unmodified files from 투오 / 그대로 쓴 투오님 파일
 
 These files are the same as on the `tuo` branch. `provision.zip` is the PC tool and `provision-android.apk` is the Android setup app.
 
-이 파일들은 `tuo` 가지의 원본과 같다. `provision.zip`은 PC 도구, `provision-android.apk`는 안드로이드 설정 앱이다.
+이 파일들은 `tuo` 가지의 원본과 같습니다. `provision.zip`은 PC 도구, `provision-android.apk`는 안드로이드 설정 앱입니다.
 
 - `docs/tuo/README.md`
 - `docs/tuo/RELEASE_NOTES.md`
@@ -49,35 +49,35 @@ These files are the same as on the `tuo` branch. `provision.zip` is the PC tool 
 - `mttl_w01/backend/static/provision-android.apk`
 - `mttl_w01/backend/static/provision.zip`
 
-## Modified Tuo files / 고쳐 쓴 투오 파일
+## Modified files from 투오 / 고쳐 쓴 투오님 파일
 
 `git diff tuo main -- <path>` shows each change.
 
-바뀐 내용은 `git diff tuo main -- <경로>`로 본다.
+바뀐 내용은 `git diff tuo main -- <경로>`로 볼 수 있습니다.
 
-- `mttl_w01/backend/backend.py` — No admin login: `AuthManager.valid()` is always true and `status()` reports every request as signed in. POST and PUT need the `X-MTTL-Request: 1` header, so that pages on other sites cannot send them, and are accepted only through the Home Assistant sidebar (from the Supervisor, `172.30.32.2`), so that other devices on the network can neither change settings nor obtain the stored MQTT password by pointing the MQTT connection test at their own address. `X-Frame-Options` is `SAMEORIGIN` instead of `DENY` so that the page opens in the Home Assistant sidebar. The route table serves our dashboard at `/` and `/dashboard.html`, our settings page at `/settings.html`, our log page at `/logs.html` and `/logview.html`, and the scripts and stylesheets of these pages. Tuo's `/app.js` and `/logs.js` routes are removed, and no route serves Tuo's `index.html` or `logs.html`. / 관리자 로그인 제거: `AuthManager.valid()`는 항상 참이고 `status()`는 모든 요청을 로그인한 상태로 답한다. POST와 PUT은 다른 사이트의 페이지가 보내지 못하도록 `X-MTTL-Request: 1` 헤더가 있어야 하고, 같은 네트워크의 다른 기기가 설정을 바꾸거나 MQTT 연결 시험을 자기 주소로 돌려 저장된 MQTT 암호를 받아 가지 못하도록 Home Assistant 사이드바(Supervisor `172.30.32.2`)로 온 것만 받는다. Home Assistant 사이드바 안에서 열리도록 `X-Frame-Options`를 `DENY`에서 `SAMEORIGIN`으로 바꿨다. 경로표는 `/`와 `/dashboard.html`에 우리 대시보드, `/settings.html`에 우리 설정 페이지, `/logs.html`과 `/logview.html`에 우리 로그 화면, 그리고 이 화면들의 스크립트와 스타일시트를 준다. 투오의 `/app.js`와 `/logs.js` 경로는 뺐고, 투오의 `index.html`과 `logs.html`을 내보내는 경로는 없다.
-- `mttl_w01/backend/ha_bridge.py` — Saving the MQTT settings while the bridge was connected never finished: the bridge stopped the old MQTT client while holding its lock, and the client's disconnect callback waits for that lock. `reconfigure()` and `stop()` now take the old client out under the lock and stop it after releasing the lock. MQTT discovery shows power with one decimal place and energy with two (`suggested_display_precision`), and lists the temperature and voltage sensors under Diagnostic (`entity_category`). / 브리지가 연결된 동안 MQTT 설정을 저장하면 끝나지 않았다. 브리지가 자기 잠금을 쥔 채 이전 MQTT 클라이언트를 멈췄고, 그 클라이언트의 연결 끊김 콜백이 같은 잠금을 기다렸기 때문이다. 이제 `reconfigure()`와 `stop()`은 잠금 안에서 이전 클라이언트를 떼어 내고, 잠금을 푼 뒤에 멈춘다. MQTT 자동 등록에서 전력은 소수 첫째 자리, 에너지는 소수 둘째 자리까지 보이고(`suggested_display_precision`), 온도와 전압 센서는 진단(Diagnostic)으로 분류한다(`entity_category`).
-- `mttl_w01/backend/static/app.js` — API paths are relative so that they work under the Ingress address, and `api()` adds the `X-MTTL-Request: 1` header. The backend no longer serves this file. / Ingress 주소 밑에서 동작하도록 API 경로를 상대 경로로 바꿨고, `api()`가 `X-MTTL-Request: 1` 헤더를 붙인다. 백엔드는 이제 이 파일을 내보내지 않는다.
-- `mttl_w01/backend/static/index.html` — Relative links for Ingress: `app.js`, `logs.html`, `provision.zip`, `provision-android.apk` and `mttl-up-card.js`. The backend no longer serves this file. / Ingress용 상대 경로: `app.js`, `logs.html`, `provision.zip`, `provision-android.apk`, `mttl-up-card.js`. 백엔드는 이제 이 파일을 내보내지 않는다.
-- `mttl_w01/backend/static/logs.html` — Relative links for Ingress: `logs.js` and `./`. The backend no longer serves this file. / Ingress용 상대 경로: `logs.js`, `./`. 백엔드는 이제 이 파일을 내보내지 않는다.
-- `mttl_w01/backend/static/logs.js` — Relative paths for Ingress: `api/logs` and `./`. The backend no longer serves this file. / Ingress용 상대 경로: `api/logs`, `./`. 백엔드는 이제 이 파일을 내보내지 않는다.
+- `mttl_w01/backend/backend.py` — No admin login: `AuthManager.valid()` is always true and `status()` reports every request as signed in. POST and PUT need the `X-MTTL-Request: 1` header, so that pages on other sites cannot send them, and are accepted only through the Home Assistant sidebar (from the Supervisor, `172.30.32.2`), so that other devices on the network can neither change settings nor obtain the stored MQTT password by pointing the MQTT connection test at their own address. `X-Frame-Options` is `SAMEORIGIN` instead of `DENY` so that the page opens in the Home Assistant sidebar. The route table serves our dashboard at `/` and `/dashboard.html`, our settings page at `/settings.html`, our log page at `/logs.html` and `/logview.html`, and the scripts and stylesheets of these pages. 투오's `/app.js` and `/logs.js` routes are removed, and no route serves 투오's `index.html` or `logs.html`. / 관리자 로그인 제거: `AuthManager.valid()`는 항상 참이고 `status()`는 모든 요청을 로그인한 상태로 답합니다. POST와 PUT은 다른 사이트의 페이지가 보내지 못하도록 `X-MTTL-Request: 1` 헤더가 있어야 하고, 같은 네트워크의 다른 기기가 설정을 바꾸거나 MQTT 연결 시험을 자기 주소로 돌려 저장된 MQTT 암호를 받아 가지 못하도록 Home Assistant 사이드바(Supervisor `172.30.32.2`)로 온 것만 받습니다. Home Assistant 사이드바 안에서 열리도록 `X-Frame-Options`를 `DENY`에서 `SAMEORIGIN`으로 바꿨습니다. 경로표는 `/`와 `/dashboard.html`에 우리 대시보드, `/settings.html`에 우리 설정 페이지, `/logs.html`과 `/logview.html`에 우리 로그 화면, 그리고 이 화면들의 스크립트와 스타일시트를 줍니다. 투오님의 `/app.js`와 `/logs.js` 경로는 뺐고, 투오님의 `index.html`과 `logs.html`을 내보내는 경로는 없습니다.
+- `mttl_w01/backend/ha_bridge.py` — Saving the MQTT settings while the bridge was connected never finished: the bridge stopped the old MQTT client while holding its lock, and the client's disconnect callback waits for that lock. `reconfigure()` and `stop()` now take the old client out under the lock and stop it after releasing the lock. MQTT discovery shows power with one decimal place and energy with two (`suggested_display_precision`), and lists the temperature and voltage sensors under Diagnostic (`entity_category`). / 브리지가 연결된 동안 MQTT 설정을 저장하면 끝나지 않았습니다. 브리지가 자기 잠금을 쥔 채 이전 MQTT 클라이언트를 멈췄고, 그 클라이언트의 연결 끊김 콜백이 같은 잠금을 기다렸기 때문입니다. 이제 `reconfigure()`와 `stop()`은 잠금 안에서 이전 클라이언트를 떼어 내고, 잠금을 푼 뒤에 멈춥니다. MQTT 자동 등록에서 전력은 소수 첫째 자리, 에너지는 소수 둘째 자리까지 보이고(`suggested_display_precision`), 온도와 전압 센서는 진단(Diagnostic)으로 분류합니다(`entity_category`).
+- `mttl_w01/backend/static/app.js` — API paths are relative so that they work under the Ingress address, and `api()` adds the `X-MTTL-Request: 1` header. The backend no longer serves this file. / Ingress 주소 밑에서 동작하도록 API 경로를 상대 경로로 바꿨고, `api()`가 `X-MTTL-Request: 1` 헤더를 붙입니다. 백엔드는 이제 이 파일을 내보내지 않습니다.
+- `mttl_w01/backend/static/index.html` — Relative links for Ingress: `app.js`, `logs.html`, `provision.zip`, `provision-android.apk` and `mttl-up-card.js`. The backend no longer serves this file. / Ingress용 상대 경로: `app.js`, `logs.html`, `provision.zip`, `provision-android.apk`, `mttl-up-card.js`. 백엔드는 이제 이 파일을 내보내지 않습니다.
+- `mttl_w01/backend/static/logs.html` — Relative links for Ingress: `logs.js` and `./`. The backend no longer serves this file. / Ingress용 상대 경로: `logs.js`, `./`. 백엔드는 이제 이 파일을 내보내지 않습니다.
+- `mttl_w01/backend/static/logs.js` — Relative paths for Ingress: `api/logs` and `./`. The backend no longer serves this file. / Ingress용 상대 경로: `api/logs`, `./`. 백엔드는 이제 이 파일을 내보내지 않습니다.
 
 ## af950833
 
 af950833 wrote a local server and an Android setup app for the MTTL-W01, published at <https://github.com/af950833/mttl_w01>. The dashboard of this app adapts the layout and CSS of af950833's dashboard. Each entry below names what was taken and the file of ours that holds it.
 
-af950833은 MTTL-W01용 로컬 서버와 안드로이드 설정 앱을 <https://github.com/af950833/mttl_w01>에 공개했다. 이 앱의 대시보드는 af950833 대시보드의 배치와 CSS를 가져와 고쳐 썼다. 아래 항목마다 가져온 것과 그것을 담은 우리 파일을 적는다.
+af950833은 MTTL-W01용 로컬 서버와 안드로이드 설정 앱을 <https://github.com/af950833/mttl_w01>에 공개했습니다. 이 앱의 대시보드는 af950833 대시보드의 배치와 CSS를 가져와 고쳐 썼습니다. 아래 항목마다 가져온 것과 그것을 담은 우리 파일을 적습니다.
 
-- `web/index.html`, `web/style.css` → `mttl_w01/backend/static/dashboard.html`, `mttl_w01/backend/static/dashboard.css` — Dashboard layout and CSS. The log page (`logview.html`) and the settings page (`settings.html`) use the same stylesheet. / 대시보드 배치와 CSS. 로그 화면(`logview.html`)과 설정 페이지(`settings.html`)도 같은 스타일시트를 쓴다.
+- `web/index.html`, `web/style.css` → `mttl_w01/backend/static/dashboard.html`, `mttl_w01/backend/static/dashboard.css` — Dashboard layout and CSS. The log page (`logview.html`) and the settings page (`settings.html`) use the same stylesheet. / 대시보드 배치와 CSS. 로그 화면(`logview.html`)과 설정 페이지(`settings.html`)도 같은 스타일시트를 씁니다.
 
 ## Material Design Icons
 
 `mttl_w01/icon.png`, `mttl_w01/logo.png` and the sidebar icon (`panel_icon: mdi:power-socket-de` in `mttl_w01/config.yaml`) use the `power-socket-de` icon of Pictogrammers' Material Design Icons (<https://pictogrammers.com/library/mdi/>). The icon is licensed under the Apache License 2.0 (<https://github.com/Templarian/MaterialDesign/blob/master/LICENSE>). In the two PNG files it is recolored and drawn on our background, and the logo adds the text `MTTL-W01`.
 
-`mttl_w01/icon.png`, `mttl_w01/logo.png`와 사이드바 아이콘(`mttl_w01/config.yaml`의 `panel_icon: mdi:power-socket-de`)은 Pictogrammers의 Material Design Icons 중 `power-socket-de`를 쓴다(<https://pictogrammers.com/library/mdi/>). 이 아이콘의 라이선스는 Apache License 2.0이다(<https://github.com/Templarian/MaterialDesign/blob/master/LICENSE>). 두 PNG 파일에서는 색을 바꿔 우리 바탕 위에 그렸고, 로고에는 `MTTL-W01` 글자를 더했다.
+`mttl_w01/icon.png`, `mttl_w01/logo.png`와 사이드바 아이콘(`mttl_w01/config.yaml`의 `panel_icon: mdi:power-socket-de`)은 Pictogrammers의 Material Design Icons 중 `power-socket-de`를 씁니다(<https://pictogrammers.com/library/mdi/>). 이 아이콘의 라이선스는 Apache License 2.0입니다(<https://github.com/Templarian/MaterialDesign/blob/master/LICENSE>). 두 PNG 파일에서는 색을 바꿔 우리 바탕 위에 그렸고, 로고에는 `MTTL-W01` 글자를 더했습니다.
 
 ## Copyright / 저작권
 
-The MIT License in [LICENSE](LICENSE) covers the code and documents written for this repository, such as `mttl_w01/run.py`, `tools/`, `tests/`, our documents and our dashboard files. It does not cover Tuo's files listed above, modified or not, or the parts of our dashboard adapted from af950833. Their copyright stays with their authors.
+The MIT License in [LICENSE](LICENSE) covers the code and documents written for this repository, such as `mttl_w01/run.py`, `tools/`, `tests/`, our documents and our dashboard files. It does not cover 투오's files listed above, modified or not, or the parts of our dashboard adapted from af950833. Their copyright stays with their authors.
 
-[LICENSE](LICENSE)의 MIT 라이선스는 `mttl_w01/run.py`, `tools/`, `tests/`, 우리 문서와 대시보드 파일처럼 이 저장소를 위해 쓴 코드와 문서에 적용된다. 위 목록의 투오 파일(고쳐 쓴 것 포함)과, 우리 대시보드 중 af950833에서 가져온 부분에는 적용되지 않는다. 그 저작권은 원저작자에게 있다.
+[LICENSE](LICENSE)의 MIT 라이선스는 `mttl_w01/run.py`, `tools/`, `tests/`, 우리 문서와 대시보드 파일처럼 이 저장소를 위해 쓴 코드와 문서에 적용됩니다. 위 목록의 투오님 파일(고쳐 쓴 것 포함)과, 우리 대시보드 중 af950833에서 가져온 부분에는 적용되지 않습니다. 그 저작권은 원저작자에게 있습니다.

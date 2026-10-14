@@ -2,13 +2,13 @@
 
 [한국어](README.ko.md)
 
-A Home Assistant app (add-on) that runs Tuo's standalone backend for the LG U+ MTTL-W01 power strip. The power strips connect to Home Assistant over your own network instead of the LG U+ cloud. A dashboard in the Home Assistant sidebar switches the four outlets and shows power, energy and temperature, and a settings page manages firmware updates and the MQTT connection. With the Mosquitto broker app installed, the outlets and their sensors also appear in Home Assistant through MQTT discovery.
+A Home Assistant app (add-on) that controls LG U+ MTTL-W01 power strips on your own network, without the LG U+ cloud. A dashboard in the Home Assistant sidebar switches the four outlets and shows power, energy and temperature, and a settings page manages firmware updates and the MQTT connection. With the Mosquitto broker app installed, the outlets and their sensors also appear in Home Assistant through MQTT discovery.
 
-Each power strip needs Tuo's firmware 1.0.111, installed once with Tuo's PC tool. The [install guide](docs/install.md) covers the app and the power strips. App versions are calendar versions `<YY>.<M>.<N>` (for example `26.10.0`); the Tuo backend version the app uses is in `description` in [mttl_w01/config.yaml](mttl_w01/config.yaml).
+Each power strip needs the custom firmware 1.0.111, installed once with the PC tool. The [install guide](docs/install.md) covers the app and the power strips. App versions are calendar versions `<YY>.<M>.<N>` (for example `26.10.0`); the standalone backend version the app uses is in `description` in [mttl_w01/config.yaml](mttl_w01/config.yaml).
 
 Home Assistant installs the app from the [ha-apps](https://github.com/kkqq9320/ha-apps) app repository as a prebuilt image; this repository holds its code and documents.
 
-This is an unofficial project, not affiliated with LG U+ or Tuo.
+This is an unofficial project, not affiliated with LG U+ or 투오.
 
 ![Dashboard in demo mode, dark theme](docs/images/dashboard.jpg)
 
@@ -31,8 +31,8 @@ There is no login. Changes work only in the Home Assistant sidebar, which Home A
 
 ## Credits
 
-This app is built on Tuo's standalone backend, PC tool and Android setup app. Its dashboard adapts the layout and CSS of [af950833's dashboard](https://github.com/af950833/mttl_w01). [NOTICE.md](NOTICE.md) lists the files that come from Tuo, which of them are modified, and why.
+This app is built on the standalone backend, custom firmware, PC tool and Android setup app made by 투오 of the [Naver HA Cafe](https://cafe.naver.com/koreassistant/24088). Its dashboard adapts the layout and CSS of [af950833's dashboard](https://github.com/af950833/mttl_w01). [NOTICE.md](NOTICE.md) lists the files that come from 투오, which of them are modified, and why.
 
 ## License
 
-The code and documents written for this repository are under the [MIT License](LICENSE). Tuo's files and the parts adapted from af950833 belong to their authors, as described in [NOTICE.md](NOTICE.md).
+The code and documents written for this repository are under the [MIT License](LICENSE). 투오's files and the parts adapted from af950833 belong to their authors, as described in [NOTICE.md](NOTICE.md).

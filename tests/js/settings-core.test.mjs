@@ -211,7 +211,7 @@ test("firmwareControls: Save needs a change and a valid address", () => {
   const badHost = firmwareControls({ ...base, draft: { ...saved, ota_host_ip: "192.0.02.1" } });
   assert.deepEqual(badHost.errors, { ota_host_ip: "err_ipv4" });
   assert.equal(badHost.canSave, false);
-  // A wrong address blocks a target change as well: Tuo would store the target and then fail on the address.
+  // A wrong address blocks a target change as well: 투오 would store the target and then fail on the address.
   const both = firmwareControls({ ...base, draft: { profile: "official-110", ota_host_ip: "nope" } });
   assert.equal(both.canSave, false);
   // Blank address only: nothing to save.
@@ -687,7 +687,7 @@ test("settleRequest reads again after a request that worked", async () => {
   assert.deepEqual(seen, ["reload"]);
 });
 
-test("settleRequest reads again after a request that failed, because Tuo stores the target before it checks the address", async () => {
+test("settleRequest reads again after a request that failed, because 투오 stores the target before it checks the address", async () => {
   let reloads = 0;
   const out = await settleRequest(async () => { throw new Error("OTA server IP must be a valid IPv4 address"); }, async () => { reloads++; return true; });
   assert.equal(out.ok, false);

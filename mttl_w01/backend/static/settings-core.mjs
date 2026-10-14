@@ -81,7 +81,7 @@ export function isIPv4(s) {
 }
 
 /**
- * Faults of the firmware card, keyed by field. A blank address passes: Tuo does not store a blank
+ * Faults of the firmware card, keyed by field. A blank address passes: 투오 does not store a blank
  * address and keeps the one it has. The backend strips the address before it checks it, so does this.
  */
 export function validateFirmware({ ota_host_ip: host }) {
@@ -399,7 +399,7 @@ export function createSettingsApi() {
     savePoll: (seconds) => apiSend("PUT", "api/config", { poll_interval: seconds }),
     saveTarget(profileId, host) {
       const address = String(host ?? "").trim();
-      // Tuo keeps the stored address when the key is missing and ignores a blank value, so a blank address is left out.
+      // 투오 keeps the stored address when the key is missing and ignores a blank value, so a blank address is left out.
       return apiSend("PUT", "api/firmware/target", address === "" ? { profile_id: profileId } : { profile_id: profileId, ota_host_ip: address });
     },
     prepare: (profileId) => apiSend("POST", `api/firmware/prepare/${profile(profileId)}`),
@@ -415,7 +415,7 @@ export function createSettingsApi() {
 // ---- Request and reading flow ----
 
 /**
- * Sends one request and then reads the backend again, also when the request failed (Tuo stores the firmware target
+ * Sends one request and then reads the backend again, also when the request failed (투오 stores the firmware target
  * before it checks the address). Never rejects: `ok` tells whether the request worked, `failure` is its Error, and
  * `reloaded` is false when the reading failed (it threw or answered false). With no `reload`, `reloaded` is true.
  */

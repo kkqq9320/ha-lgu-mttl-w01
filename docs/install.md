@@ -29,11 +29,11 @@ The app has no login. Changes are accepted only through the Home Assistant sideb
 
 What remains open: anyone on the same network who can reach port 18282 can read the device list, the power values and the logs, and download the APK, the PC tool and the firmware files. None of these responses contains a password. Keep ports 10086, 18282 and 49217 within your own network.
 
-Tuo's own documents ([docs/tuo](tuo/README.md) and [mttl_w01/backend/README.md](../mttl_w01/backend/README.md)) describe Tuo's standalone deployment, which has an admin login and Tuo's own web pages. This app removes that login, replaces those pages with its dashboard and settings page, and follows the rules above.
+The documents by 투오 of the Naver HA Cafe ([docs/tuo](tuo/README.md) and [mttl_w01/backend/README.md](../mttl_w01/backend/README.md)) describe 투오's standalone deployment, which has an admin login and 투오's own web pages. This app removes that login, replaces those pages with its dashboard and settings page, and follows the rules above.
 
 ## Prepare the power strips
 
-Each power strip needs Tuo's firmware 1.0.111 and the address of Home Assistant. Tuo's PC tool provides both: it builds the firmware on your PC, installs it over the power strip's setup Wi-Fi, and stores your Wi-Fi network and the Home Assistant address on the power strip. Do one power strip at a time. Tuo's [firmware notes](tuo/docs/FIRMWARE_AND_PROVISIONING.md) describe the firmware versions and the tool in detail.
+Each power strip needs 투오's firmware 1.0.111 and the address of Home Assistant. 투오's PC tool provides both: it builds the firmware on your PC, installs it over the power strip's setup Wi-Fi, and stores your Wi-Fi network and the Home Assistant address on the power strip. Do one power strip at a time. 투오's [firmware notes](tuo/docs/FIRMWARE_AND_PROVISIONING.md) describe the firmware versions and the tool in detail.
 
 ### What you need
 
@@ -80,14 +80,14 @@ The PC tool checks that the power strip comes online, but not which firmware it 
 
 ## Roll back the firmware
 
-While the power strip still enters setup mode, the PC tool installs Tuo's other two firmware profiles the same way:
+While the power strip still enters setup mode, the PC tool installs 투오's other two firmware profiles the same way:
 
 ```text
 python mttl_setup.py install --version 110
 python mttl_setup.py install --version 66
 ```
 
-1.0.110 is Tuo's local-backend firmware without child lock, and 1.0.66 is the LG U+ stock-compatible firmware. Power strips on these versions download firmware over TCP port 80 only, which the app does not publish, so moving them back to 1.0.111 also follows [Run the PC tool](#run-the-pc-tool).
+1.0.110 is 투오's local-backend firmware without child lock, and 1.0.66 is the LG U+ stock-compatible firmware. Power strips on these versions download firmware over TCP port 80 only, which the app does not publish, so moving them back to 1.0.111 also follows [Run the PC tool](#run-the-pc-tool).
 
 ## Settings page and device window
 

@@ -49,8 +49,8 @@ export const STRINGS = {
     sum_app: "Android setup app",
     apk_download: "Download APK",
     pc_download: "Download PC tool",
-    app_by_tuo_link: "Tuo of the Naver HA Cafe",
-    app_by_tuo: " made this Android setup app and PC tool. They are unchanged from Tuo's release.",
+    app_by_tuo_link: "투오 of the Naver HA Cafe",
+    app_by_tuo: " made this Android setup app and PC tool. They are unchanged from 투오's release.",
     qr_label: "QR code for {url}",
     empty: "Waiting for an MTTL-W01 device.",
     online: "Online",
@@ -566,7 +566,7 @@ export function fmtTemp(c) {
   return `${Number.isInteger(n) ? n : n.toFixed(1)} °C`;
 }
 
-/** Whole seconds since `lastSeen` (epoch seconds), like Tuo's card; English in both languages. */
+/** Whole seconds since `lastSeen` (epoch seconds), like 투오's card; English in both languages. */
 export function fmtAge(lastSeen, now) {
   const seen = num(lastSeen);
   if (!Number.isFinite(seen) || !Number.isFinite(now)) return NA;
@@ -995,7 +995,7 @@ export function diffMacs(prev, next) {
   };
 }
 
-/** Child Lock can change only from a mask read over the current connection (Tuo does the same). */
+/** Child Lock can change only from a mask read over the current connection (투오 does the same). */
 export function canToggleLock(device) {
   const mask = device?.childlock_mask;
   return device?.childlock_synced === true && Number.isInteger(mask) && mask >= 0 && mask < 32;
@@ -1089,7 +1089,7 @@ export function fmtLogTime(ts, timeZone) {
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}.${ms}`;
 }
 
-/** One row as text, the same layout as Tuo's text view and copy. */
+/** One row as text, the same layout as 투오's text view and copy. */
 export function logLine(row, timeZone) {
   return `${fmtLogTime(row.ts, timeZone)} ${String(row.level ?? "").padEnd(7)} [${row.category || "other"}] ${row.message ?? ""}`;
 }

@@ -5,8 +5,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTICE = ROOT / "NOTICE.md"
-UNMODIFIED = "## Unmodified Tuo files / 그대로 쓴 투오 파일"
-MODIFIED = "## Modified Tuo files / 고쳐 쓴 투오 파일"
+UNMODIFIED = "## Unmodified files from 투오 / 그대로 쓴 투오님 파일"
+MODIFIED = "## Modified files from 투오 / 고쳐 쓴 투오님 파일"
 AF950833 = "## af950833"
 MDI = "## Material Design Icons"
 ITEM = re.compile(r"^- `([^`]+)`(.*)$")
@@ -17,7 +17,7 @@ def git(*args):
 
 
 def tuo_ref():
-    """The branch that holds Tuo's original files: "tuo", else "origin/tuo", else None."""
+    """The branch that holds 투오's original files: "tuo", else "origin/tuo", else None."""
     for ref in ("tuo", "origin/tuo"):
         if git("rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode == 0:
             return ref
@@ -106,7 +106,7 @@ class NoticeTest(unittest.TestCase):
 
     def test_notice_credits(self):
         text = self.notice()
-        for s in ("Tuo", "투오", "af950833", "https://github.com/af950833/mttl_w01"):
+        for s in ("## 투오 (Naver HA Cafe) / 네이버 HA 카페 투오님", "af950833", "https://github.com/af950833/mttl_w01"):
             with self.subTest(s=s):
                 self.assertIn(s, text)
 

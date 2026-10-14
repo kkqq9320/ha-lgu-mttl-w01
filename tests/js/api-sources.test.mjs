@@ -2,7 +2,7 @@ import test, { afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-// The live data sources of the settings page and of the device window send these requests to Tuo's backend.
+// The live data sources of the settings page and of the device window send these requests to 투오's backend.
 // fetch is replaced by a recorder, so the headers apiSend and apiSendRaw add are checked on the way out.
 const core = await import(new URL("../../mttl_w01/backend/static/dashboard-core.mjs", import.meta.url));
 const settings = await import(new URL("../../mttl_w01/backend/static/settings-core.mjs", import.meta.url));
