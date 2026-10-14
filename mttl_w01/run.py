@@ -1,9 +1,12 @@
-"""Container entrypoint: turn the app options and Supervisor data into environment variables and exec the 투오 backend."""
+"""Container entrypoint: turn the app options and Supervisor data into environment variables and run the 투오 backend."""
 
+import asyncio
 import http.client
 import ipaddress
 import json
 import os
+import runpy
+import signal
 import sys
 import urllib.request
 from collections.abc import Callable, Mapping
@@ -133,6 +136,37 @@ def build_env(host_ip: str, options: dict, mqtt: dict | None, base_env: Mapping[
     return env
 
 
+def _cancel_all_tasks() -> None:
+    for task in asyncio.all_tasks():
+        task.cancel()
+
+
+def _stop_backend(signum: int, frame: object) -> None:
+    """SIGTERM handler: cancel every task of the backend's event loop so that asyncio.run() ends after the backend's cleanup.
+
+    Cancelling only the main task, as Ctrl-C does, hangs while a power strip is connected: since Python
+    3.12.1, a cancelled Server.serve_forever() waits for every client connection to close. Cancelling the
+    connection handlers too lets them close their connections. Outside the event loop, stop like Ctrl-C.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        raise KeyboardInterrupt from None
+    loop.call_soon_threadsafe(_cancel_all_tasks)
+
+
+def run_backend(env: Mapping[str, str]) -> None:
+    """Run the backend script in this process so that SIGTERM reaches _stop_backend."""
+    os.environ.update(env)
+    sys.argv = list(BACKEND_ARGS)
+    sys.path.insert(0, os.path.dirname(BACKEND_ARGS[0]))
+    signal.signal(signal.SIGTERM, _stop_backend)
+    try:
+        runpy.run_path(BACKEND_ARGS[0], run_name="__main__")
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        log("backend stopped")
+
+
 def main() -> None:
     token = os.environ.get("SUPERVISOR_TOKEN")
     try:
@@ -147,7 +181,7 @@ def main() -> None:
     env = build_env(host_ip, options, mqtt, os.environ)
     log(f"starting backend: OTA host {host_ip}, web {env['MTTL_PUBLIC_WEB_URL']}, "
         f"MQTT {env.get('HA_MQTT_HOST', 'none')}")
-    os.execve(sys.executable, [sys.executable, *BACKEND_ARGS], env)
+    run_backend(env)
 
 
 if __name__ == "__main__":

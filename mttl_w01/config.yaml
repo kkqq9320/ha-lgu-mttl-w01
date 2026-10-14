@@ -1,5 +1,5 @@
 name: LG U+ Multitap (MTTL-W01)
-version: "26.10.0"
+version: "26.10.1"
 slug: mttl_w01
 url: https://github.com/kkqq9320/ha-lgu-mttl-w01
 image: ghcr.io/kkqq9320/mttl_w01

@@ -2,8 +2,11 @@ import contextlib
 import importlib.util
 import io
 import json
+import signal
 import socket
+import subprocess
 import sys
+import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -245,13 +248,13 @@ class RunTest(unittest.TestCase):
         with mock.patch.object(r, "load_options", return_value={}), \
                 mock.patch.object(r, "fetch_host_ip", return_value=None), \
                 mock.patch.object(r, "fetch_mqtt_service") as mqtt_mock, \
-                mock.patch.object(r.os, "execve") as execve_mock, \
+                mock.patch.object(r, "run_backend") as run_mock, \
                 contextlib.redirect_stderr(err), \
                 self.assertRaises(SystemExit) as cm:
             r.main()
         self.assertEqual(cm.exception.code, 1)
         mqtt_mock.assert_not_called()
-        execve_mock.assert_not_called()
+        run_mock.assert_not_called()
         self.assertIn("host_ip", err.getvalue())
 
     def test_main_exits_on_bad_option(self):
@@ -259,58 +262,107 @@ class RunTest(unittest.TestCase):
         with mock.patch.object(r, "load_options", return_value={"host_ip": "homeassistant.local"}), \
                 mock.patch.object(r, "fetch_host_ip") as host_mock, \
                 mock.patch.object(r, "fetch_mqtt_service") as mqtt_mock, \
-                mock.patch.object(r.os, "execve") as execve_mock, \
+                mock.patch.object(r, "run_backend") as run_mock, \
                 contextlib.redirect_stderr(err), \
                 self.assertRaises(SystemExit) as cm:
             r.main()
         self.assertEqual(cm.exception.code, 1)
         host_mock.assert_not_called()
         mqtt_mock.assert_not_called()
-        execve_mock.assert_not_called()
+        run_mock.assert_not_called()
         self.assertIn("host_ip", err.getvalue())
 
     def test_main_exits_when_options_unreadable(self):
         err = io.StringIO()
         with mock.patch.object(r, "load_options", side_effect=FileNotFoundError("options.json")), \
-                mock.patch.object(r.os, "execve") as execve_mock, \
+                mock.patch.object(r, "run_backend") as run_mock, \
                 contextlib.redirect_stderr(err), \
                 self.assertRaises(SystemExit) as cm:
             r.main()
         self.assertEqual(cm.exception.code, 1)
-        execve_mock.assert_not_called()
+        run_mock.assert_not_called()
         self.assertIn("[run]", err.getvalue())
 
-    def test_main_execs_backend_with_option_ip(self):
+    def test_main_runs_backend_with_option_ip(self):
         err = io.StringIO()
         with mock.patch.object(r, "load_options", return_value={"host_ip": "192.0.2.10"}), \
                 mock.patch.object(r, "fetch_host_ip") as host_mock, \
                 mock.patch.object(r, "fetch_mqtt_service", return_value={**MQTT, "password": SECRET}), \
-                mock.patch.object(r.os, "execve") as execve_mock, \
+                mock.patch.object(r, "run_backend") as run_mock, \
                 contextlib.redirect_stderr(err):
             r.main()
         host_mock.assert_not_called()
-        self.assertEqual(execve_mock.call_args.args[1][1:], ["/app/backend.py", "--data", "/data"])
-        env = execve_mock.call_args.args[2]
+        env = run_mock.call_args.args[0]
         self.assertEqual(env["OTA_HOST_IP"], "192.0.2.10")
         self.assertEqual(env["HA_MQTT_HOST"], "core-mosquitto")
         self.assertIn("192.0.2.10", err.getvalue())
         self.assertIn("option", err.getvalue())
         self.assertNotIn(SECRET, err.getvalue())
-        self.assertEqual(execve_mock.call_args.args[2]["HA_MQTT_PASSWORD"], SECRET)
+        self.assertEqual(env["HA_MQTT_PASSWORD"], SECRET)
 
-    def test_main_execs_backend_with_detected_ip(self):
+    def test_main_runs_backend_with_detected_ip(self):
         err = io.StringIO()
         with mock.patch.object(r, "load_options", return_value={}), \
                 mock.patch.object(r, "fetch_host_ip", return_value="192.0.2.31"), \
                 mock.patch.object(r, "fetch_mqtt_service", return_value=None), \
-                mock.patch.object(r.os, "execve") as execve_mock, \
+                mock.patch.object(r, "run_backend") as run_mock, \
                 contextlib.redirect_stderr(err):
             r.main()
-        env = execve_mock.call_args.args[2]
+        env = run_mock.call_args.args[0]
         self.assertEqual(env["OTA_HOST_IP"], "192.0.2.31")
         self.assertEqual(env["MTTL_PUBLIC_WEB_URL"], "http://192.0.2.31:18282")
         self.assertIn("192.0.2.31", err.getvalue())
         self.assertIn("auto-detect", err.getvalue())
+
+
+# 백엔드 대신 tests/fixtures/fake_backend.py를 실행하도록 run.py를 고쳐 main()을 부른다.
+STOP_DRIVER = """
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("run", sys.argv[1])
+run = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(run)
+run.BACKEND_ARGS = sys.argv[2:]
+run.load_options = lambda: {"host_ip": "192.0.2.10"}
+run.fetch_mqtt_service = lambda token: None
+run.main()
+"""
+
+
+@unittest.skipUnless(hasattr(signal, "SIGKILL"), "POSIX 신호가 필요하다")
+class StopTest(unittest.TestCase):
+    """Supervisor가 앱을 멈출 때처럼 SIGTERM을 보내고 종료 코드와 정리 단계를 본다."""
+
+    def stop_backend(self, *extra):
+        tmp = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        db, record = tmp / "mttl_up.db", tmp / "stop.log"
+        proc = self.enterContext(subprocess.Popen(
+            [sys.executable, "-c", STOP_DRIVER, str(ROOT / "mttl_w01" / "run.py"),
+             str(ROOT / "tests" / "fixtures" / "fake_backend.py"), str(db), str(record), *extra],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
+        self.addCleanup(proc.kill)
+        ready = proc.stdout.readline().strip()
+        self.assertEqual(ready, "ready", proc.stderr.read() if not ready else "")
+        proc.send_signal(signal.SIGTERM)
+        try:
+            _, err = proc.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            _, err = proc.communicate()
+            self.fail(f"SIGTERM 뒤 10초 안에 멈추지 않았다\n{err}")
+        self.assertEqual(proc.returncode, 0, err)
+        self.assertIn("[run] backend stopped", err)
+        return db, record
+
+    def test_sigterm_with_device_connected_runs_cleanup_and_exits_0(self):
+        db, record = self.stop_backend()
+        self.assertEqual(record.read_text(encoding="utf-8").splitlines(),
+                         ["connection closed", "backend cleaned up"])
+        # 마지막 연결이 닫히면 SQLite가 WAL을 DB에 옮기고 -wal 파일을 지운다.
+        self.assertTrue(db.exists())
+        self.assertFalse(Path(f"{db}-wal").exists())
+
+    def test_sigterm_before_event_loop_exits_0(self):
+        self.stop_backend("before-loop")
 
 
 if __name__ == "__main__":

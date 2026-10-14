@@ -1,5 +1,9 @@
 # Changelog
 
+## 26.10.1
+
+- Stopping, restarting or updating the app now shuts the backend down cleanly. Before, the Supervisor log warned that the app did not handle SIGTERM (exit code 143), and a stopped app showed the state `error`. The backend now closes the power strip connections, saves the energy readings it had not written yet and closes its database before it exits.
+
 ## 26.10.0
 
 - First release of this app. It packages the standalone backend 0.2.11-r3 by 투오 of the Naver HA Cafe for Home Assistant, with firmware 1.0.111.
@@ -15,6 +19,10 @@
 - In Home Assistant, power shows one decimal place and energy two, and the temperature and voltage sensors are listed under Diagnostic.
 
 # 변경 기록
+
+## 26.10.1
+
+- 앱을 멈추거나 다시 시작하거나 업데이트할 때 백엔드가 정상적으로 종료됩니다. 이전에는 Supervisor 로그에 앱이 SIGTERM을 처리하지 않았다는 경고(종료 코드 143)가 남았고, 멈춘 앱의 상태가 `error`로 보였습니다. 이제 백엔드는 멀티탭 연결을 닫고, 아직 기록하지 않은 에너지 사용량을 저장하고, 데이터베이스를 닫은 뒤 종료합니다.
 
 ## 26.10.0
 
