@@ -10,6 +10,8 @@ TUO_DOCKERFILE = ADDON / "backend" / "Dockerfile"
 BACKEND_PY = ADDON / "backend" / "backend.py"
 REPOSITORY = ROOT / "repository.yaml"
 TRANSLATIONS = ADDON / "translations"
+CHANGELOG = ADDON / "CHANGELOG.md"
+VERSION_RE = r"^\d{2}\.([1-9]|1[0-2])\.(0|[1-9]\d*)$"
 
 EXPECTED_PORTS = {"10086/tcp": "10086", "8080/tcp": "18282", "10080/tcp": "49217"}
 EXPECTED_TRANSLATION_KEYS = {
@@ -29,6 +31,12 @@ def unquote(value):
     if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
         return value[1:-1]
     return value
+
+
+def config_value(key):
+    lines = [line for line in read_lines(CONFIG) if line.startswith(f"{key}: ")]
+    assert len(lines) == 1, key
+    return unquote(lines[0].split(":", 1)[1])
 
 
 def yaml_block(path, key):
@@ -87,6 +95,7 @@ class AddonPackageTest(unittest.TestCase):
     def test_required_settings(self):
         lines = read_lines(CONFIG)
         for line in ("slug: mttl_w01", "url: https://github.com/kkqq9320/ha-lgu-mttl-w01",
+                     "image: ghcr.io/kkqq9320/mttl_w01",
                      "  - amd64", "  - aarch64", "  - mqtt:want", "hassio_api: true",
                      "ingress: true", "ingress_port: 8080",
                      "panel_title: MTTL-W01", "panel_icon: mdi:power-socket-de",
@@ -107,14 +116,21 @@ class AddonPackageTest(unittest.TestCase):
             with self.subTest(part=part):
                 self.assertIn(part, check)
 
-    def test_version_matches_backend(self):
-        versions = [line for line in read_lines(CONFIG) if line.startswith("version: ")]
-        self.assertEqual(len(versions), 1)
-        version = unquote(versions[0].split(":", 1)[1])
-        self.assertRegex(version, r"^\d+\.\d+\.\d+-\d+$")
+    def test_version_is_calendar_version(self):
+        self.assertRegex(config_value("version"), VERSION_RE)
+
+    def test_description_names_backend_version(self):
+        m = re.search(r"\(based on Tuo standalone (\d+\.\d+\.\d+)\)$", config_value("description"))
         backend = re.search(r"^BACKEND_VERSION='([^']+)'$", BACKEND_PY.read_text(encoding="utf-8"), re.MULTILINE)
+        self.assertIsNotNone(m)
         self.assertIsNotNone(backend)
-        self.assertEqual(version.split("-", 1)[0], backend.group(1))
+        self.assertEqual(m.group(1), backend.group(1))
+
+    def test_changelog_top_matches_version(self):
+        en, ko = CHANGELOG.read_text(encoding="utf-8").split("\n# 변경 기록\n")
+        for part in (en, ko):
+            first = next(line for line in part.splitlines() if line.startswith("## "))
+            self.assertEqual(first, f"## {config_value('version')}")
 
     def test_dockerfile_copies_same_modules_as_tuo(self):
         def copy_sources(path):
@@ -129,11 +145,9 @@ class AddonPackageTest(unittest.TestCase):
         self.assertTrue(tuo_modules)
         self.assertEqual(our_modules, tuo_modules)
 
-    def test_repository_yaml(self):
-        lines = read_lines(REPOSITORY)
-        for line in ("name: LG U+ MTTL-W01 Add-ons", "url: https://github.com/kkqq9320/ha-lgu-mttl-w01",
-                     "maintainer: kkqq9320"):
-            self.assertIn(line, lines)
+    def test_no_repository_yaml(self):
+        # Users add kkqq9320/ha-apps; this repository is not an app repository.
+        self.assertFalse(REPOSITORY.exists())
 
     def test_translations_match(self):
         trees = {}

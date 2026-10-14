@@ -4,7 +4,7 @@
 
 LG U+ MTTL-W01 멀티탭용 투오 standalone 백엔드를 실행하는 Home Assistant 앱(애드온)이다. 멀티탭은 LG U+ 클라우드 대신 집 네트워크 안에서 Home Assistant에 접속한다. Home Assistant 사이드바의 대시보드에서 콘센트 네 개를 켜고 끄며 전력, 누적 사용량, 온도를 보고, 설정 페이지에서 펌웨어 업데이트와 MQTT 연결을 관리한다. Mosquitto broker 앱이 설치되어 있으면 콘센트와 센서가 MQTT 자동 등록(discovery)으로 Home Assistant에도 나타난다.
 
-멀티탭마다 투오 펌웨어 1.0.111을 투오 PC 도구로 한 번 설치해야 한다. 앱과 멀티탭 준비는 [설치 안내](docs/install.ko.md)에 있다. 앱 판 번호는 투오 백엔드 판 뒤에 포장 판을 붙인 것이다([mttl_w01/config.yaml](mttl_w01/config.yaml)의 `version`).
+멀티탭마다 투오 펌웨어 1.0.111을 투오 PC 도구로 한 번 설치해야 한다. 앱과 멀티탭 준비는 [설치 안내](docs/install.ko.md)에 있다. 앱 판 번호는 날짜 판 `<YY>.<M>.<N>`(예: `26.10.0`)이고, 앱이 쓰는 투오 백엔드 판은 [mttl_w01/config.yaml](mttl_w01/config.yaml)의 `description`에 있다.
 
 LG U+나 투오와 관계없는 비공식 프로젝트다.
 

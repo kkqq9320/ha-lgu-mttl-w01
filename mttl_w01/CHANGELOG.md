@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.11-1
+## 26.10.0
 
 - First release of this app. It packages the Tuo standalone backend 0.2.11-r3 for Home Assistant, with firmware 1.0.111.
 - The web UI opens from the Home Assistant sidebar through Ingress. Port 8080 is still published as 18282 for direct LAN access.
@@ -16,7 +16,7 @@
 
 # 변경 기록
 
-## 0.2.11-1
+## 26.10.0
 
 - 이 앱의 첫 판이다. 투오 standalone 백엔드 0.2.11-r3(펌웨어 1.0.111)을 Home Assistant용으로 포장했다.
 - Ingress로 Home Assistant 사이드바에서 웹 화면을 연다. 8080 포트는 LAN 직접 접속용으로 18282에 그대로 연결한다.

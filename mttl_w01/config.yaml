@@ -1,7 +1,8 @@
 name: LG U+ Multitap (MTTL-W01)
-version: "0.2.11-1"
+version: "26.10.0"
 slug: mttl_w01
 url: https://github.com/kkqq9320/ha-lgu-mttl-w01
+image: ghcr.io/kkqq9320/mttl_w01
 description: Local backend for the LG U+ MTTL-W01 power strip (based on Tuo standalone 0.2.11)
 arch:
   - amd64
