@@ -6,6 +6,8 @@ A Home Assistant app (add-on) that runs Tuo's standalone backend for the LG U+ M
 
 Each power strip needs Tuo's firmware 1.0.111, installed once with Tuo's PC tool. The [install guide](docs/install.md) covers the app and the power strips. App versions are calendar versions `<YY>.<M>.<N>` (for example `26.10.0`); the Tuo backend version the app uses is in `description` in [mttl_w01/config.yaml](mttl_w01/config.yaml).
 
+The app installs as a prebuilt image from the [ha-apps](https://github.com/kkqq9320/ha-apps) app repository; this repository holds its code and documents.
+
 This is an unofficial project, not affiliated with LG U+ or Tuo.
 
 ![Dashboard in demo mode, dark theme](docs/images/dashboard.jpg)
@@ -17,7 +19,7 @@ This is an unofficial project, not affiliated with LG U+ or Tuo.
 
 ## Quick start
 
-1. Add this repository to Home Assistant with [this link](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-lgu-mttl-w01), or add `https://github.com/kkqq9320/ha-lgu-mttl-w01` under **Settings → Apps → Install app → ⋮ → Repositories**.
+1. Add the app repository `https://github.com/kkqq9320/ha-apps` to Home Assistant with [this link](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-apps), or add it under **Settings → Apps → Install app → ⋮ → Repositories**.
 2. Install **LG U+ Multitap (MTTL-W01)**.
 3. On the app's **Info** tab, turn on **Watchdog** and **Show in sidebar**.
 4. Start the app.

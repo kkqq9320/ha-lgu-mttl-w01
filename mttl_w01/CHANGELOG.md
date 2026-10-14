@@ -9,7 +9,7 @@
 - New device window (**DEVICE SETTINGS** on each device card) for the firmware update, voltage and RSSI measurement and the Child Lock re-read.
 - No login. Changes are accepted only through the Home Assistant sidebar; port 18282 is for viewing and downloading. See [Access and screen lock](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.md#access-and-screen-lock).
 - `host_ip` is optional. When it is empty, the app takes the IPv4 address of the primary network interface from the Supervisor.
-- Supports amd64 and aarch64.
+- Installs as a prebuilt image for amd64 and aarch64 (`ghcr.io/kkqq9320/mttl_w01`). Add the app repository `https://github.com/kkqq9320/ha-apps` to Home Assistant.
 - The MQTT service is optional (`mqtt:want`): the app starts without MQTT variables when no broker is available.
 - Fixes a hang in Tuo's backend: saving the MQTT settings while connected to the broker never finished, and the Home Assistant integration stayed disconnected until the app restarted.
 - In Home Assistant, power shows one decimal place and energy two, and the temperature and voltage sensors are listed under Diagnostic.
@@ -25,7 +25,7 @@
 - 기기 창(기기 카드의 **DEVICE SETTINGS**)에서 펌웨어 업데이트, 전압·RSSI 측정, Child Lock 다시 읽기를 한다.
 - 로그인은 없다. 변경은 Home Assistant 사이드바에서만 받고, 18282 포트는 보기와 내려받기만 된다. [접근과 화면 잠금](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.ko.md#접근과-화면-잠금)을 본다.
 - `host_ip`는 선택 사항이다. 비우면 Supervisor가 알려 주는 기본 네트워크 인터페이스의 IPv4 주소를 쓴다.
-- amd64와 aarch64를 지원한다.
+- amd64와 aarch64용 미리 빌드한 이미지(`ghcr.io/kkqq9320/mttl_w01`)로 설치된다. Home Assistant에는 앱 저장소 `https://github.com/kkqq9320/ha-apps`를 추가한다.
 - MQTT 서비스는 필수가 아니다(`mqtt:want`). 브로커가 없으면 MQTT 변수 없이 시작한다.
 - 투오 백엔드의 멈춤을 고쳤다. 브로커에 연결된 동안 MQTT 설정을 저장하면 저장이 끝나지 않았고, 앱을 다시 시작할 때까지 Home Assistant 연동이 끊긴 채로 남았다.
 - Home Assistant에서 전력은 소수 첫째 자리, 에너지는 소수 둘째 자리까지 보이고, 온도와 전압 센서는 진단(Diagnostic)으로 분류된다.

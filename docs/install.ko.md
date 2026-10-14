@@ -6,7 +6,7 @@
 
 ## 앱 설치
 
-1. 저장소를 추가한다. [이 링크](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-lgu-mttl-w01)를 열거나, **설정(Settings) → 앱(Apps) → 앱 설치(Install app)**에서 **⋮** 메뉴의 **저장소(Repositories)**를 골라 `https://github.com/kkqq9320/ha-lgu-mttl-w01`을 추가한다.
+1. 앱 저장소를 추가한다. [이 링크](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-apps)를 열거나, **설정(Settings) → 앱(Apps) → 앱 설치(Install app)**에서 **⋮** 메뉴의 **저장소(Repositories)**를 골라 `https://github.com/kkqq9320/ha-apps`를 추가한다.
 2. 앱 스토어에서 **LG U+ Multitap (MTTL-W01)**을 찾아 설치한다.
 3. 앱의 **정보(Info)** 탭에서 **Watchdog**을 켠다. 상태 검사가 실패하면 Home Assistant가 앱을 다시 시작한다. **사이드바에 표시(Show in sidebar)**도 켠다.
 4. **시작(Start)**을 누른다. 앱의 **로그(Log)** 탭에 멀티탭이 접속할 주소가 `[run] host_ip 192.0.2.10 (auto-detected from Supervisor)`처럼 나온다. 멀티탭이 이 주소에 닿지 않으면 **구성(Configuration)** 탭에서 `host_ip`를 넣고([옵션](../mttl_w01/DOCS.md#옵션)) 앱을 다시 시작한다.

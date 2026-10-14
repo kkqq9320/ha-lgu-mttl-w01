@@ -1,5 +1,9 @@
 # Notice / 출처 표기
 
+The app image `ghcr.io/kkqq9320/mttl_w01` is built from the `mttl_w01/` folder, so it contains Tuo's backend files and our dashboard files listed below. The image also carries this notice and [LICENSE](LICENSE) in `/usr/share/doc/mttl_w01/`.
+
+앱 이미지 `ghcr.io/kkqq9320/mttl_w01`은 `mttl_w01/` 폴더로 만들므로 아래 목록의 투오 백엔드 파일과 우리 대시보드 파일이 들어 있다. 이미지 안 `/usr/share/doc/mttl_w01/`에는 이 문서와 [LICENSE](LICENSE)도 있다.
+
 ## Tuo / 투오
 
 Tuo released custom firmware 1.0.111 for the LG U+ MTTL-W01 together with the MTTL-W01 UP Standalone package: a standalone backend, a PC provisioning tool and an Android setup app. The tools build the firmware on the user's own machine from the manufacturer's firmware image. This app runs Tuo's standalone backend, redistributes the PC tool and the Android app that come with it, and draws heavily on Tuo's work, including the documents kept in [docs/tuo](docs/tuo/README.md).

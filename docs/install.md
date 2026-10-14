@@ -6,7 +6,7 @@ Addresses in this guide are examples. Use the address of your own Home Assistant
 
 ## Install the app
 
-1. Add the repository. Open [this link](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-lgu-mttl-w01), or go to **Settings → Apps → Install app**, open the **⋮** menu, choose **Repositories** and add `https://github.com/kkqq9320/ha-lgu-mttl-w01`.
+1. Add the app repository. Open [this link](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-apps), or go to **Settings → Apps → Install app**, open the **⋮** menu, choose **Repositories** and add `https://github.com/kkqq9320/ha-apps`.
 2. Find **LG U+ Multitap (MTTL-W01)** in the app store and install it.
 3. On the app's **Info** tab, turn on **Watchdog**, so that Home Assistant restarts the app when its health check fails. Turn on **Show in sidebar** as well.
 4. Select **Start**. The app's **Log** tab shows the address the power strips will connect to, for example `[run] host_ip 192.0.2.10 (auto-detected from Supervisor)`. If the power strips cannot reach that address, set `host_ip` on the **Configuration** tab ([options](../mttl_w01/DOCS.md#options)) and restart the app.

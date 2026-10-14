@@ -6,6 +6,8 @@ LG U+ MTTL-W01 멀티탭용 투오 standalone 백엔드를 실행하는 Home Ass
 
 멀티탭마다 투오 펌웨어 1.0.111을 투오 PC 도구로 한 번 설치해야 한다. 앱과 멀티탭 준비는 [설치 안내](docs/install.ko.md)에 있다. 앱 판 번호는 날짜 판 `<YY>.<M>.<N>`(예: `26.10.0`)이고, 앱이 쓰는 투오 백엔드 판은 [mttl_w01/config.yaml](mttl_w01/config.yaml)의 `description`에 있다.
 
+앱은 [ha-apps](https://github.com/kkqq9320/ha-apps) 앱 저장소에서 미리 빌드한 이미지로 설치되고, 이 저장소는 앱의 코드와 문서를 담는다.
+
 LG U+나 투오와 관계없는 비공식 프로젝트다.
 
 ![예시 모드의 대시보드, 다크 테마](docs/images/dashboard.jpg)
@@ -17,7 +19,7 @@ LG U+나 투오와 관계없는 비공식 프로젝트다.
 
 ## 빠른 시작
 
-1. [이 링크](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-lgu-mttl-w01)로 이 저장소를 Home Assistant에 추가한다. 또는 **설정(Settings) → 앱(Apps) → 앱 설치(Install app) → ⋮ → 저장소(Repositories)**에 `https://github.com/kkqq9320/ha-lgu-mttl-w01`을 넣는다.
+1. [이 링크](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-apps)로 앱 저장소 `https://github.com/kkqq9320/ha-apps`를 Home Assistant에 추가한다. 또는 **설정(Settings) → 앱(Apps) → 앱 설치(Install app) → ⋮ → 저장소(Repositories)**에 이 주소를 넣는다.
 2. **LG U+ Multitap (MTTL-W01)**을 설치한다.
 3. 앱의 **정보(Info)** 탭에서 **Watchdog**과 **사이드바에 표시(Show in sidebar)**를 켠다.
 4. 앱을 시작한다.

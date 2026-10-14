@@ -4,11 +4,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PAIRS = [("README.md", "README.ko.md"), ("docs/install.md", "docs/install.ko.md")]
-BILINGUAL = ["mttl_w01/DOCS.md", "NOTICE.md", "mttl_w01/CHANGELOG.md"]
+BILINGUAL = ["mttl_w01/README.md", "mttl_w01/DOCS.md", "NOTICE.md", "mttl_w01/CHANGELOG.md"]
 LINKED_DOCS = [*(p for pair in PAIRS for p in pair), *BILINGUAL]
 # DOCS.md and CHANGELOG.md are shown in Home Assistant, where relative links do not work,
 # so they link to the repository.
 REPO_URL = "https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/"
+HA_SHOWN = ["mttl_w01/README.md", "mttl_w01/DOCS.md", "mttl_w01/CHANGELOG.md"]
+NOTICE_URL = REPO_URL + "NOTICE.md"
+# Users add the app collection, not this repository.
+HA_APPS = "https://github.com/kkqq9320/ha-apps"
+MY_LINK = ("https://my.home-assistant.io/redirect/supervisor_add_addon_repository/"
+           "?repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-apps")
 HANGUL = re.compile("[가-힣]")
 LATIN = re.compile("[A-Za-z]")
 LINK = re.compile(r"\]\(([^)\s]+)\)")
@@ -85,6 +91,29 @@ class DocsTest(unittest.TestCase):
                     if anchor:
                         anchors = {slug(title) for _, title in headings(dest.read_text(encoding="utf-8"))}
                         self.assertIn(anchor, anchors)
+
+    def test_ha_shown_docs_use_absolute_links(self):
+        for rel in HA_SHOWN:
+            for target in LINK.findall(read(rel)):
+                with self.subTest(file=rel, link=target):
+                    self.assertTrue(target.startswith("https://"), target)
+
+    def test_install_docs_point_to_ha_apps(self):
+        for rel in ("README.md", "README.ko.md", "docs/install.md", "docs/install.ko.md"):
+            with self.subTest(file=rel):
+                text = read(rel)
+                self.assertIn(HA_APPS, text)
+                self.assertIn(MY_LINK, text)
+                self.assertNotIn("repository_url=https%3A%2F%2Fgithub.com%2Fkkqq9320%2Fha-lgu-mttl-w01", text)
+                # The old "add this repository" step quoted this repository's address.
+                self.assertNotIn("`https://github.com/kkqq9320/ha-lgu-mttl-w01`", text)
+
+    def test_ha_shown_docs_credit_notice(self):
+        for rel in ("mttl_w01/README.md", "mttl_w01/DOCS.md"):
+            with self.subTest(file=rel):
+                text = read(rel)
+                for s in (NOTICE_URL, "Tuo", "투오", "af950833", "power-socket-de"):
+                    self.assertIn(s, text)
 
 
 if __name__ == "__main__":

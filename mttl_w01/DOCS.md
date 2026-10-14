@@ -33,6 +33,15 @@ Keep the default host ports. The Home Assistant sidebar reaches the web UI throu
 
 There is no login. Changes work only in the Home Assistant sidebar, which Home Assistant's login protects. Port 18282 is for viewing and downloading: the dashboard there shows **VIEW ONLY**, and anyone on your network who can reach the port can read the device list, the power values and the logs. Details, including the screen lock, are in [Access and screen lock](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.md#access-and-screen-lock).
 
+## Credits
+
+- Tuo made the standalone backend, the PC provisioning tool and the Android setup app that this app runs and redistributes.
+- The dashboard adapts the layout and CSS of [af950833's dashboard](https://github.com/af950833/mttl_w01).
+- The icon and logo use the `power-socket-de` icon of Material Design Icons (Apache License 2.0).
+- [NOTICE.md](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/NOTICE.md) lists the files that come from Tuo, the changes made to them, and the licenses.
+
+This is an unofficial project, not affiliated with LG U+ or Tuo.
+
 # LG U+ 멀티탭 (MTTL-W01)
 
 이 앱은 LG U+ MTTL-W01 멀티탭용 투오 standalone 백엔드를 실행한다. 앱 설치, 멀티탭 준비, 설정 페이지와 기기 창, 문제 해결은 [설치 안내](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.ko.md)에 있다.
@@ -65,3 +74,12 @@ There is no login. Changes work only in the Home Assistant sidebar, which Home A
 ## 접근
 
 로그인은 없다. 변경은 Home Assistant 로그인이 보호하는 사이드바에서만 된다. 18282 포트는 보기와 내려받기용이다. 이 포트의 대시보드는 **VIEW ONLY**를 보이고, 같은 네트워크에서 이 포트에 닿는 사람은 누구나 기기 목록, 전력 값, 로그를 읽을 수 있다. 화면 잠금을 비롯한 자세한 내용은 [접근과 화면 잠금](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/docs/install.ko.md#접근과-화면-잠금)에 있다.
+
+## 출처
+
+- 이 앱이 실행하고 다시 배포하는 standalone 백엔드, PC 설정 도구, 안드로이드 설정 앱은 투오(Tuo)가 만들었다.
+- 대시보드는 [af950833 대시보드](https://github.com/af950833/mttl_w01)의 배치와 CSS를 가져와 고쳐 썼다.
+- 아이콘과 로고는 Material Design Icons의 `power-socket-de` 아이콘(Apache License 2.0)을 쓴다.
+- 투오에게서 온 파일, 고친 내용, 라이선스는 [NOTICE.md](https://github.com/kkqq9320/ha-lgu-mttl-w01/blob/main/NOTICE.md)에 있다.
+
+LG U+나 투오와 관계없는 비공식 프로젝트다.
