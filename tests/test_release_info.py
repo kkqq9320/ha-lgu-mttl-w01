@@ -32,12 +32,30 @@ class ReleaseInfoTest(unittest.TestCase):
         self.assertNotIn("# note", values)
 
     def test_config_values_reads_trailing_comments(self):
-        for line in ('version: "26.10.0"  # first', "version: 26.10.0 # first", "version: '26.10.0'"):
+        for line in ('version: "26.10.0"  # first', "version: 26.10.0 # first", "version: '26.10.0'",
+                     "version: 26.10.0\t# first"):
             with self.subTest(line=line):
                 self.assertEqual(m.config_values(line + "\n")["version"], "26.10.0")
         for line in ('version: "26.10.0" x', 'version: "26.10.0', 'version: "26.10\\x2e0"'):
             with self.subTest(line=line), self.assertRaises(ValueError):
                 m.config_values(line + "\n")
+
+    def test_config_values_rejects_values_it_cannot_read(self):
+        # Block scalars, tags, anchors, aliases and reserved indicators would otherwise be read as text.
+        for text in ("name: >-\n  LG U+\n  Multitap\n", "name: |\n  X\n", "name: !!str X\n", "name: &a X\n",
+                     "name: *a\n", "name: @x\n", "name: %x\n", "name: `x`\n"):
+            with self.subTest(text=text), self.assertRaises(ValueError) as cm:
+                m.config_values(text)
+            self.assertIn("name", str(cm.exception))
+
+    def test_config_values_rejects_plain_value_on_two_lines(self):
+        with self.assertRaises(ValueError) as cm:
+            m.config_values('description: Local backend\n  for the power strip\nversion: "26.10.0"\n')
+        self.assertIn("description", str(cm.exception))
+
+    def test_config_values_skips_flow_collections(self):
+        values = m.config_values('arch: [amd64, aarch64]\nmap: {a: 1}\nversion: "26.10.0"\n')
+        self.assertEqual(values, {"version": "26.10.0"})
 
     def test_config_values_rejects_repeated_key(self):
         with self.assertRaises(ValueError):

@@ -1,5 +1,6 @@
 import importlib.util
 import io
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -86,23 +87,29 @@ class TarTest(unittest.TestCase):
         self.assertIn("\n#image: ", config)
         self.assertIn("\nservices:\n  - mqtt:want\n", config)
 
-    def test_tar_ignores_build_copies_and_caches(self):
+    def test_tar_takes_tracked_files_only(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             app = repo / "mttl_w01"
             (app / "backend" / "__pycache__").mkdir(parents=True)
             (app / "config.yaml").write_bytes(SAMPLE.encode())
             (app / "backend" / "backend.py").write_bytes(b"x = 1\n")
+            (app / "backend" / "gone.py").write_bytes(b"x = 2\n")
+            (repo / "NOTICE.md").write_bytes(b"notice\n")
+            (repo / "LICENSE").write_bytes(b"license\n")
+            subprocess.run(["git", "init", "-q", str(repo)], check=True)
+            subprocess.run(["git", "-C", str(repo), "add", "mttl_w01"], check=True)
+            # Left out: an untracked local file, caches, git-ignored build copies, a tracked file deleted on disk.
+            (app / "backend" / ".env").write_bytes(b"SECRET=1\n")
             (app / "backend" / "__pycache__" / "backend.cpython-312.pyc").write_bytes(b"\0")
             (app / "stale.pyc").write_bytes(b"\0")
             (app / "NOTICE.md").write_bytes(b"stale copy\n")
             (app / "LICENSE").write_bytes(b"stale copy\n")
-            (repo / "NOTICE.md").write_bytes(b"notice\n")
-            (repo / "LICENSE").write_bytes(b"license\n")
+            (app / "backend" / "gone.py").unlink()
             files, names = tar_members(repo)
         self.assertEqual(names, sorted(names))
-        self.assertEqual(sorted(names), ["mttl_w01/LICENSE", "mttl_w01/NOTICE.md",
-                                         "mttl_w01/backend/backend.py", "mttl_w01/config.yaml"])
+        self.assertEqual(names, ["mttl_w01/LICENSE", "mttl_w01/NOTICE.md",
+                                 "mttl_w01/backend/backend.py", "mttl_w01/config.yaml"])
         self.assertEqual(files["mttl_w01/NOTICE.md"], b"notice\n")
         self.assertEqual(files["mttl_w01/LICENSE"], b"license\n")
 

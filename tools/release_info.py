@@ -15,34 +15,49 @@ from pathlib import Path
 VERSION_RE = r"^\d{2}\.([1-9]|1[0-2])\.(0|[1-9]\d*)$"
 OUTPUT_KEYS = ("version", "name", "description", "url")
 DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "mttl_w01" / "config.yaml"
+# Block scalars, tags, anchors, aliases and reserved indicators: not readable as one-line text here.
+UNREADABLE = ("|", ">", "!", "&", "*", "%", "@", "`")
+FLOW = ("[", "{")
 
 
-def _scalar(raw: str) -> str:
+def _scalar(key: str, raw: str) -> str:
     raw = raw.strip()
+    if raw.startswith(UNREADABLE):
+        raise ValueError(f"cannot read config.yaml {key!r} ({raw!r}); write it on one line, plain or quoted")
     if raw[:1] in ("'", '"'):
         quote = raw[0]
         end = raw.find(quote, 1)
         rest = raw[end + 1:] if end > 0 else ""
         if end < 0 or (rest.strip() and not rest.strip().startswith("#")) or (quote == '"' and "\\" in raw[:end]):
-            raise ValueError(f"cannot read the quoted value {raw!r}")
+            raise ValueError(f"cannot read the quoted value of config.yaml {key!r} ({raw!r})")
         return raw[1:end]
-    return raw.split(" #", 1)[0].strip()
+    return re.split(r"\s#", raw, maxsplit=1)[0].strip()
 
 
 def config_values(text: str) -> dict[str, str]:
+    """Top-level one-line `key: value` scalars of config.yaml, unquoted; mappings, lists and flow collections are skipped."""
     values: dict[str, str] = {}
+    last_scalar = None
     for line in text.splitlines():
-        if not line.strip() or line[0] in " \t#":
+        if not line.strip() or line.startswith("#"):
+            continue
+        if line[0] in " \t":
+            if last_scalar and not line.lstrip().startswith("#"):
+                raise ValueError(f"config.yaml {last_scalar!r} continues on the next line; write it on one line")
             continue
         key, sep, raw = line.partition(":")
         if not sep:
             raise ValueError(f"cannot read the config line {line!r}")
-        value = _scalar(raw)
+        last_scalar = None
+        if raw.strip().startswith(FLOW):
+            continue
+        value = _scalar(key, raw)
         if not value:
             continue  # a mapping or a list follows on the next lines
         if key in values:
             raise ValueError(f"config.yaml sets {key!r} twice")
         values[key] = value
+        last_scalar = key
     return values
 
 

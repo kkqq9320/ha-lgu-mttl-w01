@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import argparse
 import io
+import subprocess
 import sys
 import tarfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import BinaryIO
 
 APP = "mttl_w01"
@@ -41,15 +42,19 @@ def local_config(text: str, keep_mqtt: bool = False) -> str:
 
 
 def app_members(repo: Path) -> list[tuple[str, Path]]:
-    app = repo / APP
+    """The files git tracks under the app folder, with their working-tree contents, plus the root NOTICE.md and LICENSE."""
+    out = subprocess.run(["git", "-C", str(repo), "ls-files", "-z", "--", APP], capture_output=True)
+    if out.returncode != 0:
+        raise ValueError(f"cannot list the files of {APP}/ with git: {out.stderr.decode('utf-8', 'replace').strip()}")
     members = []
-    for path in app.rglob("*"):
-        rel = path.relative_to(app)
-        if not path.is_file() or "__pycache__" in rel.parts or path.suffix == ".pyc":
+    for name in out.stdout.decode("utf-8").split("\0"):
+        if not name:
             continue
-        if rel.as_posix() in ROOT_FILES:
+        rel = PurePosixPath(name).relative_to(APP)
+        path = repo / name
+        if rel.as_posix() in ROOT_FILES or "__pycache__" in rel.parts or path.suffix == ".pyc" or not path.is_file():
             continue
-        members.append((f"{APP}/{rel.as_posix()}", path))
+        members.append((name, path))
     members += [(f"{APP}/{name}", repo / name) for name in ROOT_FILES]
     return sorted(members)
 

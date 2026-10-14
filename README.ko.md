@@ -6,7 +6,7 @@ LG U+ MTTL-W01 멀티탭용 투오 standalone 백엔드를 실행하는 Home Ass
 
 멀티탭마다 투오 펌웨어 1.0.111을 투오 PC 도구로 한 번 설치해야 한다. 앱과 멀티탭 준비는 [설치 안내](docs/install.ko.md)에 있다. 앱 판 번호는 날짜 판 `<YY>.<M>.<N>`(예: `26.10.0`)이고, 앱이 쓰는 투오 백엔드 판은 [mttl_w01/config.yaml](mttl_w01/config.yaml)의 `description`에 있다.
 
-앱은 [ha-apps](https://github.com/kkqq9320/ha-apps) 앱 저장소에서 미리 빌드한 이미지로 설치되고, 이 저장소는 앱의 코드와 문서를 담는다.
+Home Assistant는 [ha-apps](https://github.com/kkqq9320/ha-apps) 앱 저장소를 통해 이 앱을 미리 빌드한 이미지로 설치하고, 이 저장소는 앱의 코드와 문서를 담는다.
 
 LG U+나 투오와 관계없는 비공식 프로젝트다.
 

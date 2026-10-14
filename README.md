@@ -6,7 +6,7 @@ A Home Assistant app (add-on) that runs Tuo's standalone backend for the LG U+ M
 
 Each power strip needs Tuo's firmware 1.0.111, installed once with Tuo's PC tool. The [install guide](docs/install.md) covers the app and the power strips. App versions are calendar versions `<YY>.<M>.<N>` (for example `26.10.0`); the Tuo backend version the app uses is in `description` in [mttl_w01/config.yaml](mttl_w01/config.yaml).
 
-The app installs as a prebuilt image from the [ha-apps](https://github.com/kkqq9320/ha-apps) app repository; this repository holds its code and documents.
+Home Assistant installs the app from the [ha-apps](https://github.com/kkqq9320/ha-apps) app repository as a prebuilt image; this repository holds its code and documents.
 
 This is an unofficial project, not affiliated with LG U+ or Tuo.
 

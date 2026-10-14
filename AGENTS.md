@@ -33,7 +33,7 @@ LG U+ MTTL-W01 멀티탭을 투오 standalone 백엔드로 Home Assistant에서 
 ## 문서와 화면 언어
 
 - 사용자 문서는 영어 파일과 한국어 `*.ko.md` 짝으로 둔다.
-- `DOCS.md`, `NOTICE.md`, `CHANGELOG.md`는 한 파일에 영어를 먼저, 한국어를 뒤에 쓴다.
+- `mttl_w01/README.md`, `DOCS.md`, `NOTICE.md`, `CHANGELOG.md`는 한 파일에 영어를 먼저, 한국어를 뒤에 쓴다.
 - `run.py` 로그는 영어로 쓰고 줄 앞에 `[run]`을 붙인다.
 - 대시보드는 EN/KR 전환을 지원한다.
 - `AGENTS.md`(이 파일)는 관리자용이므로 한국어로 쓴다.
@@ -55,7 +55,7 @@ node --test "tests/js/*.test.mjs"
 python tools/pack_local_app.py | ssh <HA SSH 호스트> 'sudo tar -C /addons --no-same-owner -xf -'
 ```
 
-- `tools/pack_local_app.py`는 `mttl_w01/`을 `mttl_w01/` 이름으로 묶는다. `config.yaml`의 `image:` 줄을 주석으로 바꿔 HA가 이미지를 받지 않고 빌드하게 한다. HA에서는 슬러그 `local_mttl_w01`로 보인다.
+- `tools/pack_local_app.py`는 `mttl_w01/` 중 Git이 관리하는 파일(`git ls-files`)을 작업 트리 내용 그대로 `mttl_w01/` 이름으로 묶는다. 새 파일은 `git add` 뒤에 들어간다. `config.yaml`의 `image:` 줄을 주석으로 바꿔 HA가 이미지를 받지 않고 빌드하게 한다. HA에서는 슬러그 `local_mttl_w01`로 보인다.
 - 로컬 시험판은 MQTT 서비스(`services:` 블록)도 주석으로 바꿔 MQTT 없이 돈다. 빈 DB의 로컬 앱이 같은 MQTT `unique_id`로 에너지 값을 보내면, 본 앱으로 돌아갈 때 HA 에너지 통계에 계량기 초기화와 큰 사용량이 기록될 수 있기 때문이다. MQTT 연동을 바꾼 판은 릴리스 뒤 본 앱 업데이트로 확인한다.
 - `--keep-mqtt`는 로컬 앱이 실제 운영 앱일 때만 쓴다.
 - 이미지 빌드 맥락은 `mttl_w01/`이다. `Dockerfile`이 복사하는 `NOTICE.md`, `LICENSE`는 저장소 최상위에 있어, 빌드 전에 사본을 `mttl_w01/`에 넣는다. GitHub Actions workflow와 이 스크립트가 넣고, 사본은 `.gitignore`에 있다.
