@@ -46,3 +46,17 @@ node --test "tests/js/*.test.mjs"
 ```
 
 `node --test`의 경로는 따옴표로 감싼 글롭으로 쓴다. 디렉터리를 인자로 주면 Node 24에서 실패한다.
+
+## 로컬 시험
+
+릴리스 전에 Home Assistant에서 로컬 빌드로 확인한다. Git Bash에서 실행한다. PowerShell 파이프는 바이너리를 바꿀 수 있다.
+
+```bash
+python tools/pack_local_app.py | ssh <HA SSH 호스트> 'sudo tar -C /addons --no-same-owner -xf -'
+```
+
+- `tools/pack_local_app.py`는 `mttl_w01/`을 `mttl_w01/` 이름으로 묶는다. `config.yaml`의 `image:` 줄을 주석으로 바꿔 HA가 이미지를 받지 않고 빌드하게 한다. HA에서는 슬러그 `local_mttl_w01`로 보인다.
+- 로컬 시험판은 MQTT 서비스(`services:` 블록)도 주석으로 바꿔 MQTT 없이 돈다. 빈 DB의 로컬 앱이 같은 MQTT `unique_id`로 에너지 값을 보내면, 본 앱으로 돌아갈 때 HA 에너지 통계에 계량기 초기화와 큰 사용량이 기록될 수 있기 때문이다. MQTT 연동을 바꾼 판은 릴리스 뒤 본 앱 업데이트로 확인한다.
+- `--keep-mqtt`는 로컬 앱이 실제 운영 앱일 때만 쓴다.
+- 이미지 빌드 맥락은 `mttl_w01/`이다. `Dockerfile`이 복사하는 `NOTICE.md`, `LICENSE`는 저장소 최상위에 있어, 빌드 전에 사본을 `mttl_w01/`에 넣는다. GitHub Actions workflow와 이 스크립트가 넣고, 사본은 `.gitignore`에 있다.
+- 로컬 앱과 본 앱은 같은 호스트 포트를 쓴다. 시험하는 동안 본 앱을 멈추고, 끝나면 로컬 앱을 멈추고 본 앱을 다시 시작한다.

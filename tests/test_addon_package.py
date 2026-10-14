@@ -11,6 +11,7 @@ BACKEND_PY = ADDON / "backend" / "backend.py"
 REPOSITORY = ROOT / "repository.yaml"
 TRANSLATIONS = ADDON / "translations"
 CHANGELOG = ADDON / "CHANGELOG.md"
+BUILD_COPIES = ("NOTICE.md", "LICENSE")
 VERSION_RE = r"^\d{2}\.([1-9]|1[0-2])\.(0|[1-9]\d*)$"
 
 EXPECTED_PORTS = {"10086/tcp": "10086", "8080/tcp": "18282", "10080/tcp": "49217"}
@@ -139,11 +140,25 @@ class AddonPackageTest(unittest.TestCase):
         ours = copy_sources(DOCKERFILE)
         self.assertTrue(ours)
         for src in ours:
-            self.assertTrue((ADDON / src).exists(), src)
+            # NOTICE.md and LICENSE live at the repository root; the workflows and
+            # tools/pack_local_app.py copy them into the build context first.
+            base = ROOT if src in BUILD_COPIES else ADDON
+            self.assertTrue((base / src).exists(), src)
         our_modules = {Path(src).name for src in ours if src.startswith("backend/") and src.endswith(".py")}
         tuo_modules = {Path(src).name for src in copy_sources(TUO_DOCKERFILE) if src.endswith(".py")}
         self.assertTrue(tuo_modules)
         self.assertEqual(our_modules, tuo_modules)
+
+    def test_dockerfile_installs_notice_and_labels(self):
+        lines = read_lines(DOCKERFILE)
+        self.assertIn("COPY NOTICE.md LICENSE /usr/share/doc/mttl_w01/", lines)
+        text = "\n".join(lines)
+        self.assertRegex(text, r'org\.opencontainers\.image\.title="[^"]+"')
+        description = re.search(r'org\.opencontainers\.image\.description="([^"]+)"', text)
+        self.assertIsNotNone(description)
+        self.assertIn("Tuo", description.group(1))
+        self.assertIn("https://github.com/kkqq9320/ha-lgu-mttl-w01", description.group(1))
+        self.assertLessEqual(len(description.group(1)), 512)
 
     def test_no_repository_yaml(self):
         # Users add kkqq9320/ha-apps; this repository is not an app repository.
