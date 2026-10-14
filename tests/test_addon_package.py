@@ -1,4 +1,5 @@
 import re
+import struct
 import unittest
 from pathlib import Path
 
@@ -38,6 +39,14 @@ def config_value(key):
     lines = [line for line in read_lines(CONFIG) if line.startswith(f"{key}: ")]
     assert len(lines) == 1, key
     return unquote(lines[0].split(":", 1)[1])
+
+
+def png_header(path):
+    """(width, height, color type) from the PNG signature and IHDR chunk."""
+    data = path.read_bytes()[:26]
+    assert data[:8] == b"\x89PNG\r\n\x1a\n" and data[12:16] == b"IHDR", path
+    width, height = struct.unpack(">II", data[16:24])
+    return width, height, data[25]
 
 
 def yaml_block(path, key):
@@ -159,6 +168,14 @@ class AddonPackageTest(unittest.TestCase):
         self.assertIn("Tuo", description.group(1))
         self.assertIn("https://github.com/kkqq9320/ha-lgu-mttl-w01", description.group(1))
         self.assertLessEqual(len(description.group(1)), 512)
+
+    def test_icon_and_logo_png(self):
+        # Color type 6 is RGBA: both images need a transparent background for HA's light and dark themes.
+        self.assertEqual(png_header(ADDON / "icon.png"), (128, 128, 6))
+        width, height, color_type = png_header(ADDON / "logo.png")
+        self.assertEqual(color_type, 6)
+        self.assertGreater(width, height)
+        self.assertTrue(200 <= width <= 500, width)
 
     def test_no_repository_yaml(self):
         # Users add kkqq9320/ha-apps; this repository is not an app repository.

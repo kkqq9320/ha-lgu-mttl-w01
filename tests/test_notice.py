@@ -8,6 +8,7 @@ NOTICE = ROOT / "NOTICE.md"
 UNMODIFIED = "## Unmodified Tuo files / 그대로 쓴 투오 파일"
 MODIFIED = "## Modified Tuo files / 고쳐 쓴 투오 파일"
 AF950833 = "## af950833"
+MDI = "## Material Design Icons"
 ITEM = re.compile(r"^- `([^`]+)`(.*)$")
 
 
@@ -108,6 +109,15 @@ class NoticeTest(unittest.TestCase):
         for s in ("Tuo", "투오", "af950833", "https://github.com/af950833/mttl_w01"):
             with self.subTest(s=s):
                 self.assertIn(s, text)
+
+    def test_notice_credits_mdi(self):
+        text = self.notice()
+        self.assertEqual(text.splitlines().count(MDI), 1)
+        mdi = "\n".join(section(text, MDI))
+        for s in ("power-socket-de", "Apache License 2.0", "mttl_w01/icon.png", "mttl_w01/logo.png",
+                  "https://github.com/Templarian/MaterialDesign/blob/master/LICENSE"):
+            with self.subTest(s=s):
+                self.assertIn(s, mdi)
 
 
 if __name__ == "__main__":

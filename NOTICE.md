@@ -66,6 +66,12 @@ af950833은 MTTL-W01용 로컬 서버와 안드로이드 설정 앱을 <https://
 
 - `web/index.html`, `web/style.css` → `mttl_w01/backend/static/dashboard.html`, `mttl_w01/backend/static/dashboard.css` — Dashboard layout and CSS. The log page (`logview.html`) and the settings page (`settings.html`) use the same stylesheet. / 대시보드 배치와 CSS. 로그 화면(`logview.html`)과 설정 페이지(`settings.html`)도 같은 스타일시트를 쓴다.
 
+## Material Design Icons
+
+`mttl_w01/icon.png`, `mttl_w01/logo.png` and the sidebar icon (`panel_icon: mdi:power-socket-de` in `mttl_w01/config.yaml`) use the `power-socket-de` icon of Pictogrammers' Material Design Icons (<https://pictogrammers.com/library/mdi/>). The icon is licensed under the Apache License 2.0 (<https://github.com/Templarian/MaterialDesign/blob/master/LICENSE>). In the two PNG files it is recolored and drawn on our background, and the logo adds the text `MTTL-W01`.
+
+`mttl_w01/icon.png`, `mttl_w01/logo.png`와 사이드바 아이콘(`mttl_w01/config.yaml`의 `panel_icon: mdi:power-socket-de`)은 Pictogrammers의 Material Design Icons 중 `power-socket-de`를 쓴다(<https://pictogrammers.com/library/mdi/>). 이 아이콘의 라이선스는 Apache License 2.0이다(<https://github.com/Templarian/MaterialDesign/blob/master/LICENSE>). 두 PNG 파일에서는 색을 바꿔 우리 바탕 위에 그렸고, 로고에는 `MTTL-W01` 글자를 더했다.
+
 ## Copyright / 저작권
 
 The MIT License in [LICENSE](LICENSE) covers the code and documents written for this repository, such as `mttl_w01/run.py`, `tools/`, `tests/`, our documents and our dashboard files. It does not cover Tuo's files listed above, modified or not, or the parts of our dashboard adapted from af950833. Their copyright stays with their authors.
